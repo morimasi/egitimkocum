@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon } from '../components/Icons';
 import { DashboardSkeleton } from '../components/SkeletonLoader';
 
 const KpiCard = ({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
@@ -69,6 +68,17 @@ const CoachDashboard = () => {
         const average = studentAssignments.length > 0 ? Math.round(total / studentAssignments.length) : 0;
         return { name: student.name.split(' ')[0], "Not Ortalaması": average, studentId: student.id };
     });
+    
+    const studentsWithMetrics = students.map(student => {
+        const studentAssignments = assignments.filter(a => a.studentId === student.id);
+        const gradedAssignments = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+        const averageGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length) : 0;
+        const overdueAssignments = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+        
+        const needsAttention = (averageGrade < 60 && gradedAssignments.length > 0) || overdueAssignments > 0;
+        
+        return { ...student, needsAttention };
+    });
 
     const handleBarClick = (data: any) => {
         if (data && data.studentId) {
@@ -107,13 +117,14 @@ const CoachDashboard = () => {
                 </Card>
                 <Card title="Hızlı Erişim: Öğrenciler">
                     <ul className="space-y-3">
-                        {students.map(student => (
+                        {studentsWithMetrics.map(student => (
                             <li key={student.id} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setActivePage('students')}>
                                 <img className="w-10 h-10 rounded-full" src={student.profilePicture} alt={student.name} />
-                                <div className="ml-3">
+                                <div className="ml-3 flex-1">
                                     <p className="text-sm font-medium">{student.name}</p>
                                     <p className="text-xs text-gray-500">{student.email}</p>
                                 </div>
+                                {student.needsAttention && <AlertTriangleIcon className="w-5 h-5 text-yellow-500" title="Bu öğrencinin ilgilenilmesi gerekiyor." />}
                             </li>
                         ))}
                     </ul>

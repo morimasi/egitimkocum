@@ -4,15 +4,21 @@ import { User, Assignment, AssignmentStatus } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, MessagesIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { suggestStudentGoal } from '../services/geminiService';
 
 
 const StudentDetailModal = ({ student, onClose }: { student: User | null; onClose: () => void; }) => {
-    const { getAssignmentsForStudent } = useDataContext();
+    const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal } = useDataContext();
+    const { addToast } = useUI();
+    const [newGoalText, setNewGoalText] = useState('');
+    const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
+
     if (!student) return null;
 
     const assignments = getAssignmentsForStudent(student.id);
+    const goals = getGoalsForStudent(student.id);
     const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
     const submittedCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
     const gradedCount = assignments.filter(a => a.status === AssignmentStatus.Graded).length;
@@ -28,6 +34,29 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
             name: `Ödev ${index + 1}`,
             "Not": a.grade,
         }));
+        
+    const handleAddGoal = () => {
+        if (newGoalText.trim() === '') return;
+        addGoal({
+            studentId: student.id,
+            text: newGoalText,
+            isCompleted: false,
+        });
+        setNewGoalText('');
+    };
+
+    const handleSuggestGoal = async () => {
+        setIsGeneratingGoal(true);
+        const overdueAssignments = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+        try {
+            const suggestion = await suggestStudentGoal(student.name, averageGrade, overdueAssignments);
+            setNewGoalText(suggestion);
+        } catch(e) {
+            addToast("Hedef önerisi alınamadı.", "error");
+        } finally {
+            setIsGeneratingGoal(false);
+        }
+    };
 
     return (
         <Modal isOpen={!!student} onClose={onClose} title={`${student.name} - Performans Detayları`} size="lg">
@@ -73,6 +102,28 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
+                    </Card>
+                </div>
+
+                <div>
+                    <h4 className="font-semibold mb-2">Hedefler</h4>
+                    <Card>
+                        <ul className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-3">
+                             {goals.length > 0 ? goals.map(goal => (
+                                <li key={goal.id} className="flex items-center">
+                                    <input type="checkbox" checked={goal.isCompleted} onChange={() => updateGoal({...goal, isCompleted: !goal.isCompleted})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                    <label className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : ''}`}>{goal.text}</label>
+                                </li>
+                             )) : <p className="text-sm text-gray-500">Bu öğrenci için henüz hedef belirlenmedi.</p>}
+                        </ul>
+                        <div className="flex gap-2">
+                            <input type="text" value={newGoalText} onChange={(e) => setNewGoalText(e.target.value)} placeholder="Yeni hedef ekle..." className="flex-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                            <button onClick={handleAddGoal} className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Ekle</button>
+                        </div>
+                        <button onClick={handleSuggestGoal} disabled={isGeneratingGoal} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50">
+                            <SparklesIcon className={`w-4 h-4 mr-1 ${isGeneratingGoal ? 'animate-spin' : ''}`} />
+                            {isGeneratingGoal ? 'Öneriliyor...' : '✨ Akıllı Hedef Öner'}
+                        </button>
                     </Card>
                 </div>
             </div>

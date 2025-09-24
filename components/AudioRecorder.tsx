@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { MicIcon, PlayIcon, PauseIcon, StopIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';

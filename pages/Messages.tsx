@@ -129,13 +129,14 @@ const Messages = () => {
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file && currentUser && selectedContactId) {
+            const fileUrl = URL.createObjectURL(file);
             sendMessage({
                 senderId: currentUser.id,
                 receiverId: selectedContactId,
                 text: file.name,
                 type: 'file',
                 fileName: file.name,
-                fileUrl: '#', // Mock URL
+                fileUrl: fileUrl,
             });
             addToast("Dosya başarıyla gönderildi.", "success");
         }
@@ -256,7 +257,7 @@ const Messages = () => {
                                                     <AudioRecorder initialAudio={msg.audioUrl} readOnly />
                                                 </div>
                                             ) : msg.type === 'file' ? (
-                                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 underline">
+                                                <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline">
                                                     <DocumentIcon className="w-6 h-6 flex-shrink-0" />
                                                     <span>{msg.fileName}</span>
                                                 </a>

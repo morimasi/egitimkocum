@@ -33,6 +33,7 @@ export interface Assignment {
   grade: number | null;
   feedback: string;
   fileUrl: string | null;
+  fileName?: string;
   studentId: string;
   coachId: string;
   submittedAt: string | null;

@@ -1,5 +1,4 @@
-
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 // Ensure API_KEY is available in the environment.
 if (!process.env.API_KEY) {
@@ -43,5 +42,55 @@ export const generateSmartFeedback = async (grade: number, assignmentTitle: stri
   } catch (error) {
     console.error("Error generating smart feedback:", error);
     return "Akıllı geri bildirim üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
+  }
+};
+
+export const generateAssignmentChecklist = async (title: string, description: string): Promise<{ text: string }[]> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Bir eğitim koçu olarak, "${title}" başlıklı ve "${description}" açıklamalı bir ödev için öğrencilerin takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi oluştur.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              text: {
+                type: Type.STRING,
+                description: 'Kontrol listesi maddesinin metni.',
+              },
+            },
+            required: ['text'],
+          },
+        },
+      },
+    });
+
+    const jsonString = response.text.trim();
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Error generating assignment checklist:", error);
+    return [];
+  }
+};
+
+export const suggestStudentGoal = async (studentName: string, averageGrade: number, overdueAssignments: number): Promise<string> => {
+  try {
+    const prompt = `Öğrenci ${studentName}'in mevcut durumu: Not ortalaması 100 üzerinden ${averageGrade} ve vadesi geçmiş ${overdueAssignments} ödevi var. Bu öğrenci için S.M.A.R.T. (Spesifik, Ölçülebilir, Ulaşılabilir, İlgili, Zaman-sınırlı) bir hedef öner. Hedef, öğrenciyi motive etmeli ve performansını artırmaya yönelik olmalı. Sadece tek cümlelik hedefin metnini döndür.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.8,
+      },
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Error suggesting student goal:", error);
+    return "Hedef önerisi üretilirken bir hata oluştu.";
   }
 };

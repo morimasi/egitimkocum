@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 // FIX: Extend CardProps with React.HTMLAttributes<HTMLDivElement> to accept standard HTML attributes like 'id'.

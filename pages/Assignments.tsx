@@ -3,9 +3,9 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon } from '../components/Icons';
+import { SparklesIcon, XIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
-import { generateAssignmentDescription, generateSmartFeedback } from '../services/geminiService';
+import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
 
 const getStatusChip = (status: AssignmentStatus) => {
@@ -44,7 +44,8 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+    const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
 
@@ -53,17 +54,33 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             addToast("Lütfen önce bir ödev başlığı girin.", "error");
             return;
         }
-        setIsGenerating(true);
+        setIsGeneratingDesc(true);
         try {
             const generatedDesc = await generateAssignmentDescription(title);
             setDescription(generatedDesc);
         } catch(e) {
             addToast("Açıklama üretilemedi.", "error");
         } finally {
-            setIsGenerating(false);
+            setIsGeneratingDesc(false);
         }
     };
     
+    const handleGenerateChecklist = async () => {
+        if (!title) {
+            addToast("Lütfen önce bir ödev başlığı girin.", "error");
+            return;
+        }
+        setIsGeneratingChecklist(true);
+        try {
+            const generatedItems = await generateAssignmentChecklist(title, description);
+            setChecklist(prev => [...prev, ...generatedItems]);
+        } catch (e) {
+            addToast("Kontrol listesi üretilemedi.", "error");
+        } finally {
+            setIsGeneratingChecklist(false);
+        }
+    };
+
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
@@ -112,7 +129,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Yeni Ödev Oluştur">
+        <Modal isOpen={isOpen} onClose={onClose} title="Yeni Ödev Oluştur" size="lg">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Şablondan Seç</label>
@@ -128,10 +145,36 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                  <div>
                     <label className="block text-sm font-medium mb-1">Açıklama</label>
                     <textarea value={description} onChange={e => setDescription(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
-                    <button type="button" onClick={handleGenerateDescription} disabled={isGenerating} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                        {isGenerating ? 'Oluşturuluyor...' : '✨ Açıklama Oluştur'}
-                    </button>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
+                        <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <SparklesIcon className={`w-4 h-4 mr-1 ${isGeneratingDesc ? 'animate-spin' : ''}`} />
+                            {isGeneratingDesc ? 'Oluşturuluyor...' : '✨ Açıklama Oluştur'}
+                        </button>
+                         <button type="button" onClick={handleGenerateChecklist} disabled={isGeneratingChecklist} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <SparklesIcon className={`w-4 h-4 mr-1 ${isGeneratingChecklist ? 'animate-spin' : ''}`} />
+                            {isGeneratingChecklist ? 'Oluşturuluyor...' : '✨ Kontrol Listesi Oluştur'}
+                        </button>
+                    </div>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Kontrol Listesi</label>
+                    <div className="space-y-2">
+                        {checklist.map((item, index) => (
+                            <div key={index} className="flex items-center">
+                                <input type="text" value={item.text} 
+                                       onChange={(e) => {
+                                           const newChecklist = [...checklist];
+                                           newChecklist[index].text = e.target.value;
+                                           setChecklist(newChecklist);
+                                       }} 
+                                       className="w-full p-2 border rounded-md bg-gray-100 dark:bg-gray-900 dark:border-gray-600"/>
+                                <button type="button" onClick={() => setChecklist(checklist.filter((_, i) => i !== index))} className="ml-2 text-red-500 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50">
+                                    <XIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <button type="button" onClick={() => setChecklist([...checklist, { text: '' }])} className="mt-2 text-sm text-primary-600 font-semibold hover:text-primary-800">+ Madde Ekle</button>
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
@@ -166,7 +209,14 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if(e.target.files && e.target.files.length > 0) {
-            updateAssignment({ ...assignment, status: AssignmentStatus.Submitted, fileUrl: e.target.files[0].name, submittedAt: new Date().toISOString() });
+            const file = e.target.files[0];
+            updateAssignment({ 
+                ...assignment, 
+                status: AssignmentStatus.Submitted, 
+                fileUrl: URL.createObjectURL(file), 
+                fileName: file.name,
+                submittedAt: new Date().toISOString() 
+            });
             addToast("Ödev dosyası başarıyla yüklendi.", "success");
             onClose();
         }
@@ -201,7 +251,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
     const handleCoachFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            const newAttachment = { name: file.name, url: '#' }; // Mock URL
+            const newAttachment = { name: file.name, url: URL.createObjectURL(file) };
             const updatedAttachments = [...(assignment.coachAttachments || []), newAttachment];
             updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
             addToast("Dosya başarıyla eklendi.", "success");
@@ -254,7 +304,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                     </div>
                 )}
                 
-                {assignment.fileUrl && <p><strong className="font-semibold">Teslim Edilen Dosya:</strong> <a href="#" className="text-primary-500">{assignment.fileUrl}</a></p>}
+                {assignment.fileUrl && <p><strong className="font-semibold">Teslim Edilen Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
 
                 <div>
                     <strong className="font-semibold block mb-1">Koçun Eklediği Dosyalar:</strong>
@@ -262,7 +312,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                         <ul className="space-y-1">
                             {assignment.coachAttachments.map((file, index) => (
                                 <li key={index} className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded-md flex items-center justify-between">
-                                    <a href={file.url} className="text-primary-500 hover:underline">{file.name}</a>
+                                    <a href={file.url} download={file.name} className="text-primary-500 hover:underline">{file.name}</a>
                                 </li>
                             ))}
                         </ul>

@@ -36,9 +36,24 @@ const initialNotifications: AppNotification[] = [
 ];
 
 const initialTemplates: AssignmentTemplate[] = [
-  { id: 'temp-1', title: 'Haftalık Kitap Özeti', description: 'Bu hafta okuduğunuz kitabın özetini çıkarın. Ana karakterleri, konuyu ve kitabın ana fikrini belirtin.', checklist: [{text: 'Kitabı bitir'}, {text: 'Ana karakterleri listele'}, {text: 'Konuyu özetle'}, {text: 'Ana fikri yaz'}] },
-  { id: 'temp-2', title: 'Deney Raporu', description: 'Yaptığınız deneyi bilimsel rapor formatına uygun şekilde yazın.', checklist: [{text: 'Hipotezi belirle'}, {text: 'Malzemeleri listele'}, {text: 'Deney adımlarını yaz'}, {text: 'Gözlemleri kaydet'}, {text: 'Sonucu analiz et'}] },
+  // Görev Bazlı Şablonlar
+  { id: 'temp-task-1', title: 'Soru Çözümü', description: 'Belirtilen konularda veya kaynaklardan belirli sayıda soru çözülecektir. Çözüm adımlarınızı göstermeniz ve anlamadığınız noktaları belirtmeniz beklenmektedir.', checklist: [{text: 'Belirtilen sayıda soruyu çöz'}, {text: 'Yanlışlarını ve boşlarını kontrol et'}, {text: 'Anlamadığın soruları not al'}] },
+  { id: 'temp-task-2', title: 'Konu Tekrarı', description: 'Belirtilen dersin konusu tekrar edilecek ve konuyla ilgili özet çıkarılacaktır. Önemli gördüğünüz formül veya kavramları not alınız.', checklist: [{text: 'Konu anlatımını oku/izle'}, {text: 'Kendi cümlelerinle özet çıkar'}, {text: 'Önemli kavramları listele'}] },
+  { id: 'temp-task-3', title: 'Deneme Çözümü', description: 'Belirtilen deneme sınavı, süre tutularak çözülecektir. Sınav sonrası doğru ve yanlış sayılarınızı not ediniz.', checklist: [{text: 'Süre tutarak denemeyi çöz'}, {text: 'Cevaplarını kontrol et'}, {text: 'Net sayını hesapla'}] },
+  { id: 'temp-task-4', title: 'Yanlış Analizi', description: 'Çözdüğünüz deneme veya testteki yanlış ve boş bıraktığınız soruların nedenlerini analiz ediniz. Doğru çözümlerini öğrenerek not alınız.', checklist: [{text: 'Yanlış/boş soruları belirle'}, {text: 'Her bir sorunun doğru çözümünü öğren'}, {text: 'Neden yanlış yaptığını (bilgi eksiği, dikkat hatası vb.) not al'}] },
+  { id: 'temp-task-5', title: 'Kitap Okuma ve Özet', description: 'Belirtilen kitabı okuyup, ana fikrini ve karakter analizlerini içeren bir özet hazırlayınız.', checklist: [{text: 'Kitabın belirtilen bölümünü oku'}, {text: 'Önemli olayları not al'}, {text: 'Ana fikri ve karakterleri analiz et'}, {text: 'Özeti yaz'}] },
+
+  // Ders Bazlı Şablonlar
+  { id: 'temp-ders-1', title: 'Matematik', description: 'Matematik dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu tekrar et'}, {text: 'Verilen alıştırmaları çöz'}, {text: 'Sonuçları kontrol et'}] },
+  { id: 'temp-ders-2', title: 'Türkçe', description: 'Türkçe dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Metni oku ve anla'}, {text: 'Soruları cevapla'}, {text: 'Yazım ve dilbilgisi kurallarına dikkat et'}] },
+  { id: 'temp-ders-3', title: 'Fizik', description: 'Fizik dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve formülleri gözden geçir'}, {text: 'Problemleri çöz'}, {text: 'Birim dönüşümlerine dikkat et'}] },
+  { id: 'temp-ders-4', title: 'Kimya', description: 'Kimya dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve reaksiyonları incele'}, {text: 'Soruları yanıtla'}, {text: 'Denklemleri doğru yazdığından emin ol'}] },
+  { id: 'temp-ders-5', title: 'Biyoloji', description: 'Biyoloji dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve terimleri öğren'}, {text: 'Soruları cevapla'}, {text: 'Şemaları ve görselleri incele'}] },
+  { id: 'temp-ders-6', title: 'Tarih', description: 'Tarih dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Dönemi ve olayları araştır'}, {text: 'Kronolojik sıraya dikkat et'}, {text: 'Neden-sonuç ilişkisi kur'}] },
+  { id: 'temp-ders-7', title: 'Coğrafya', description: 'Coğrafya dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve haritaları incele'}, {text: 'Soruları yanıtla'}, {text: 'Beşeri ve fiziki özellikleri analiz et'}] },
+  { id: 'temp-ders-8', title: 'Felsefe', description: 'Felsefe dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Felsefi metni oku'}, {text: 'Temel argümanları belirle'}, {text: 'Kendi yorumunu kat'}] },
 ];
+
 
 const initialResources: Resource[] = [
   { id: 'res-1', name: 'Türev Konu Anlatımı.pdf', type: 'pdf', url: '#' },

@@ -4,33 +4,43 @@ import { User, UserRole } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const SuperAdminDashboard = () => {
     const { currentUser, users, updateUser, deleteUser, addUser } = useDataContext();
     const { addToast } = useUI();
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
-        setIsModalOpen(true);
+        setIsEditModalOpen(true);
     };
 
     const handleNew = () => {
         setEditingUser(null);
-        setIsModalOpen(true);
+        setIsEditModalOpen(true);
     };
 
-    const handleDelete = (userId: string) => {
-        if (currentUser?.id === userId) {
+    const handleDeleteRequest = (user: User) => {
+        if (currentUser?.id === user.id) {
             addToast("Kendinizi silemezsiniz.", "error");
             return;
         }
-        if (window.confirm("Bu kullanıcıyı ve ilişkili tüm verileri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
-            deleteUser(userId);
+        setUserToDelete(user);
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (userToDelete) {
+            deleteUser(userToDelete.id);
             addToast("Kullanıcı başarıyla silindi.", "success");
         }
+        setIsConfirmModalOpen(false);
+        setUserToDelete(null);
     };
     
     const filteredUsers = users.filter(u => 
@@ -147,7 +157,7 @@ const SuperAdminDashboard = () => {
                                     <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
                                         <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
                                         {currentUser?.id !== user.id && (
-                                            <button onClick={() => handleDelete(user.id)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
+                                            <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
                                         )}
                                     </td>
                                 </tr>
@@ -157,7 +167,17 @@ const SuperAdminDashboard = () => {
                 </div>
             </Card>
 
-            {isModalOpen && <UserEditModal user={editingUser} onClose={() => setIsModalOpen(false)} />}
+            {isEditModalOpen && <UserEditModal user={editingUser} onClose={() => setIsEditModalOpen(false)} />}
+            {isConfirmModalOpen && userToDelete && (
+                <ConfirmationModal
+                    isOpen={isConfirmModalOpen}
+                    onClose={() => setIsConfirmModalOpen(false)}
+                    onConfirm={handleConfirmDelete}
+                    title="Kullanıcıyı Sil"
+                    message={`'${userToDelete.name}' adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu kullanıcıya ait tüm ödevler ve mesajlar da silinecektir. Bu işlem geri alınamaz.`}
+                    confirmText="Evet, Sil"
+                />
+            )}
         </div>
     );
 };

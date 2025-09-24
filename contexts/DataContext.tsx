@@ -32,6 +32,7 @@ interface DataContextType {
     updateTypingStatus: (userId: string, isTyping: boolean) => void;
     getGoalsForStudent: (studentId: string) => Goal[];
     updateGoal: (updatedGoal: Goal) => void;
+    addGoal: (newGoal: Omit<Goal, 'id'>) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -198,6 +199,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
     };
 
+    const addGoal = (newGoalData: Omit<Goal, 'id'>) => {
+        const newGoal: Goal = {
+            ...newGoalData,
+            id: `goal-${Date.now()}`,
+        };
+        setGoals(prev => [...prev, newGoal]);
+    };
+
 
     const value = {
         currentUser,
@@ -229,6 +238,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         updateTypingStatus,
         getGoalsForStudent,
         updateGoal,
+        addGoal,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
