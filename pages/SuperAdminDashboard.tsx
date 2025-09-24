@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { getInitialDataForSeeding } from '../contexts/DataContext';
+import { functions, db } from '../services/firebase';
 
 const SetupWizard = () => {
     const { seedDatabase } = useDataContext();
@@ -87,24 +88,22 @@ const SetupWizard = () => {
 
 
 const SuperAdminDashboard = () => {
-    const { currentUser, users, updateUser, deleteUser, addUser } = useDataContext();
+    const { currentUser, users, updateUser, deleteUser } = useDataContext();
     const { addToast } = useUI();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [roleChanges, setRoleChanges] = useState<Record<string, UserRole>>({});
+    const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+
 
     // If only one user exists (the admin), show the setup wizard.
     const isSeeded = users.length > 1;
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
-        setIsEditModalOpen(true);
-    };
-
-    const handleNew = () => {
-        setEditingUser(null);
         setIsEditModalOpen(true);
     };
 
@@ -126,6 +125,39 @@ const SuperAdminDashboard = () => {
         setUserToDelete(null);
     };
 
+    const handleRoleChange = (userId: string, newRole: UserRole) => {
+        setRoleChanges(prev => ({ ...prev, [userId]: newRole }));
+    };
+
+    const handleSaveRole = async (user: User) => {
+        const newRole = roleChanges[user.id];
+        if (!newRole) return;
+
+        setSavingStates(prev => ({ ...prev, [user.id]: true }));
+        try {
+            const setUserRole = functions.httpsCallable('setUserRole');
+            await setUserRole({ userId: user.id, role: newRole });
+            
+            // On success, update the local state in DataContext to reflect the change immediately
+            updateUser({ ...user, role: newRole });
+            
+            addToast(`'${user.name}' kullanıcısının rolü '${newRole}' olarak güncellendi.`, "success");
+            
+            // Clear the pending change for this user
+            setRoleChanges(prev => {
+                const newChanges = { ...prev };
+                delete newChanges[user.id];
+                return newChanges;
+            });
+
+        } catch (error: any) {
+            console.error("Error updating role:", error);
+            addToast(error.message || "Rol güncellenirken bir hata oluştu.", "error");
+        } finally {
+            setSavingStates(prev => ({ ...prev, [user.id]: false }));
+        }
+    };
+
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -134,21 +166,16 @@ const SuperAdminDashboard = () => {
     const UserEditModal = ({ user, onClose }: { user: User | null; onClose: () => void }) => {
         const [name, setName] = useState(user?.name || '');
         const [email, setEmail] = useState(user?.email || '');
-        const [role, setRole] = useState(user?.role || UserRole.Student);
         const [isLoading, setIsLoading] = useState(false);
 
         const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
             setIsLoading(true);
-            const userData = { name, email, role, profilePicture: user?.profilePicture || `https://i.pravatar.cc/150?u=${email}` };
             
             try {
-                if (user) {
-                    await updateUser({ ...user, ...userData });
-                    addToast("Kullanıcı başarıyla güncellendi.", "success");
-                } else {
-                    // This is simplified. Real app requires creating user in Auth first.
-                    addToast("Yeni kullanıcı oluşturma işlemi için Firebase konsolunu kullanın.", "info");
+                if (user && user.name !== name) {
+                    await updateUser({ ...user, name });
+                    addToast("Kullanıcı adı başarıyla güncellendi.", "success");
                 }
                 onClose();
             } catch (error) {
@@ -159,7 +186,7 @@ const SuperAdminDashboard = () => {
         };
 
         return (
-            <Modal isOpen={true} onClose={onClose} title={user ? "Kullanıcıyı Düzenle" : "Yeni Kullanıcı Ekle"}>
+            <Modal isOpen={true} onClose={onClose} title={"Kullanıcıyı Düzenle"}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">Ad Soyad</label>
@@ -167,15 +194,7 @@ const SuperAdminDashboard = () => {
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">E-posta</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required disabled={!!user}/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Rol</label>
-                        <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            <option value={UserRole.Student}>Öğrenci</option>
-                            <option value={UserRole.Coach}>Koç</option>
-                            <option value={UserRole.SuperAdmin}>Süper Admin</option>
-                        </select>
+                        <input type="email" value={email}  className="w-full p-2 border rounded-md bg-gray-200 dark:bg-gray-800 dark:border-gray-600" required disabled/>
                     </div>
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
@@ -186,20 +205,6 @@ const SuperAdminDashboard = () => {
                 </form>
             </Modal>
         );
-    };
-
-    const getRoleBadge = (role: UserRole) => {
-        const styles = {
-            [UserRole.Student]: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-            [UserRole.Coach]: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-            [UserRole.SuperAdmin]: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-        };
-        const text = {
-            [UserRole.Student]: 'Öğrenci',
-            [UserRole.Coach]: 'Koç',
-            [UserRole.SuperAdmin]: 'Süper Admin',
-        };
-        return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[role]}`}>{text[role]}</span>;
     };
 
     return (
@@ -216,9 +221,9 @@ const SuperAdminDashboard = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
                         />
-                        <button onClick={handleNew} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
-                            Yeni Kullanıcı Ekle
-                        </button>
+                         <p className="text-sm text-gray-500">
+                           Yeni kullanıcı eklemek için Firebase Authentication panelini kullanın.
+                        </p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -240,8 +245,26 @@ const SuperAdminDashboard = () => {
                                             </div>
                                         </td>
                                         <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
-                                        <td className="py-3 px-4 text-center">{getRoleBadge(user.role)}</td>
+                                        <td className="py-3 px-4 text-center">
+                                            <select 
+                                                value={roleChanges[user.id] || user.role} 
+                                                onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                                                className="p-1 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-xs"
+                                                disabled={savingStates[user.id] || currentUser?.id === user.id}
+                                            >
+                                                <option value={UserRole.Student}>Öğrenci</option>
+                                                <option value={UserRole.Coach}>Koç</option>
+                                                <option value={UserRole.SuperAdmin}>Süper Admin</option>
+                                            </select>
+                                        </td>
                                         <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                                             <button 
+                                                onClick={() => handleSaveRole(user)}
+                                                className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400 disabled:no-underline"
+                                                disabled={!roleChanges[user.id] || savingStates[user.id]}
+                                            >
+                                                {savingStates[user.id] ? '...' : 'Kaydet'}
+                                            </button>
                                             <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
                                             {currentUser?.id !== user.id && (
                                                 <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>

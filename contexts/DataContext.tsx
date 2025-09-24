@@ -321,10 +321,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user: FirebaseUser | null) => {
             if (user) {
+                 // Force refresh the token to get the latest custom claims.
+                const idTokenResult = await user.getIdTokenResult(true); 
+                const userRoleFromToken = idTokenResult.claims.role as UserRole | undefined;
+
                 const userDocRef = db.collection('users').doc(user.uid);
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
-                    dispatch({ type: 'SET_CURRENT_USER', payload: { ...userDoc.data(), id: user.uid } as User });
+                    const userFromFirestore = { ...userDoc.data(), id: user.uid } as User;
+                    
+                    // The role from the token is the source of truth.
+                    const finalUser: User = { 
+                        ...userFromFirestore, 
+                        // Fallback to Firestore role if claim is not set, e.g., for newly registered users.
+                        role: userRoleFromToken || userFromFirestore.role 
+                    };
+
+                    // Self-correction: If Firestore is out of sync with the token, update it.
+                    if (userRoleFromToken && userFromFirestore.role !== userRoleFromToken) {
+                        console.warn(`Role mismatch for ${user.uid}. Updating Firestore role to '${userRoleFromToken}'.`);
+                        await userDocRef.update({ role: userRoleFromToken });
+                        finalUser.role = userRoleFromToken;
+                    }
+
+                    dispatch({ type: 'SET_CURRENT_USER', payload: finalUser });
                     await fetchAllData();
                 } else {
                      console.log("User document doesn't exist for authenticated user, logging out.");
