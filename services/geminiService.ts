@@ -94,3 +94,33 @@ export const suggestStudentGoal = async (studentName: string, averageGrade: numb
     return "Hedef önerisi üretilirken bir hata oluştu.";
   }
 };
+
+export const generateWeeklySummary = async (studentName: string, stats: { completed: number, avgGrade: number | string, goals: number }): Promise<string> => {
+  try {
+    const prompt = `Sen bir eğitim koçusun. Öğrencin ${studentName} için geçen haftaki performansına dayanarak kısa, pozitif ve motive edici bir özet yaz.
+    Geçen haftanın verileri:
+    - Tamamlanan ödev sayısı: ${stats.completed}
+    - Haftalık not ortalaması: ${stats.avgGrade}
+    - Ulaşılan hedef sayısı: ${stats.goals}
+
+    Özeti şu şekilde yapılandır:
+    1.  Genel bir tebrik ve pozitif bir başlangıç yap.
+    2.  Verilerden bir veya iki olumlu noktayı vurgula (örneğin, "Bu hafta ${stats.completed} ödev tamamlaman harika!").
+    3.  Gelecek hafta için küçük ve yapıcı bir teşvikte bulun.
+    
+    Tonun samimi ve cesaretlendirici olsun. Sadece özet metnini döndür.`;
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            temperature: 0.7,
+        },
+    });
+
+    return response.text;
+  } catch(error) {
+    console.error("Error generating weekly summary:", error);
+    return "Haftalık özet oluşturulurken bir hata oluştu.";
+  }
+};

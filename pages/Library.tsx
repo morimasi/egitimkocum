@@ -1,8 +1,9 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { ChecklistItem } from '../types';
+import { ChecklistItem, Resource, User, UserRole } from '../types';
+import Modal from '../components/Modal';
+import { useUI } from '../contexts/UIContext';
 
 const TemplateCard = ({ template }: { template: { id: string; title: string; description: string; checklist: Omit<ChecklistItem, 'id'|'isCompleted'>[] } }) => (
     <Card>
@@ -23,28 +24,79 @@ const TemplateCard = ({ template }: { template: { id: string; title: string; des
     </Card>
 );
 
-const ResourceCard = ({ resource }: { resource: { id: string; name: string; type: string; url: string } }) => {
+const RecommendModal = ({ resource, onClose }: { resource: Resource; onClose: () => void }) => {
+    const { students, toggleResourceRecommendation } = useDataContext();
+    
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`"${resource.name}" Kaynağını Öner`}>
+            <div className="max-h-80 overflow-y-auto">
+                <p className="text-sm text-gray-500 mb-4">Bu kaynağı önermek istediğiniz öğrencileri seçin.</p>
+                <ul className="space-y-2">
+                    {students.map(student => {
+                        const isRecommended = resource.recommendedTo?.includes(student.id);
+                        return (
+                            <li key={student.id}>
+                                <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={isRecommended}
+                                        onChange={() => toggleResourceRecommendation(resource.id, student.id)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3"/>
+                                    <span className="font-medium">{student.name}</span>
+                                </label>
+                            </li>
+                        )
+                    })}
+                </ul>
+            </div>
+        </Modal>
+    );
+};
+
+
+const ResourceCard = ({ resource }: { resource: { id: string; name: string; type: string; url: string, recommendedTo?: string[] } }) => {
+    const { currentUser } = useDataContext();
+    const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
+    
     const typeIcons = {
         pdf: '📄',
         link: '🔗',
         video: '🎬',
     };
+    
     return (
+        <>
         <Card>
-            <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 group">
-                <span className="text-2xl">{typeIcons[resource.type as keyof typeof typeIcons]}</span>
-                <div>
-                    <h4 className="font-semibold group-hover:text-primary-500">{resource.name}</h4>
-                    <p className="text-xs text-gray-500 uppercase">{resource.type}</p>
-                </div>
-            </a>
+            <div className="flex flex-col h-full">
+                <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 group flex-grow">
+                    <span className="text-2xl">{typeIcons[resource.type as keyof typeof typeIcons]}</span>
+                    <div>
+                        <h4 className="font-semibold group-hover:text-primary-500">{resource.name}</h4>
+                        <p className="text-xs text-gray-500 uppercase">{resource.type}</p>
+                    </div>
+                </a>
+                {currentUser?.role === UserRole.Coach && (
+                    <div className="mt-4 pt-3 border-t dark:border-gray-700 text-right">
+                        <button onClick={() => setIsRecommendModalOpen(true)} className="text-sm font-semibold text-primary-600 hover:underline">
+                            Öner ({resource.recommendedTo?.length || 0})
+                        </button>
+                    </div>
+                )}
+            </div>
         </Card>
+        {isRecommendModalOpen && <RecommendModal resource={resource as Resource} onClose={() => setIsRecommendModalOpen(false)} />}
+        </>
     )
 };
 
 const Library = () => {
-    const { templates, resources } = useDataContext();
-    const [activeTab, setActiveTab] = React.useState('templates');
+    const { templates, resources, currentUser } = useDataContext();
+    const [activeTab, setActiveTab] = useState('templates');
+    const isStudent = currentUser?.role === UserRole.Student;
+
+    const recommendedResources = resources.filter(r => r.recommendedTo?.includes(currentUser?.id || ''));
 
     return (
         <div className="space-y-6">
@@ -61,8 +113,17 @@ const Library = () => {
                              onClick={() => setActiveTab('resources')}
                             className={`${activeTab === 'resources' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Kaynaklar
+                            Tüm Kaynaklar
                         </button>
+                        {isStudent && (
+                             <button
+                                onClick={() => setActiveTab('recommended')}
+                                className={`${activeTab === 'recommended' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm relative`}
+                            >
+                                Bana Önerilenler
+                                {recommendedResources.length > 0 && <span className="absolute top-2 -right-3 ml-2 bg-primary-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">{recommendedResources.length}</span>}
+                            </button>
+                        )}
                     </nav>
                 </div>
             </div>
@@ -86,7 +147,7 @@ const Library = () => {
             )}
              {activeTab === 'resources' && (
                 <div>
-                    <h2 className="text-2xl font-bold mb-4">Kaynaklar</h2>
+                    <h2 className="text-2xl font-bold mb-4">Tüm Kaynaklar</h2>
                     {resources.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {resources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
@@ -101,7 +162,23 @@ const Library = () => {
                     )}
                 </div>
             )}
-
+            {activeTab === 'recommended' && isStudent && (
+                 <div>
+                    <h2 className="text-2xl font-bold mb-4">Bana Önerilenler</h2>
+                    {recommendedResources.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {recommendedResources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
+                        </div>
+                    ) : (
+                         <Card>
+                            <div className="text-center py-10">
+                                <h3 className="text-lg font-semibold">Henüz size özel bir kaynak önerilmedi.</h3>
+                                <p className="text-gray-500 mt-2">Koçunuz bir kaynak önerdiğinde burada görünecektir.</p>
+                            </div>
+                        </Card>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

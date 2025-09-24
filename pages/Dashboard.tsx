@@ -44,216 +44,159 @@ const GoalsCard = () => {
                             onChange={() => handleToggleGoal(goal.id)}
                             className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                         />
-                        <label htmlFor={`goal-${goal.id}`} className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : ''}`}>
-                            {goal.text}
-                        </label>
+                        <label htmlFor={`goal-${goal.id}`} className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{goal.text}</label>
                     </li>
                 )) : (
-                    <p className="text-sm text-gray-500">Henüz bir hedef belirlemediniz.</p>
+                    <p className="text-sm text-gray-500 text-center py-4">Henüz bir hedef belirlemedin.</p>
                 )}
             </ul>
         </Card>
     );
-};
+}
 
-const CoachDashboard = () => {
-    const { students, assignments } = useDataContext();
-    const { setActivePage, setInitialFilters } = useUI();
-    const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-    const pendingSubmissions = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-    const studentAverages = students.map(student => {
-        const studentAssignments = assignments.filter(a => a.studentId === student.id && a.status === AssignmentStatus.Graded && a.grade !== null);
-        const total = studentAssignments.reduce((acc, curr) => acc + curr.grade!, 0);
-        const average = studentAssignments.length > 0 ? Math.round(total / studentAssignments.length) : 0;
-        return { name: student.name.split(' ')[0], "Not Ortalaması": average, studentId: student.id };
-    });
+const StudentDashboard = () => {
+    const { currentUser, getAssignmentsForStudent, coach, messages } = useDataContext();
+    const { setActivePage } = useUI();
     
-    const studentsWithMetrics = students.map(student => {
-        const studentAssignments = assignments.filter(a => a.studentId === student.id);
-        const gradedAssignments = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-        const averageGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length) : 0;
-        const overdueAssignments = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-        
-        const needsAttention = (averageGrade < 60 && gradedAssignments.length > 0) || overdueAssignments > 0;
-        
-        return { ...student, needsAttention };
-    });
+    if (!currentUser) return null;
 
-    const handleBarClick = (data: any) => {
-        if (data && data.studentId) {
-            setInitialFilters({ studentId: data.studentId });
-            setActivePage('assignments');
-        }
-    };
+    const myAssignments = getAssignmentsForStudent(currentUser.id);
+    const pendingAssignments = myAssignments.filter(a => a.status === AssignmentStatus.Pending);
+    const gradedAssignments = myAssignments.filter(a => a.status === AssignmentStatus.Graded);
+    const averageGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((acc, a) => acc + (a.grade || 0), 0) / gradedAssignments.length) : 'N/A';
+    
+    const upcomingAssignments = myAssignments
+        .filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) > new Date())
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 5);
+
+    const recentMessages = messages
+        .filter(m => m.receiverId === currentUser.id && !m.readBy.includes(currentUser.id))
+        .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0,3);
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tour-step-3">
-                <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-blue-500" />
-                <KpiCard title="Bekleyen Teslimler" value={pendingSubmissions} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
-                <KpiCard title="Toplam Ödev Sayısı" value={assignments.length} icon={<CheckCircleIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <KpiCard title="Bekleyen Ödevler" value={pendingAssignments.length} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3" />
+                <KpiCard title="Not Ortalaması" value={averageGrade} icon={<CheckCircleIcon className="w-6 h-6 text-green-800" />} color="bg-green-200" />
+                <KpiCard title="Koç" value={coach?.name || 'Atanmadı'} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
             </div>
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card title="Yaklaşan Ödevler" className="lg:col-span-2">
+                     <ul className="space-y-3">
+                        {upcomingAssignments.length > 0 ? upcomingAssignments.map(a => {
+                             const dueDate = new Date(a.dueDate);
+                             const now = new Date();
+                             const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+                             const isUrgent = diffDays <= 2;
+                            return (
+                                <li key={a.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <div>
+                                        <p className="font-semibold">{a.title}</p>
+                                        <p className={`text-sm ${isUrgent ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                            Son teslim: {dueDate.toLocaleDateString('tr-TR')}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setActivePage('assignments')} className="text-sm font-semibold text-primary-500 hover:underline">Detay</button>
+                                </li>
+                            )
+                        }) : <p className="text-center text-gray-500 py-8">Yaklaşan bir ödevin yok. Harika iş!</p>}
+                    </ul>
+                </Card>
+                <div className="space-y-6">
+                    <GoalsCard />
+                    <Card title="Son Mesajlar">
+                         <ul className="space-y-3">
+                            {recentMessages.length > 0 ? recentMessages.map(msg => (
+                                <li key={msg.id} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => setActivePage('messages', {contactId: msg.senderId})}>
+                                    <p className="text-sm font-semibold">{coach?.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{msg.text}</p>
+                                </li>
+                            )) : <p className="text-sm text-gray-500 text-center py-4">Yeni mesaj yok.</p>}
+                        </ul>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+};
 
+const CoachDashboard = () => {
+    const { students, assignments, messages, currentUser } = useDataContext();
+    const { setActivePage } = useUI();
+
+    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+    const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+    
+    // Calculate overall grade average
+    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+    const overallAverage = gradedAssignments.length > 0
+        ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length)
+        : 0;
+
+    // Data for assignment status chart
+    const statusData = [
+        { name: 'Bekliyor', value: assignments.filter(a => a.status === AssignmentStatus.Pending).length },
+        { name: 'Teslim Edildi', value: assignments.filter(a => a.status === AssignmentStatus.Submitted).length },
+        { name: 'Notlandırıldı', value: assignments.filter(a => a.status === AssignmentStatus.Graded).length },
+    ];
+    const COLORS = ['#facc15', '#3b82f6', '#22c55e'];
+    
+    const studentsWithAlerts = students.map(s => {
+        const studentAssignments = assignments.filter(a => a.studentId === s.id);
+        const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+        const avg = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
+        const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+        const showAlert = avg < 60 && avg > 0 || overdue > 0;
+        return { ...s, showAlert, avg, overdue };
+    }).filter(s => s.showAlert);
+    
+    const unreadMessagesCount = messages.filter(m => m.receiverId === currentUser?.id && !m.readBy.includes(currentUser.id)).length;
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
+                <KpiCard title="Değerlendirilecek Ödev" value={pendingCount} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3"/>
+                <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" />
+                 <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<XIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card title="Öğrenci Not Ortalamaları" className="lg:col-span-2">
-                    <div style={{ width: '100%', height: 300 }}>
+                <Card title="Hızlı Erişim" className="lg:col-span-1">
+                     <ul className="space-y-2">
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Öğrenciler</h3>
+                        {students.slice(0, 5).map(s => {
+                             const hasAlert = studentsWithAlerts.some(alertStudent => alertStudent.id === s.id);
+                             return (
+                                <li key={s.id} onClick={() => setActivePage('students')} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                    <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
+                                    <span className="ml-3 font-medium">{s.name}</span>
+                                    {/* FIX: Wrapped icon in a span with a title attribute to fix prop type error and provide a tooltip. */}
+                                    {hasAlert && <span title="Düşük not ortalaması veya gecikmiş ödev"><AlertTriangleIcon className="w-4 h-4 text-yellow-500 ml-auto" /></span>}
+                                </li>
+                            )
+                        })}
+                    </ul>
+                </Card>
+                <Card title="Ödev Durum Dağılımı" className="lg:col-span-2">
+                    <div style={{ width: '100%', height: 250 }}>
                         <ResponsiveContainer>
-                            {/* FIX: Cast event argument to 'any' to resolve incorrect type definition for recharts onClick handler. */}
-                            <BarChart data={studentAverages} margin={{ top: 5, right: 20, left: -10, bottom: 5 }} onClick={(e: any) => handleBarClick(e?.activePayload?.[0]?.payload)}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.2)" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
-                                <Legend />
-                                <Bar dataKey="Not Ortalaması" radius={[4, 4, 0, 0]} onMouseOver={(data, index) => setActiveIndex(index)} onMouseOut={() => setActiveIndex(null)}>
-                                     {studentAverages.map((entry, index) => (
-                                        <Cell cursor="pointer" fill={index === activeIndex ? '#2563eb' : '#3b82f6'} key={`cell-${index}`}/>
+                            <BarChart data={statusData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(128, 128, 128, 0.2)"/>
+                                <XAxis type="number" hide />
+                                <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} />
+                                <Tooltip cursor={{fill: 'rgba(243, 244, 246, 0.5)'}} contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
+                                <Bar dataKey="value" barSize={30} background={{ fill: '#eee' }}>
+                                    {statusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
-                <Card title="Hızlı Erişim: Öğrenciler">
-                    <ul className="space-y-3">
-                        {studentsWithMetrics.map(student => (
-                            <li key={student.id} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setActivePage('students')}>
-                                <img className="w-10 h-10 rounded-full" src={student.profilePicture} alt={student.name} />
-                                <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium">{student.name}</p>
-                                    <p className="text-xs text-gray-500">{student.email}</p>
-                                </div>
-                                {student.needsAttention && <AlertTriangleIcon className="w-5 h-5 text-yellow-500" title="Bu öğrencinin ilgilenilmesi gerekiyor." />}
-                            </li>
-                        ))}
-                    </ul>
-                </Card>
             </div>
-        </div>
-    );
-};
-
-
-const StudentDashboard = () => {
-    const { currentUser, getAssignmentsForStudent, messages } = useDataContext();
-    const { addToast } = useUI();
-    const [showNotificationBanner, setShowNotificationBanner] = useState(false);
-
-    const myAssignments = currentUser ? getAssignmentsForStudent(currentUser.id) : [];
-
-    useEffect(() => {
-        if (!('Notification' in window)) return;
-
-        const checkPermissionsAndNotify = () => {
-            const upcomingAssignment = myAssignments.find(a => {
-                const dueDate = new Date(a.dueDate);
-                const now = new Date();
-                const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                return a.status === AssignmentStatus.Pending && hoursUntilDue > 0 && hoursUntilDue <= 24;
-            });
-
-            if (upcomingAssignment) {
-                if (Notification.permission === 'granted') {
-                    new Notification('Ödev Hatırlatma', {
-                        body: `'${upcomingAssignment.title}' ödevinin teslimine 24 saatten az kaldı!`,
-                        icon: '/vite.svg'
-                    });
-                } else if (Notification.permission === 'default') {
-                    setShowNotificationBanner(true);
-                }
-            }
-        };
-        
-        // Check on component mount and then every hour
-        checkPermissionsAndNotify();
-        const interval = setInterval(checkPermissionsAndNotify, 1000 * 60 * 60);
-        return () => clearInterval(interval);
-
-    }, [myAssignments]);
-    
-    const handleRequestPermission = async () => {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            addToast('Bildirimlere izin verildi!', 'success');
-            setShowNotificationBanner(false);
-        } else {
-            addToast('Bildirimlere izin verilmedi.', 'info');
-        }
-    }
-
-    const pendingAssignments = myAssignments.filter(a => a.status === AssignmentStatus.Pending).length;
-    const gradedAssignments = myAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-    
-    const averageGrade = gradedAssignments.length > 0
-        ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length)
-        : 0;
-
-    const unreadMessages = messages.filter(m => m.receiverId === currentUser?.id && !m.isRead).length;
-
-    const gradeHistory = gradedAssignments
-        .sort((a,b) => new Date(a.submittedAt!).getTime() - new Date(b.submittedAt!).getTime())
-        .map((a, index) => ({
-        name: `Ödev ${index + 1}`,
-        "Not": a.grade,
-    }));
-    
-    const upcomingAssignments = myAssignments
-        .filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) > new Date())
-        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 3);
-
-    return (
-        <div className="space-y-6">
-            {showNotificationBanner && (
-                 <div className="bg-primary-100 dark:bg-primary-900/50 border-l-4 border-primary-500 text-primary-700 dark:text-primary-200 p-4 rounded-md flex justify-between items-center">
-                    <div>
-                        <p className="font-bold">Bildirimleri Etkinleştir</p>
-                        <p className="text-sm">Yaklaşan ödev teslim tarihlerini kaçırmamak için bildirimlere izin verin.</p>
-                    </div>
-                    <div>
-                        <button onClick={handleRequestPermission} className="px-3 py-1.5 border border-primary-500 text-primary-600 dark:text-primary-200 rounded-md text-sm font-semibold hover:bg-primary-200 dark:hover:bg-primary-800">İzin Ver</button>
-                         <button onClick={() => setShowNotificationBanner(false)} className="ml-2 p-1 text-primary-600 dark:text-primary-200 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800"><XIcon className="w-4 h-4"/></button>
-                    </div>
-                </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <KpiCard id="tour-step-3" title="Bekleyen Ödev" value={pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-red-500" />
-                <KpiCard title="Not Ortalaması" value={averageGrade} icon={<CheckCircleIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
-                <KpiCard title="Yeni Mesaj" value={unreadMessages} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
-            </div>
-
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card title="Not Trendi" className="lg:col-span-2">
-                    <div style={{ width: '100%', height: 300 }}>
-                        <ResponsiveContainer>
-                            <LineChart data={gradeHistory} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.2)" />
-                                <XAxis dataKey="name" />
-                                <YAxis domain={[0, 100]} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
-                                <Legend />
-                                <Line type="monotone" dataKey="Not" stroke="#3b82f6" strokeWidth={2} activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </Card>
-                <div className="flex flex-col gap-6">
-                    <GoalsCard />
-                    <Card title="Yaklaşan Ödevler">
-                         <ul className="space-y-3">
-                            {upcomingAssignments.length > 0 ? upcomingAssignments.map(assignment => (
-                                <li key={assignment.id} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <p className="font-semibold">{assignment.title}</p>
-                                    <p className="text-sm text-red-500">
-                                        Son Teslim: {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
-                                    </p>
-                                </li>
-                            )) : <p className="text-sm text-gray-500">Yaklaşan ödeviniz bulunmamaktadır.</p>}
-                        </ul>
-                    </Card>
-                </div>
-             </div>
         </div>
     );
 };
@@ -261,11 +204,13 @@ const StudentDashboard = () => {
 const Dashboard = () => {
     const { currentUser, isLoading } = useDataContext();
 
-    if(isLoading) {
+    if (isLoading) {
         return <DashboardSkeleton />;
     }
 
-    if (!currentUser) return null;
+    if (!currentUser) {
+        return <div>Lütfen giriş yapın.</div>;
+    }
 
     return currentUser.role === UserRole.Coach ? <CoachDashboard /> : <StudentDashboard />;
 };

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem } from '../types';
+import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon, XIcon } from '../components/Icons';
@@ -48,6 +48,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
     const [isGeneratingChecklist, setIsGeneratingChecklist] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
+    const [submissionType, setSubmissionType] = useState<SubmissionType>('file');
 
     const handleGenerateDescription = async () => {
         if (!title) {
@@ -115,6 +116,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             coachAttachments: [],
             checklist: checklist.map((item, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
             feedbackReaction: null,
+            submissionType,
         };
         addAssignment(newAssignmentBase, selectedStudents);
         addToast("Ödev başarıyla oluşturuldu.", "success");
@@ -126,6 +128,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         setSelectedStudents([]);
         setSelectedTemplate('');
         setChecklist([]);
+        setSubmissionType('file');
     };
 
     return (
@@ -176,6 +179,14 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                     </div>
                     <button type="button" onClick={() => setChecklist([...checklist, { text: '' }])} className="mt-2 text-sm text-primary-600 font-semibold hover:text-primary-800">+ Madde Ekle</button>
                 </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
+                    <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <option value="file">Dosya Yükleme</option>
+                        <option value="text">Metin Cevabı</option>
+                        <option value="completed">Sadece Tamamlandı İşareti</option>
+                    </select>
+                </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
@@ -202,10 +213,36 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
     const [grade, setGrade] = useState<string>(assignment?.grade?.toString() || '');
     const [feedback, setFeedback] = useState(assignment?.feedback || '');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [textSubmission, setTextSubmission] = useState('');
+    const [activeTab, setActiveTab] = useState<SubmissionType>(assignment?.submissionType || 'file');
 
     if (!currentUser || !assignment) return null;
     
     const isCoach = currentUser.role === UserRole.Coach;
+
+    const handleSubmission = () => {
+        let updatedAssignment: Assignment = { ...assignment, status: AssignmentStatus.Submitted, submittedAt: new Date().toISOString() };
+        
+        switch(activeTab) {
+            case 'file':
+                addToast("Lütfen bir dosya seçin ve yükle butonuna basın.", "info");
+                return; // File is handled by its own input's onChange
+            case 'text':
+                if (textSubmission.trim() === '') {
+                    addToast("Lütfen metin cevabınızı girin.", "error");
+                    return;
+                }
+                updatedAssignment.textSubmission = textSubmission;
+                break;
+            case 'completed':
+                // No extra data needed
+                break;
+        }
+
+        updateAssignment(updatedAssignment);
+        addToast("Ödev başarıyla teslim edildi.", "success");
+        onClose();
+    };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if(e.target.files && e.target.files.length > 0) {
@@ -303,8 +340,16 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                         </ul>
                     </div>
                 )}
+
+                {assignment.status !== AssignmentStatus.Pending && (
+                    <div>
+                        <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
+                        {assignment.submissionType === 'file' && assignment.fileUrl && <p><strong className="font-semibold">Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
+                        {assignment.submissionType === 'text' && assignment.textSubmission && <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md whitespace-pre-wrap">{assignment.textSubmission}</div>}
+                        {assignment.submissionType === 'completed' && <p className="text-sm text-gray-500">Öğrenci bu görevi 'Tamamlandı' olarak işaretledi.</p>}
+                    </div>
+                )}
                 
-                {assignment.fileUrl && <p><strong className="font-semibold">Teslim Edilen Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
 
                 <div>
                     <strong className="font-semibold block mb-1">Koçun Eklediği Dosyalar:</strong>
@@ -323,13 +368,28 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                 
                 {/* Student View */}
                 {!isCoach && assignment.status === AssignmentStatus.Pending && (
-                    <div>
-                        <label className="w-full text-center cursor-pointer bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 block">
-                            Dosya Yükle
-                            <input type="file" className="hidden" onChange={handleFileUpload} />
-                        </label>
+                    <div className="border-t dark:border-gray-600 pt-4">
+                        <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
+                         {assignment.submissionType === 'file' && (
+                            <div>
+                                <label className="w-full text-center cursor-pointer bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 block">
+                                    Dosya Yükle
+                                    <input type="file" className="hidden" onChange={handleFileUpload} />
+                                </label>
+                            </div>
+                        )}
+                         {assignment.submissionType === 'text' && (
+                             <div>
+                                <textarea value={textSubmission} onChange={(e) => setTextSubmission(e.target.value)} rows={6} placeholder="Cevabınızı buraya yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                                <button onClick={handleSubmission} className="w-full mt-2 bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Metin Olarak Gönder</button>
+                            </div>
+                        )}
+                        {assignment.submissionType === 'completed' && (
+                            <button onClick={handleSubmission} className="w-full bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Tamamlandı Olarak İşaretle</button>
+                        )}
                     </div>
                 )}
+
                 {!isCoach && assignment.status === AssignmentStatus.Graded && (
                     <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
                         <div className="flex justify-between items-start">
@@ -416,7 +476,6 @@ const Assignments = () => {
     const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(false);
     
     useEffect(() => {
-        // Clear initial filters after applying them so they don't persist on navigation
         if (initialFilters.studentId) {
             setInitialFilters({});
         }
@@ -435,7 +494,25 @@ const Assignments = () => {
     }, [displayedAssignments, filterStatus, filterStudent, searchTerm]);
 
     const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor';
+    
+    // Quick Grade State
+    const [quickGradeAssignments, setQuickGradeAssignments] = useState<Assignment[]>([]);
+    const [quickGradeIndex, setQuickGradeIndex] = useState(0);
 
+    const handleStartQuickGrade = () => {
+        const submitted = filteredAssignments.filter(a => a.status === AssignmentStatus.Submitted);
+        if (submitted.length > 0) {
+            setQuickGradeAssignments(submitted);
+            setQuickGradeIndex(0);
+        } else {
+            alert("Değerlendirilecek ödev bulunmuyor.");
+        }
+    };
+    
+    const handleQuickGradeClose = () => {
+        setQuickGradeAssignments([]);
+    };
+    
     return (
         <>
             <Card>
@@ -455,7 +532,12 @@ const Assignments = () => {
                             </select>
                         )}
                     </div>
-                    {isCoach && <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700" id="tour-step-4">Yeni Ödev Oluştur</button>}
+                    {isCoach && (
+                        <div className="flex gap-2 w-full md:w-auto">
+                             <button onClick={handleStartQuickGrade} className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">Hızlı Değerlendir</button>
+                            <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700" id="tour-step-4">Yeni Ödev Oluştur</button>
+                        </div>
+                    )}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -486,6 +568,13 @@ const Assignments = () => {
             </Card>
             {isNewAssignmentModalOpen && <NewAssignmentModal isOpen={isNewAssignmentModalOpen} onClose={() => setIsNewAssignmentModalOpen(false)} />}
             {selectedAssignment && <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} studentName={getUserName(selectedAssignment.studentId)} />}
+            {quickGradeAssignments.length > 0 && 
+                <AssignmentDetailModal 
+                    assignment={quickGradeAssignments[quickGradeIndex]}
+                    onClose={handleQuickGradeClose}
+                    studentName={getUserName(quickGradeAssignments[quickGradeIndex].studentId)}
+                />
+            }
         </>
     );
 };

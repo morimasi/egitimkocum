@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal } from '../types';
 import { useMockData } from '../hooks/useMockData';
 
@@ -20,7 +20,7 @@ interface DataContextType {
     register: (name: string, email: string) => User | null;
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesWithUser: (userId: string) => Message[];
-    sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
+    sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => void;
     addAssignment: (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => void;
     updateAssignment: (updatedAssignment: Assignment) => void;
     updateUser: (updatedUser: User) => void;
@@ -33,6 +33,10 @@ interface DataContextType {
     getGoalsForStudent: (studentId: string) => Goal[];
     updateGoal: (updatedGoal: Goal) => void;
     addGoal: (newGoal: Omit<Goal, 'id'>) => void;
+    addReaction: (messageId: string, emoji: string) => void;
+    voteOnPoll: (messageId: string, optionIndex: number) => void;
+    findMessageById: (messageId: string) => Message | undefined;
+    toggleResourceRecommendation: (resourceId: string, studentId: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -94,11 +98,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return newUser;
     };
 
-    const getAssignmentsForStudent = (studentId: string) => {
+    const getAssignmentsForStudent = useCallback((studentId: string) => {
         return assignments.filter(a => a.studentId === studentId);
-    };
+    }, [assignments]);
 
-    const getMessagesWithUser = (userId: string) => {
+    const findMessageById = useCallback((messageId: string) => {
+        return messages.find(m => m.id === messageId);
+    }, [messages]);
+
+    const getMessagesWithUser = useCallback((userId: string) => {
         if (!currentUser) return [];
         if (userId === 'announcements') {
             return messages.filter(m => m.type === 'announcement').sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -106,14 +114,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return messages.filter(
             m => (m.senderId === currentUser.id && m.receiverId === userId) || (m.senderId === userId && m.receiverId === currentUser.id)
         ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    };
+    }, [currentUser, messages]);
 
-    const sendMessage = (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+    const sendMessage = (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
+        if (!currentUser) return;
         const newMessage: Message = {
             ...message,
             id: `msg-${Date.now()}`,
             timestamp: new Date().toISOString(),
-            isRead: false,
+            readBy: [currentUser.id],
         };
         setMessages(prev => [...prev, newMessage]);
     };
@@ -173,8 +182,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (!currentUser) return;
         setMessages(prev =>
             prev.map(m =>
-                (m.senderId === contactId && m.receiverId === currentUser.id)
-                    ? { ...m, isRead: true }
+                (m.senderId === contactId && m.receiverId === currentUser.id && !m.readBy.includes(currentUser.id))
+                    ? { ...m, readBy: [...m.readBy, currentUser.id] }
                     : m
             )
         );
@@ -191,9 +200,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setTypingStatus(prev => ({ ...prev, [userId]: isTyping }));
     };
 
-    const getGoalsForStudent = (studentId: string) => {
+    const getGoalsForStudent = useCallback((studentId: string) => {
         return goals.filter(g => g.studentId === studentId);
-    };
+    }, [goals]);
 
     const updateGoal = (updatedGoal: Goal) => {
         setGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
@@ -205,6 +214,83 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             id: `goal-${Date.now()}`,
         };
         setGoals(prev => [...prev, newGoal]);
+    };
+    
+    const addReaction = (messageId: string, emoji: string) => {
+        if (!currentUser) return;
+        const userId = currentUser.id;
+        setMessages(prev => prev.map(msg => {
+            if (msg.id === messageId) {
+                const newReactions = { ...(msg.reactions || {}) };
+                
+                // Check if user already reacted with this emoji
+                const userHasReactedWithEmoji = newReactions[emoji]?.includes(userId);
+
+                // Remove user from any existing reaction
+                Object.keys(newReactions).forEach(key => {
+                    newReactions[key] = newReactions[key].filter(id => id !== userId);
+                    if (newReactions[key].length === 0) {
+                        delete newReactions[key];
+                    }
+                });
+                
+                // If the user didn't have this reaction, add it
+                if (!userHasReactedWithEmoji) {
+                    if (!newReactions[emoji]) {
+                        newReactions[emoji] = [];
+                    }
+                    newReactions[emoji].push(userId);
+                }
+                
+                return { ...msg, reactions: newReactions };
+            }
+            return msg;
+        }));
+    };
+
+    const voteOnPoll = (messageId: string, optionIndex: number) => {
+        if (!currentUser) return;
+        const userId = currentUser.id;
+        setMessages(prev => prev.map(msg => {
+            if (msg.id === messageId && msg.poll) {
+                const newPoll = { ...msg.poll };
+                
+                let userAlreadyVotedForThisOption = false;
+
+                const newOptions = newPoll.options.map((opt, index) => {
+                    // Check if user voted for the clicked option
+                    if (index === optionIndex && opt.votes.includes(userId)) {
+                        userAlreadyVotedForThisOption = true;
+                    }
+                    // Remove user's vote from any option
+                    const filteredVotes = opt.votes.filter(v => v !== userId);
+                    return { ...opt, votes: filteredVotes };
+                });
+
+                // If user didn't vote for this option before, add the vote.
+                // Otherwise, it was a click to remove the vote.
+                if (!userAlreadyVotedForThisOption) {
+                    newOptions[optionIndex].votes.push(userId);
+                }
+                
+                return { ...msg, poll: { ...newPoll, options: newOptions } };
+            }
+            return msg;
+        }));
+    };
+
+    const toggleResourceRecommendation = (resourceId: string, studentId: string) => {
+        setResources(prev => prev.map(res => {
+            if (res.id === resourceId) {
+                const recommended = res.recommendedTo || [];
+                const isRecommended = recommended.includes(studentId);
+                const newRecommended = isRecommended
+                    ? recommended.filter(id => id !== studentId)
+                    : [...recommended, studentId];
+                return { ...res, recommendedTo: newRecommended };
+            }
+            return res;
+        }));
     };
 
 
@@ -239,6 +325,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         getGoalsForStudent,
         updateGoal,
         addGoal,
+        addReaction,
+        voteOnPoll,
+        findMessageById,
+        toggleResourceRecommendation,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

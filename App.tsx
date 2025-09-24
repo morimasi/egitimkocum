@@ -20,6 +20,7 @@ import { useDataContext } from './contexts/DataContext';
 import { SkeletonCard, SkeletonText } from './components/SkeletonLoader';
 import { UserRole } from './types';
 import VideoCallModal from './components/VideoCallModal';
+import WeeklyReportModal from './components/WeeklyReportModal';
 
 const AppSkeleton = () => (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -60,6 +61,27 @@ const AppContent = () => {
     const { currentUser, isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
+    const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
+
+    React.useEffect(() => {
+        if (currentUser && currentUser.role === UserRole.Student) {
+            const lastReportDate = localStorage.getItem(`weeklyReport_${currentUser.id}`);
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+            
+            if (!lastReportDate || new Date(lastReportDate) < oneWeekAgo) {
+                // To avoid showing on first ever login, we can check if there's any activity
+                 setShowWeeklyReport(true);
+            }
+        }
+    }, [currentUser]);
+    
+    const handleCloseReport = () => {
+        setShowWeeklyReport(false);
+        if(currentUser) {
+            localStorage.setItem(`weeklyReport_${currentUser.id}`, new Date().toISOString());
+        }
+    };
 
     const renderPage = () => {
         if (currentUser?.role === UserRole.SuperAdmin) {
@@ -113,6 +135,7 @@ const AppContent = () => {
             <ToastContainer />
             <Tour />
             <VideoCallModal />
+            {showWeeklyReport && <WeeklyReportModal onClose={handleCloseReport} />}
         </div>
     );
 };

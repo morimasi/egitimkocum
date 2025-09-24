@@ -24,6 +24,8 @@ export interface ChecklistItem {
   isCompleted: boolean;
 }
 
+export type SubmissionType = 'file' | 'text' | 'completed';
+
 export interface Assignment {
   id: string;
   title: string;
@@ -41,6 +43,22 @@ export interface Assignment {
   checklist?: ChecklistItem[];
   audioFeedbackUrl?: string | null;
   feedbackReaction?: '👍' | '🤔' | null;
+  submissionType?: SubmissionType;
+  textSubmission?: string | null;
+}
+
+export interface Reaction {
+  [emoji: string]: string[]; // key: emoji, value: array of user IDs
+}
+
+export interface PollOption {
+  text: string;
+  votes: string[]; // array of user IDs
+}
+
+export interface Poll {
+  question: string;
+  options: PollOption[];
 }
 
 export interface Message {
@@ -49,12 +67,16 @@ export interface Message {
   receiverId: string;
   text: string;
   timestamp: string;
-  type: 'text' | 'file' | 'audio' | 'announcement';
+  type: 'text' | 'file' | 'audio' | 'announcement' | 'poll';
   fileUrl?: string;
   fileName?: string;
   audioUrl?: string;
-  isRead: boolean;
+  readBy: string[];
+  reactions?: Reaction;
+  replyTo?: string; // ID of the message being replied to
+  poll?: Poll;
 }
+
 
 export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin';
 
@@ -95,6 +117,7 @@ export interface Resource {
   name: string;
   type: 'pdf' | 'link' | 'video';
   url: string;
+  recommendedTo?: string[]; // Array of student IDs
 }
 
 export interface Goal {
