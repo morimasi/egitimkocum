@@ -26,15 +26,16 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
         setIsLoading(true);
 
         try {
-            const newUser = await register(name, email, password);
-            if (!newUser) {
+            await register(name, email, password);
+            // On successful registration, onAuthStateChanged will automatically log the user in.
+            // The isLoading state will persist until the App component detects the new currentUser.
+        } catch (err: any) {
+             setIsLoading(false); // Only stop loading on error.
+             if (err.code === 'auth/email-already-in-use') {
                 setError('Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.');
+            } else {
+                 setError('Kayıt sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
             }
-            // On successful registration, AppContent will automatically log in and switch views
-        } catch (err) {
-             setError('Kayıt sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
-        } finally {
-            setIsLoading(false);
         }
     };
 

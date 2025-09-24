@@ -263,7 +263,7 @@ interface DataContextType {
     typingStatus: { [userId: string]: boolean };
     login: (email: string, pass: string) => Promise<User | null>;
     logout: () => Promise<void>;
-    register: (name: string, email: string, pass: string) => Promise<User | null>;
+    register: (name: string, email: string, pass: string) => Promise<void>;
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesWithUser: (userId: string) => Message[];
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => Promise<void>;
@@ -347,8 +347,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     dispatch({ type: 'SET_CURRENT_USER', payload: finalUser });
                     await fetchAllData();
                 } else {
-                     console.log("User document doesn't exist for authenticated user, logging out.");
-                    await auth.signOut();
+                     console.log("User document doesn't exist for authenticated user, could be pending creation by cloud function. Waiting...");
+                     // The document might not exist yet if the cloud function is still running.
+                     // We can set a timeout to retry or rely on a snapshot listener.
+                     // For simplicity, we'll let the app show loading until the user doc is available.
                 }
             } else {
                 dispatch({ type: 'SET_CURRENT_USER', payload: null });
@@ -377,26 +379,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         await auth.signOut();
     }, []);
 
-    const register = useCallback(async (name: string, email: string, pass: string): Promise<User | null> => {
-        // Check if any users exist to determine if this is the first registration.
-        const usersCollectionRef = db.collection('users');
-        const existingUsersSnapshot = await usersCollectionRef.limit(1).get();
-        const isFirstUser = existingUsersSnapshot.empty;
-        
-        // The first user registered will be the Super Admin.
-        const role = isFirstUser ? UserRole.SuperAdmin : UserRole.Student;
-
-        const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
-        const newUser: User = {
-            id: userCredential.user!.uid,
-            name,
-            email,
-            role,
-            profilePicture: `https://i.pravatar.cc/150?u=${email}`
-        };
-        await db.collection("users").doc(newUser.id).set(newUser);
-        
-        return newUser;
+    const register = useCallback(async (name: string, email: string, pass: string): Promise<void> => {
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+            // The onUserCreate cloud function will be triggered by this.
+            // We set the display name here so the cloud function can access it.
+            await userCredential.user!.updateProfile({ displayName: name });
+            // onAuthStateChanged will then automatically log the user in and fetch their data.
+        } catch (error) {
+            console.error("Registration failed in DataContext:", error);
+            throw error; // Re-throw to be caught by the UI component
+        }
     }, []);
 
     const addUser = useCallback(async (userData: Omit<User, 'id'>): Promise<User | null> => {

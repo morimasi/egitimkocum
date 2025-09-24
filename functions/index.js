@@ -4,6 +4,53 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 /**
+ * Triggered when a new user is created in Firebase Authentication.
+ * It checks if this is the first user in the system. If so, it assigns them
+ * the 'superadmin' role via custom claims and creates their user document in Firestore.
+ * Otherwise, it assigns the default 'student' role.
+ */
+exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
+  const { uid, email, displayName } = user;
+  const usersRef = admin.firestore().collection("users");
+
+  try {
+    // Check if any other user documents exist by querying for just one document.
+    const querySnapshot = await usersRef.limit(1).get();
+
+    let role = "student"; // Default role for new users.
+
+    // If the 'users' collection is empty, this is the first user.
+    if (querySnapshot.empty) {
+      role = "superadmin";
+      // Set the custom claim on the Auth token for server-side validation.
+      await admin.auth().setCustomUserClaims(uid, { role: "superadmin" });
+      console.log(`Custom claim 'superadmin' set for the first user: ${uid}`);
+    }
+
+    // Create the user document in Firestore.
+    const newUserDoc = {
+      id: uid,
+      name: displayName || email, // Fallback to email if displayName isn't available yet.
+      email: email,
+      role: role,
+      profilePicture: `https://i.pravatar.cc/150?u=${email}`,
+    };
+
+    await usersRef.doc(uid).set(newUserDoc);
+    console.log(`User document created for ${uid} with role '${role}'.`);
+    
+    return null;
+  } catch (error) {
+    console.error("Error in onUserCreate function:", error);
+    // Optional: To prevent inconsistent states, you could delete the Auth user
+    // if Firestore document creation fails. For now, we just log the error.
+    // await admin.auth().deleteUser(uid);
+    return null;
+  }
+});
+
+
+/**
  * Sets a custom user role claim on a user's auth token and updates their role in Firestore.
  * This function can only be called by an authenticated user with a 'superadmin' custom claim.
  * @param {object} data - The data passed to the function, expecting { userId: string, role: string }.

@@ -12,10 +12,10 @@ Uygulama, üç farklı kullanıcı rolünü (Süper Admin, Koç, Öğrenci) dest
   - **Authentication**: E-posta/Şifre ile güvenli kullanıcı kaydı, girişi ve **Custom Claims** ile sunucu taraflı rol yönetimi.
   - **Cloud Firestore**: Tüm uygulama verileri (kullanıcılar, ödevler, mesajlar vb.) için gerçek zamanlı, NoSQL veritabanı.
   - **Cloud Storage**: Ödev dosyaları, profil fotoğrafları ve sesli geri bildirimler gibi tüm medya dosyaları için güvenli depolama.
-  - **Cloud Functions**: Rol ataması gibi hassas işlemleri gerçekleştirmek için güvenli sunucu tarafı mantığı.
+  - **Cloud Functions**: Rol ataması ve ilk kullanıcı kurulumu gibi hassas işlemleri gerçekleştirmek için güvenli sunucu tarafı mantığı.
 - **🔒 Rol Bazlı Erişim**: Süper Admin, Koç ve Öğrenci olmak üzere üç farklı kullanıcı rolü ve her role özel yetkilendirme. Firestore Güvenlik Kuralları, bu rolleri sunucu tarafında zorunlu kılar.
 - **🚀 Otomatik Kurulum**:
-  - **Otomatik Admin Ataması**: Sisteme kaydolan ilk kullanıcı otomatik olarak "Süper Admin" rolünü alır.
+  - **Otomatik Admin Ataması**: Sisteme kaydolan ilk kullanıcı, bir Cloud Function sayesinde otomatik olarak "Süper Admin" rolünü ve yetkilerini alır.
   - **Kurulum Sihirbazı**: Süper Admin'i ilk girişinde karşılayan, demo verilerini sisteme doğru ve senkronize bir şekilde yüklemesi için yönlendiren arayüz.
 - **📊 Dinamik Paneller (Dashboard)**: Her role özel, önemli metrikleri ve yapay zeka destekli içgörüleri gösteren ana sayfalar.
 - **📚 Gelişmiş Ödev Yönetimi**: Koçlar için kolayca ödev oluşturma, farklı teslimat türleri belirleme ve yapay zeka destekli geri bildirimler sağlama.
@@ -68,17 +68,14 @@ Bu projenin çalışabilmesi için bir Firebase projesine ve Gemini API anahtar�
 2.  **Firebase'e Giriş Yapın**: `firebase login` komutu ile hesabınıza giriş yapın.
 3.  **Proje Klasöründe Firebase'i Başlatın**: Projenin ana dizininde `firebase use --add` komutunu çalıştırın ve oluşturduğunuz Firebase projesini seçin.
 4.  **Cloud Functions Bağımlılıklarını Yükleyin**: Terminalde `functions` klasörüne gidin (`cd functions`) ve `npm install` komutunu çalıştırın.
-5.  **Tüm Servisleri Dağıtın (Deploy)**: Projenin ana dizinine geri dönün (`cd ..`) ve `firebase deploy` komutunu çalıştırın. Bu komut, `setUserRole` Cloud Function'ını ve `firestore.rules` dosyasındaki yeni güvenlik kurallarınızı projenize yükleyecektir.
+5.  **Tüm Servisleri Dağıtın (Deploy)**: Projenin ana dizinine geri dönün (`cd ..`) ve `firebase deploy` komutunu çalıştırın. Bu komut, `setUserRole` ve `onUserCreate` Cloud Function'larını ve `firestore.rules` dosyasındaki yeni güvenlik kurallarınızı projenize yükleyecektir.
 
 ### Adım 4: Uygulamayı Çalıştırma ve Kurulum
 1.  **Tarayıcıda Açın**: `index.html` dosyasını modern bir web tarayıcısında (Chrome, Firefox, Edge vb.) açın.
-2.  **İlk Kullanıcıyı Kaydedin (Admin Kurulumu)**:
+2.  **İlk Kullanıcıyı Kaydedin (Otomatik Admin Kurulumu)**:
     -   Uygulama açıldığında "Kayıt Ol" ekranına gidin.
-    -   İlk hesabınızı oluşturun. **Bu ilk hesap, otomatik olarak Süper Admin yetkilerine sahip olacaktır.**
-3.  **Süper Admin Rolünü Ayarlayın**:
-    -   Süper Admin olarak giriş yaptıktan sonra, **Firebase Console > Authentication** sayfasına gidin. Kendi kullanıcınızın UID'sini kopyalayın.
-    -   **Firebase Console > Firestore Database** sayfasına gidin. `users` koleksiyonunda kendi kullanıcı belgenizi bulun ve `role` alanını `superadmin` olarak manuel güncelleyin. Sayfayı yenilediğinizde rolünüz aktif olacaktır. Bu, Cloud Function'ı çağırma yetkisi için gereklidir.
-4.  **Kurulum Sihirbazını Tamamlayın**:
-    -   Platforma geri döndüğünüzde sizi bir **Kurulum Sihirbazı** karşılayacaktır.
+    -   İlk hesabınızı oluşturun. **Bu ilk hesap, arka planda çalışan bir Cloud Function sayesinde otomatik olarak Süper Admin yetkilerine sahip olacaktır.** Manuel bir işlem yapmanıza gerek yoktur.
+3.  **Kurulum Sihirbazını Tamamlayın**:
+    -   Süper Admin olarak giriş yaptıktan sonra sizi bir **Kurulum Sihirbazı** karşılayacaktır.
     -   Sihirbazdaki adımları takip ederek demo kullanıcıları Firebase Authentication paneline ekleyin ve UID'lerini sihirbazdaki ilgili alanlara yapıştırarak kurulumu tamamlayın.
-5.  **Platformu Keşfedin!** Kurulum tamamlandıktan sonra platform tamamen hazır hale gelir. Sol menüdeki "Kullanıcı Değiştir" menüsünü kullanarak farklı roller arasında anında geçiş yapabilirsiniz.
+4.  **Platformu Keşfedin!** Kurulum tamamlandıktan sonra platform tamamen hazır hale gelir. Sol menüdeki "Kullanıcı Değiştir" menüsünü kullanarak farklı roller arasında anında geçiş yapabilirsiniz.
