@@ -4,57 +4,68 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { auth, db, storage } from '../services/firebase';
 
-// Fix: Corrected Firebase User type. `firebase.auth.User` does not exist in the compat library.
+// Fix: Corrected Firebase User type to align with the 'compat' library.
 type FirebaseUser = firebase.User;
 
 // This function now only serves to provide data for seeding the database.
-const getInitialDataForSeeding = () => {
-    const initialUsers: User[] = [
-      { id: 'superadmin-1', name: 'Admin User', email: 'admin@app.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
-      { id: 'coach-1', name: 'Ayşe Yılmaz', email: 'ayse.yilmaz@koc.com', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=coach-1' },
-      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1' },
-      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2' },
-      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3' },
-      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4' },
+export const getInitialDataForSeeding = () => {
+    const initialUsers: Omit<User, 'id'>[] = [
+      // The superadmin is created on first registration, so it's removed from seeding data.
+      { name: 'Ayşe Yılmaz', email: 'ayse.yilmaz@koc.com', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=coach-1' },
+      { name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1' },
+      { name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2' },
+      { name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3' },
+      { name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4' },
     ];
     
+    // We use placeholder IDs here which will be mapped to real UIDs during seeding.
+    const tempIds = {
+        coach: 'coach-1',
+        student1: 'student-1',
+        student2: 'student-2',
+        student3: 'student-3',
+        student4: 'student-4',
+    };
+
+    // FIX: Corrected the type from Omit<Assignment, 'studentId' | 'coachId'>[] to Assignment[] because the objects include studentId and coachId.
     const initialAssignments: Assignment[] = [
         // Student 1 (Ali Veli)
-        { id: 'asg-1', studentId: 'student-1', coachId: 'coach-1', title: 'Matematik Problemleri', description: 'Limit ve Türev konularında 20 problem çözülecek.', dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
-        { id: 'asg-2', studentId: 'student-1', coachId: 'coach-1', title: 'Fizik Deney Raporu', description: 'Basit sarkaç deneyi raporu hazırlanacak.', dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 85, feedback: 'Raporun gayet başarılı, özellikle sonuç bölümünü çok iyi analiz etmişsin. Bir dahaki sefere hipotez kısmını daha detaylı yazabilirsin.', fileUrl: '#', fileName: 'fizik_raporu.pdf', submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
-        { id: 'asg-10', studentId: 'student-1', coachId: 'coach-1', title: 'Haftalık Kitap Özeti', description: 'Bu hafta okuduğun kitabın özetini 300 kelimeyi geçmeyecek şekilde yaz.', dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'text', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-1', studentId: tempIds.student1, coachId: tempIds.coach, title: 'Matematik Problemleri', description: 'Limit ve Türev konularında 20 problem çözülecek.', dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-2', studentId: tempIds.student1, coachId: tempIds.coach, title: 'Fizik Deney Raporu', description: 'Basit sarkaç deneyi raporu hazırlanacak.', dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 85, feedback: 'Raporun gayet başarılı, özellikle sonuç bölümünü çok iyi analiz etmişsin. Bir dahaki sefere hipotez kısmını daha detaylı yazabilirsin.', fileUrl: '#', fileName: 'fizik_raporu.pdf', submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
+        { id: 'asg-10', studentId: tempIds.student1, coachId: tempIds.coach, title: 'Haftalık Kitap Özeti', description: 'Bu hafta okuduğun kitabın özetini 300 kelimeyi geçmeyecek şekilde yaz.', dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'text', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
 
         // Student 2 (Zeynep Kaya)
-        { id: 'asg-3', studentId: 'student-2', coachId: 'coach-1', title: 'Kompozisyon Yazımı', description: 'Küresel ısınmanın etkileri üzerine bir kompozisyon yazılacak.', dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: '#', fileName: 'kompozisyon.docx', submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
-        { id: 'asg-4', studentId: 'student-2', coachId: 'coach-1', title: 'Kimya Formül Ezberi', description: 'Organik kimya temel formüllerini ezberle ve tamamlandı olarak işaretle.', dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 100, feedback: 'Harika, formülleri ezberlemen gelecekteki konular için çok önemli. Böyle devam et!', fileUrl: null, submittedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
-        { id: 'asg-11', studentId: 'student-2', coachId: 'coach-1', title: 'Biyoloji Çizimi', description: 'Bir bitki hücresinin organellerini çiz ve isimlendir. Çizimini yükle.', dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-3', studentId: tempIds.student2, coachId: tempIds.coach, title: 'Kompozisyon Yazımı', description: 'Küresel ısınmanın etkileri üzerine bir kompozisyon yazılacak.', dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: '#', fileName: 'kompozisyon.docx', submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
+        { id: 'asg-4', studentId: tempIds.student2, coachId: tempIds.coach, title: 'Kimya Formül Ezberi', description: 'Organik kimya temel formüllerini ezberle ve tamamlandı olarak işaretle.', dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 100, feedback: 'Harika, formülleri ezberlemen gelecekteki konular için çok önemli. Böyle devam et!', fileUrl: null, submittedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-11', studentId: tempIds.student2, coachId: tempIds.coach, title: 'Biyoloji Çizimi', description: 'Bir bitki hücresinin organellerini çiz ve isimlendir. Çizimini yükle.', dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
 
         // Student 3 (Mehmet Öztürk)
-        { id: 'asg-5', studentId: 'student-3', coachId: 'coach-1', title: 'Tarih Araştırması', description: 'Fransız İhtilali\'nin Osmanlı\'ya etkilerini araştır ve bir sayfalık rapor yaz.', dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' }, // Overdue
-        { id: 'asg-6', studentId: 'student-3', coachId: 'coach-1', title: 'Coğrafya Sunumu', description: 'Türkiye\'nin iklim tipleri hakkında bir sunum hazırla.', dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
-        { id: 'asg-12', studentId: 'student-3', coachId: 'coach-1', title: '50 Paragraf Sorusu', description: 'Verilen kaynaktan 50 paragraf sorusu çöz ve sonuçlarını metin olarak gönder.', dueDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 75, feedback: 'Soruları çözmüş olman güzel fakat bazı dikkatsizlik hataların var. Lütfen soruları daha dikkatli oku.', fileUrl: null, textSubmission: '50 soruda 38 doğru, 12 yanlış yaptım.', submittedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'text', coachAttachments: [], audioFeedbackUrl: null, fileName: '' },
+        { id: 'asg-5', studentId: tempIds.student3, coachId: tempIds.coach, title: 'Tarih Araştırması', description: 'Fransız İhtilali\'nin Osmanlı\'ya etkilerini araştır ve bir sayfalık rapor yaz.', dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' }, // Overdue
+        { id: 'asg-6', studentId: tempIds.student3, coachId: tempIds.coach, title: 'Coğrafya Sunumu', description: 'Türkiye\'nin iklim tipleri hakkında bir sunum hazırla.', dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-12', studentId: tempIds.student3, coachId: tempIds.coach, title: '50 Paragraf Sorusu', description: 'Verilen kaynaktan 50 paragraf sorusu çöz ve sonuçlarını metin olarak gönder.', dueDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 75, feedback: 'Soruları çözmüş olman güzel fakat bazı dikkatsizlik hataların var. Lütfen soruları daha dikkatli oku.', fileUrl: null, textSubmission: '50 soruda 38 doğru, 12 yanlış yaptım.', submittedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'text', coachAttachments: [], audioFeedbackUrl: null, fileName: '' },
 
         // Student 4 (Fatma Demir)
-        { id: 'asg-7', studentId: 'student-4', coachId: 'coach-1', title: 'İngilizce Kelime Testi', description: 'Verilen 100 kelimeyi ezberle ve kendini sına.', dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: null, submittedAt: new Date().toISOString(), feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
-        { id: 'asg-8', studentId: 'student-4', coachId: 'coach-1', title: 'Deneme Analizi', description: 'Son deneme sınavının analizini yap ve hatalarını çıkar.', dueDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 95, feedback: 'Analizin çok detaylı ve yerinde. Hatalarının üzerine gitmen seni başarıya ulaştıracaktır.', fileUrl: '#', fileName: 'deneme_analizi.xlsx', submittedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
-        { id: 'asg-9', studentId: 'student-4', coachId: 'coach-1', title: 'Felsefe Makalesi Okuma', description: 'Platon\'un "Devlet" eserinden belirlenen bölümü oku ve ana fikirleri çıkar.', dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'completed', checklist: [{id: 'chk-asg9-1', text: 'Belirlenen bölümü oku', isCompleted: false}, {id: 'chk-asg9-2', text: 'Bölümdeki ana fikirleri listele', isCompleted: false}, {id: 'chk-asg9-3', text: 'Kendi yorumunu ekle', isCompleted: false}], coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-7', studentId: tempIds.student4, coachId: tempIds.coach, title: 'İngilizce Kelime Testi', description: 'Verilen 100 kelimeyi ezberle ve kendini sına.', dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: null, submittedAt: new Date().toISOString(), feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-8', studentId: tempIds.student4, coachId: tempIds.coach, title: 'Deneme Analizi', description: 'Son deneme sınavının analizini yap ve hatalarını çıkar.', dueDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 95, feedback: 'Analizin çok detaylı ve yerinde. Hatalarının üzerine gitmen seni başarıya ulaştıracaktır.', fileUrl: '#', fileName: 'deneme_analizi.xlsx', submittedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
+        { id: 'asg-9', studentId: tempIds.student4, coachId: tempIds.coach, title: 'Felsefe Makalesi Okuma', description: 'Platon\'un "Devlet" eserinden belirlenen bölümü oku ve ana fikirleri çıkar.', dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'completed', checklist: [{id: 'chk-asg9-1', text: 'Belirlenen bölümü oku', isCompleted: false}, {id: 'chk-asg9-2', text: 'Bölümdeki ana fikirleri listele', isCompleted: false}, {id: 'chk-asg9-3', text: 'Kendi yorumunu ekle', isCompleted: false}], coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
     ];
     
+    // FIX: Corrected the type from Omit<Message, 'senderId' | 'receiverId'>[] to Message[] because the objects include senderId and receiverId.
     const initialMessages: Message[] = [
         // Conversation with Ali
-        { id: 'msg-1', senderId: 'student-1', receiverId: 'coach-1', text: 'Hocam merhaba, matematik ödevindeki 5. soruda takıldım. Yardımcı olabilir misiniz?', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-1'] },
-        { id: 'msg-2', senderId: 'coach-1', receiverId: 'student-1', text: 'Merhaba Ali, tabii ki. Hangi adımı anlamadığını söylersen oradan devam edelim.', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-1', 'coach-1'], reactions: {'👍': ['student-1']} },
-        { id: 'msg-3', senderId: 'student-1', receiverId: 'coach-1', type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
+        { id: 'msg-1', senderId: tempIds.student1, receiverId: tempIds.coach, text: 'Hocam merhaba, matematik ödevindeki 5. soruda takıldım. Yardımcı olabilir misiniz?', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: [tempIds.coach, tempIds.student1] },
+        { id: 'msg-2', senderId: tempIds.coach, receiverId: tempIds.student1, text: 'Merhaba Ali, tabii ki. Hangi adımı anlamadığını söylersen oradan devam edelim.', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: [tempIds.student1, tempIds.coach], reactions: {'👍': [tempIds.student1]} },
+        { id: 'msg-3', senderId: tempIds.student1, receiverId: tempIds.coach, type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: [tempIds.coach, tempIds.student1] },
         
         // Conversation with Zeynep
-        { id: 'msg-4', senderId: 'coach-1', receiverId: 'student-2', text: 'Zeynep, kompozisyon ödevin gelmiş, en kısa zamanda değerlendireceğim.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-2', 'coach-1'] },
-        { id: 'msg-5', senderId: 'student-2', receiverId: 'coach-1', text: 'Teşekkürler hocam, bekliyorum 😊', timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-2'] },
+        { id: 'msg-4', senderId: tempIds.coach, receiverId: tempIds.student2, text: 'Zeynep, kompozisyon ödevin gelmiş, en kısa zamanda değerlendireceğim.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: [tempIds.student2, tempIds.coach] },
+        { id: 'msg-5', senderId: tempIds.student2, receiverId: tempIds.coach, text: 'Teşekkürler hocam, bekliyorum 😊', timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: [tempIds.coach, tempIds.student2] },
 
         // Announcement
-        { id: 'msg-6', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: ['coach-1'] },
+        { id: 'msg-6', senderId: tempIds.coach, receiverId: 'all', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: [tempIds.coach] },
         
         // Poll
-        { id: 'msg-7', senderId: 'coach-1', receiverId: 'student-3', type: 'poll', text: 'Anket: Gelecek haftaki deneme sınavı', poll: { question: 'Gelecek haftaki deneme sınavı hangi gün olsun?', options: [{text: 'Cumartesi', votes: ['student-3']}, {text: 'Pazar', votes: []}] }, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), readBy: ['student-3', 'coach-1'] }
+        { id: 'msg-7', senderId: tempIds.coach, receiverId: tempIds.student3, type: 'poll', text: 'Anket: Gelecek haftaki deneme sınavı', poll: { question: 'Gelecek haftaki deneme sınavı hangi gün olsun?', options: [{text: 'Cumartesi', votes: [tempIds.student3]}, {text: 'Pazar', votes: []}] }, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), readBy: [tempIds.student3, tempIds.coach] }
     ];
 
     const initialTemplates: AssignmentTemplate[] = [
@@ -63,19 +74,20 @@ const getInitialDataForSeeding = () => {
     ];
     
     const initialResources: Resource[] = [
-      { id: 'res-1', name: 'Türev Konu Anlatımı.pdf', type: 'pdf', url: '#', recommendedTo: ['student-1'] },
-      { id: 'res-2', name: 'Rehber Matematik - YouTube', type: 'link', url: 'https://www.youtube.com/@RehberMatematik', recommendedTo: ['student-1', 'student-3'] },
-      { id: 'res-3', name: 'Hücre Organelleri Videosu', type: 'video', url: '#', recommendedTo: ['student-2'] },
+      { id: 'res-1', name: 'Türev Konu Anlatımı.pdf', type: 'pdf', url: '#', recommendedTo: [tempIds.student1] },
+      { id: 'res-2', name: 'Rehber Matematik - YouTube', type: 'link', url: 'https://www.youtube.com/@RehberMatematik', recommendedTo: [tempIds.student1, tempIds.student3] },
+      { id: 'res-3', name: 'Hücre Organelleri Videosu', type: 'video', url: '#', recommendedTo: [tempIds.student2] },
     ];
     
+    // FIX: Corrected the type from Omit<Goal, 'studentId'>[] to Goal[] because the objects include studentId.
     const initialGoals: Goal[] = [
-        {id: 'goal-1', studentId: 'student-1', text: 'Haftada 200 paragraf sorusu çöz.', isCompleted: false},
-        {id: 'goal-2', studentId: 'student-2', text: 'Her gün 20 yeni İngilizce kelime ezberle.', isCompleted: true},
-        {id: 'goal-3', studentId: 'student-3', text: 'Gecikmiş tarih ödevini bu hafta bitir.', isCompleted: false},
-        {id: 'goal-4', studentId: 'student-4', text: 'Haftalık deneme sınavı netini 5 puan artır.', isCompleted: false},
+        {id: 'goal-1', studentId: tempIds.student1, text: 'Haftada 200 paragraf sorusu çöz.', isCompleted: false},
+        {id: 'goal-2', studentId: tempIds.student2, text: 'Her gün 20 yeni İngilizce kelime ezberle.', isCompleted: true},
+        {id: 'goal-3', studentId: tempIds.student3, text: 'Gecikmiş tarih ödevini bu hafta bitir.', isCompleted: false},
+        {id: 'goal-4', studentId: tempIds.student4, text: 'Haftalık deneme sınavı netini 5 puan artır.', isCompleted: false},
     ];
 
-    return { initialUsers, initialAssignments, initialMessages, initialTemplates, initialResources, initialGoals };
+    return { initialUsers, initialAssignments, initialMessages, initialTemplates, initialResources, initialGoals, tempIds };
 };
 
 const getInitialState = () => ({
@@ -260,7 +272,7 @@ interface DataContextType {
     updateUser: (updatedUser: User) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     addUser: (newUser: Omit<User, 'id'>) => Promise<User | null>;
-    seedDatabase: () => Promise<void>;
+    seedDatabase: (demoUserUids: Record<string, string>) => Promise<void>;
     markMessagesAsRead: (contactId: string) => Promise<void>;
     markNotificationsAsRead: () => Promise<void>;
     updateTypingStatus: (userId: string, isTyping: boolean) => void;
@@ -315,6 +327,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     dispatch({ type: 'SET_CURRENT_USER', payload: { ...userDoc.data(), id: user.uid } as User });
                     await fetchAllData();
                 } else {
+                     console.log("User document doesn't exist for authenticated user, logging out.");
                     await auth.signOut();
                 }
             } else {
@@ -332,6 +345,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
         const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+        // onAuthStateChanged will handle fetching data and setting the current user
         const userDoc = await db.collection("users").doc(userCredential.user!.uid).get();
         if (userDoc.exists) {
             return { ...userDoc.data(), id: userDoc.id } as User;
@@ -344,19 +358,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const register = useCallback(async (name: string, email: string, pass: string): Promise<User | null> => {
+        // Check if any users exist to determine if this is the first registration.
+        const usersCollectionRef = db.collection('users');
+        const existingUsersSnapshot = await usersCollectionRef.limit(1).get();
+        const isFirstUser = existingUsersSnapshot.empty;
+        
+        // The first user registered will be the Super Admin.
+        const role = isFirstUser ? UserRole.SuperAdmin : UserRole.Student;
+
         const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
         const newUser: User = {
             id: userCredential.user!.uid,
             name,
             email,
-            role: UserRole.Student, // Default role
+            role,
             profilePicture: `https://i.pravatar.cc/150?u=${email}`
         };
         await db.collection("users").doc(newUser.id).set(newUser);
+        
         return newUser;
     }, []);
 
     const addUser = useCallback(async (userData: Omit<User, 'id'>): Promise<User | null> => {
+        // This function is for admin use and assumes user is created in Auth separately.
+        // It's primarily used for seeding.
+        const usersQuery = await db.collection('users').where('email', '==', userData.email).limit(1).get();
+        if (!usersQuery.empty) {
+            console.error("User with this email already exists in Firestore.");
+            return null;
+        }
+        // This is a simplified version for the demo. A real app would require an admin SDK
+        // to create a user with a specific UID.
         const userDocRef = await db.collection("users").add(userData);
         const newUser = { ...userData, id: userDocRef.id };
         dispatch({ type: 'ADD_USER', payload: newUser });
@@ -370,6 +402,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, []);
     
     const deleteUser = useCallback(async (userId: string) => {
+        // NOTE: This only deletes the Firestore record. The Auth user must be deleted separately from the Firebase console.
         await db.collection('users').doc(userId).delete();
         dispatch({ type: 'DELETE_USER', payload: userId });
     }, []);
@@ -412,23 +445,73 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return downloadURL;
     };
 
-    const seedDatabase = async () => {
-        console.log("Seeding database...");
-        const { initialUsers, initialAssignments, initialMessages, initialTemplates, initialResources, initialGoals } = getInitialDataForSeeding();
+    const seedDatabase = async (demoUserUids: Record<string, string>) => {
+        console.log("Seeding database with UIDs:", demoUserUids);
+        const { initialUsers, initialAssignments, initialMessages, initialTemplates, initialResources, initialGoals, tempIds } = getInitialDataForSeeding();
         const batch = db.batch();
 
-        initialUsers.forEach(user => {
-            const userRef = db.collection("users").doc(user.id);
-            batch.set(userRef, user);
+        const tempIdToUidMap: Record<string, string> = {};
+        
+        const mappedUsers: User[] = [];
+        for (const user of initialUsers) {
+            const uid = demoUserUids[user.email];
+            if (!uid) throw new Error(`UID for ${user.email} not provided! Aborting seed.`);
+            
+            const tempUser = Object.values(tempIds).find(id => user.profilePicture.includes(id));
+            if (tempUser) {
+                 tempIdToUidMap[tempUser] = uid;
+            }
+
+            const mappedUser = { ...user, id: uid };
+            mappedUsers.push(mappedUser);
+            const userRef = db.collection("users").doc(uid);
+            batch.set(userRef, mappedUser);
+        }
+
+        const mapId = (tempId: string) => tempIdToUidMap[tempId] || tempId;
+
+        initialAssignments.forEach((item: any) => {
+            const studentUid = mapId(item.studentId);
+            const coachUid = mapId(item.coachId);
+            const newItem = { ...item, studentId: studentUid, coachId: coachUid };
+            batch.set(db.collection("assignments").doc(item.id), newItem);
         });
-        initialAssignments.forEach(item => batch.set(db.collection("assignments").doc(item.id), item));
-        initialMessages.forEach(item => batch.set(db.collection("messages").doc(item.id), item));
+
+        initialMessages.forEach((item: any) => {
+            const senderUid = mapId(item.senderId);
+            const receiverUid = item.receiverId === 'all' ? 'all' : mapId(item.receiverId);
+            const readByUids = item.readBy.map(mapId);
+            
+            let reactionsUidMapped = {};
+            if (item.reactions) {
+                reactionsUidMapped = Object.fromEntries(
+                    Object.entries(item.reactions).map(([emoji, userIds]: [string, any]) => [
+                        emoji,
+                        userIds.map(mapId)
+                    ])
+                );
+            }
+            
+            const newItem = { ...item, senderId: senderUid, receiverId: receiverUid, readBy: readByUids, reactions: reactionsUidMapped };
+            batch.set(db.collection("messages").doc(item.id), newItem);
+        });
+
+        initialGoals.forEach((item: any) => {
+            const studentUid = mapId(item.studentId);
+            const newItem = { ...item, studentId: studentUid };
+            batch.set(db.collection("goals").doc(item.id), newItem);
+        });
+
+        initialResources.forEach(item => {
+            const recommendedToUids = item.recommendedTo?.map(mapId).filter(Boolean) as string[] || [];
+            const newItem = {...item, recommendedTo: recommendedToUids};
+            batch.set(db.collection("resources").doc(item.id), newItem);
+        });
+        
         initialTemplates.forEach(item => batch.set(db.collection("templates").doc(item.id), item));
-        initialResources.forEach(item => batch.set(db.collection("resources").doc(item.id), item));
-        initialGoals.forEach(item => batch.set(db.collection("goals").doc(item.id), item));
 
         await batch.commit();
-        console.log("Database seeded successfully!");
+        console.log("Database seeded successfully with correct UIDs!");
         await fetchAllData();
     };
 
@@ -548,7 +631,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         state, students, coach, login, logout, register, getAssignmentsForStudent, getMessagesWithUser, sendMessage, addAssignment, updateAssignment,
         updateUser, deleteUser, addUser, seedDatabase, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
         getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceRecommendation, uploadFile,
-        fetchAllData, 
     ]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

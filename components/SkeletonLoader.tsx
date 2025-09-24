@@ -12,7 +12,7 @@ export const SkeletonText = ({ className = '' }: SkeletonProps) => (
 
 export const SkeletonCard = ({ className = '', children }: SkeletonProps) => (
     <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md animate-pulse ${className}`}>
-        {children || (
+        {children ?? (
             <div className="space-y-4">
                 <SkeletonText className="h-4 w-1/4" />
                 <SkeletonText className="h-10 w-full" />

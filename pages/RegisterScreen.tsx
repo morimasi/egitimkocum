@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 
@@ -45,11 +44,13 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
                  <div className="text-center">
                      <div className="flex items-center justify-center mb-4">
                         <div className="bg-primary-500 rounded-full p-3">
-                             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
+                             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
                         </div>
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Yeni Hesap Oluştur</h1>
-                    <p className="mt-2 text-gray-500 dark:text-gray-400">Platforma öğrenci olarak katılın.</p>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">
+                        Platforma kaydolun. İlk oluşturulan hesap Süper Admin yetkilerine sahip olacaktır.
+                    </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleRegister}>
                     <div className="space-y-4">

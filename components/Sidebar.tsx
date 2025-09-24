@@ -57,14 +57,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> }
         );
-    }
-    if (currentUser?.role === UserRole.Coach) {
-        navItems.push(
-          { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
-          { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> }
-        );
-    }
-    if (currentUser?.role !== UserRole.SuperAdmin) {
+        if (currentUser?.role === UserRole.Coach) {
+            navItems.push(
+              { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+              { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> }
+            );
+        }
         navItems.push(
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" /> },
             { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
@@ -77,7 +75,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);
         if (selectedUser) {
-            await login(selectedUser.email, 'password123'); // FIX: Added demo password
+            // FIX: Added the demo password to the login function call.
+            await login(selectedUser.email, 'password123');
         }
     };
 

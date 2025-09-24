@@ -18,44 +18,51 @@ const Tour = () => {
     const tooltipRef = useRef<HTMLDivElement>(null);
 
     const isCoach = currentUser?.role === UserRole.Coach;
+    
+    // Refactored to an imperative style for better readability and TypeScript inference.
+    const getTourSteps = (): TourStep[] => {
+        const baseSteps: TourStep[] = [
+            {
+                id: 'tour-step-0',
+                title: 'Hoş Geldiniz!',
+                content: 'Eğitim Koçu Platformu\'na hoş geldiniz! Hızlı bir turla temel özellikleri tanıyalım.',
+                position: 'bottom',
+            },
+            {
+                id: 'tour-step-1',
+                title: 'Navigasyon Menüsü',
+                content: 'Uygulamanın tüm sayfalarına buradan kolayca erişebilirsiniz.',
+                position: 'right',
+            },
+            {
+                id: 'tour-step-2',
+                title: 'Kullanıcı Değiştirme',
+                content: 'Demo için koç ve öğrenci görünümleri arasında buradan geçiş yapabilirsiniz.',
+                position: 'top',
+            },
+            {
+                id: 'tour-step-3',
+                title: 'Genel Bakış Kartları',
+                content: isCoach ? 'Öğrenci sayısı ve bekleyen ödevler gibi önemli bilgilere buradan hızlıca göz atın.' : 'Bekleyen ödevlerin ve not ortalaman gibi önemli bilgilere buradan hızlıca göz atın.',
+                position: 'bottom',
+                action: () => setActivePage('dashboard'),
+            },
+        ];
 
-    const tourSteps: TourStep[] = [
-        {
-            id: 'tour-step-0',
-            title: 'Hoş Geldiniz!',
-            content: 'Eğitim Koçu Platformu\'na hoş geldiniz! Hızlı bir turla temel özellikleri tanıyalım.',
-            position: 'bottom',
-        },
-        {
-            id: 'tour-step-1',
-            title: 'Navigasyon Menüsü',
-            content: 'Uygulamanın tüm sayfalarına buradan kolayca erişebilirsiniz.',
-            position: 'right',
-        },
-        {
-            id: 'tour-step-2',
-            title: 'Kullanıcı Değiştirme',
-            content: 'Demo için koç ve öğrenci görünümleri arasında buradan geçiş yapabilirsiniz.',
-            position: 'top',
-        },
-        {
-            id: 'tour-step-3',
-            title: 'Genel Bakış Kartları',
-            content: isCoach ? 'Öğrenci sayısı ve bekleyen ödevler gibi önemli bilgilere buradan hızlıca göz atın.' : 'Bekleyen ödevlerin ve not ortalaman gibi önemli bilgilere buradan hızlıca göz atın.',
-            position: 'bottom',
-            action: () => setActivePage('dashboard'),
-        },
-    ];
+        if (isCoach) {
+            baseSteps.push({
+                id: 'tour-step-4',
+                title: 'Yeni Ödev Oluşturma',
+                content: 'Öğrencilerinize yeni bir ödev atamak için bu butonu kullanabilirsiniz.',
+                position: 'bottom',
+                action: () => setActivePage('assignments'),
+            });
+        }
+        
+        return baseSteps;
+    };
 
-    if (isCoach) {
-        tourSteps.push({
-            id: 'tour-step-4',
-            title: 'Yeni Ödev Oluşturma',
-            content: 'Öğrencilerinize yeni bir ödev atamak için bu butonu kullanabilirsiniz.',
-            position: 'bottom',
-            action: () => setActivePage('assignments'),
-        });
-    }
+    const tourSteps = getTourSteps();
 
     useEffect(() => {
         if (isTourActive && tourStep < tourSteps.length) {

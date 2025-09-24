@@ -47,9 +47,10 @@ const CoachAnalytics = () => {
                     <ResponsiveContainer>
                         <PieChart>
                             <Pie data={statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`}>
-                                {statusData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus]} />
-                                ))}
+                                {statusData.map((entry, index) => {
+                                    const statusKey = Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus;
+                                    return <Cell key={`cell-${index}`} fill={COLORS[statusKey]} />;
+                                })}
                             </Pie>
                             <Tooltip />
                             <Legend />
@@ -95,9 +96,10 @@ const StudentAnalytics = () => {
                      <ResponsiveContainer>
                         <PieChart>
                             <Pie data={statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`}>
-                                {statusData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus]} />
-                                ))}
+                                {statusData.map((entry, index) => {
+                                    const statusKey = Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus;
+                                    return <Cell key={`cell-${index}`} fill={COLORS[statusKey]} />;
+                                })}
                             </Pie>
                             <Tooltip />
                             <Legend />

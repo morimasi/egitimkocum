@@ -5,16 +5,98 @@ import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { getInitialDataForSeeding } from '../contexts/DataContext';
+
+const SetupWizard = () => {
+    const { seedDatabase } = useDataContext();
+    const { addToast } = useUI();
+    const [uids, setUids] = useState<Record<string, string>>({});
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const demoUsersToCreate = getInitialDataForSeeding().initialUsers;
+
+    const handleUidChange = (email: string, uid: string) => {
+        setUids(prev => ({ ...prev, [email]: uid }));
+    };
+
+    const handleCompleteSetup = async () => {
+        const missingUids = demoUsersToCreate.filter(user => !uids[user.email] || uids[user.email].trim() === '');
+        if (missingUids.length > 0) {
+            addToast(`Lütfen ${missingUids.map(u => u.name).join(', ')} için UID'leri girin.`, "error");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await seedDatabase(uids);
+            addToast("Kurulum başarıyla tamamlandı! Veritabanı demo verileriyle dolduruldu.", "success");
+            // The component will unmount as isSeeded becomes true, no need to hide it manually
+        } catch (error: any) {
+            console.error(error);
+            addToast(`Kurulum sırasında bir hata oluştu: ${error.message}`, "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    return (
+        <Card title="🚀 Platform Kurulum Sihirbazı" className="border-primary-500 border-2">
+            <div className="space-y-6">
+                <p className="text-gray-600 dark:text-gray-300">
+                    Hoş geldiniz! Platformu demo verileriyle doldurmak ve tüm özellikleri test etmek için lütfen aşağıdaki adımları izleyin.
+                </p>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-2">Adım 1: Demo Kullanıcıları Oluşturun</h3>
+                    <p className="text-sm text-gray-500 mb-3">Firebase projenizin **Authentication** bölümüne gidin ve aşağıdaki kullanıcıları **'password123'** şifresiyle manuel olarak ekleyin:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                        {demoUsersToCreate.map(user => (
+                            <li key={user.email}><strong>{user.name} ({user.role}):</strong> <code>{user.email}</code></li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                     <h3 className="font-semibold text-lg mb-2">Adım 2: Kullanıcı UID'lerini Girin</h3>
+                     <p className="text-sm text-gray-500 mb-4">Authentication panelinde oluşturduğunuz her kullanıcının yanındaki "User UID" değerini kopyalayıp aşağıdaki ilgili alana yapıştırın.</p>
+                     <div className="space-y-3">
+                        {demoUsersToCreate.map(user => (
+                            <div key={user.email}>
+                                <label className="block text-sm font-medium mb-1">{user.name}</label>
+                                <input
+                                    type="text"
+                                    placeholder={`${user.email} için UID`}
+                                    value={uids[user.email] || ''}
+                                    onChange={(e) => handleUidChange(user.email, e.target.value)}
+                                    className="w-full p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 font-mono text-xs"
+                                />
+                            </div>
+                        ))}
+                     </div>
+                </div>
+
+                <div>
+                     <button onClick={handleCompleteSetup} className="w-full px-4 py-3 rounded-md bg-primary-600 text-white hover:bg-primary-700 font-bold text-lg" disabled={isLoading}>
+                        {isLoading ? 'Kurulum Yapılıyor...' : 'Kurulumu Tamamla'}
+                    </button>
+                </div>
+            </div>
+        </Card>
+    )
+};
+
 
 const SuperAdminDashboard = () => {
-    const { currentUser, users, updateUser, deleteUser, addUser, seedDatabase } = useDataContext();
+    const { currentUser, users, updateUser, deleteUser, addUser } = useDataContext();
     const { addToast } = useUI();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
-    const [isSeeding, setIsSeeding] = useState(false);
+
+    // If only one user exists (the admin), show the setup wizard.
+    const isSeeded = users.length > 1;
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
@@ -38,25 +120,10 @@ const SuperAdminDashboard = () => {
     const handleConfirmDelete = () => {
         if (userToDelete) {
             deleteUser(userToDelete.id);
-            addToast("Kullanıcı başarıyla silindi.", "success");
+            addToast("Kullanıcı başarıyla silindi. (Not: Firebase Auth kaydını konsoldan silmeniz gerekir)", "success");
         }
         setIsConfirmModalOpen(false);
         setUserToDelete(null);
-    };
-    
-    const handleSeed = async () => {
-        if(window.confirm("Veritabanını demo verileriyle doldurmak istediğinizden emin misiniz? Bu işlem mevcut verilerin üzerine yazabilir.")) {
-            setIsSeeding(true);
-            try {
-                await seedDatabase();
-                addToast("Veritabanı başarıyla demo verileriyle dolduruldu.", "success");
-            } catch(e) {
-                console.error(e);
-                addToast("Veritabanı doldurulurken bir hata oluştu.", "error");
-            } finally {
-                setIsSeeding(false);
-            }
-        }
     };
 
     const filteredUsers = users.filter(u => 
@@ -81,8 +148,7 @@ const SuperAdminDashboard = () => {
                     addToast("Kullanıcı başarıyla güncellendi.", "success");
                 } else {
                     // This is simplified. Real app requires creating user in Auth first.
-                    await addUser(userData);
-                    addToast("Kullanıcı başarıyla Firestore'a eklendi.", "success");
+                    addToast("Yeni kullanıcı oluşturma işlemi için Firebase konsolunu kullanın.", "info");
                 }
                 onClose();
             } catch (error) {
@@ -101,7 +167,7 @@ const SuperAdminDashboard = () => {
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">E-posta</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required disabled={!!user}/>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">Rol</label>
@@ -138,64 +204,57 @@ const SuperAdminDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
-             <Card title="Veritabanı Yönetimi" className="border-orange-500 border">
-                 <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div>
-                        <h4 className="font-semibold">Demo Verilerini Yükle</h4>
-                        <p className="text-sm text-gray-500 mt-1">Uygulamayı ilk kez kuruyorsanız, veritabanını hazır demo verileriyle (kullanıcılar, ödevler vb.) doldurmak için bu butonu kullanın.</p>
+            {!isSeeded ? <SetupWizard /> : (
+                <>
+                <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
+                <Card>
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                        <input
+                            type="text"
+                            placeholder="Kullanıcı ara (isim veya e-posta)..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
+                        />
+                        <button onClick={handleNew} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
+                            Yeni Kullanıcı Ekle
+                        </button>
                     </div>
-                    <button onClick={handleSeed} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 whitespace-nowrap" disabled={isSeeding}>
-                        {isSeeding ? 'Yükleniyor...' : 'Demo Verilerini Yükle'}
-                    </button>
-                </div>
-            </Card>
-            <Card>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <input
-                        type="text"
-                        placeholder="Kullanıcı ara (isim veya e-posta)..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
-                    />
-                    <button onClick={handleNew} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
-                        Yeni Kullanıcı Ekle
-                    </button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Kullanıcı</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">E-posta</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Rol</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-right">Eylemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map(user => (
-                                <tr key={user.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center">
-                                            <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
-                                            <span className="font-medium">{user.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
-                                    <td className="py-3 px-4 text-center">{getRoleBadge(user.role)}</td>
-                                    <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                                        <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
-                                        {currentUser?.id !== user.id && (
-                                            <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
-                                        )}
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Kullanıcı</th>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">E-posta</th>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Rol</th>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-right">Eylemler</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.map(user => (
+                                    <tr key={user.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center">
+                                                <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
+                                                <span className="font-medium">{user.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
+                                        <td className="py-3 px-4 text-center">{getRoleBadge(user.role)}</td>
+                                        <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                                            <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
+                                            {currentUser?.id !== user.id && (
+                                                <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+                </>
+            )}
 
             {isEditModalOpen && <UserEditModal user={editingUser} onClose={() => setIsEditModalOpen(false)} />}
             {isConfirmModalOpen && userToDelete && (
