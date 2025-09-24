@@ -1,6 +1,5 @@
 import React from 'react';
 
-// FIX: Changed type alias to be more specific for SVG elements, resolving the issue with the 'title' prop.
 type IconProps = React.SVGProps<SVGSVGElement>;
 
 export const DashboardIcon = (props: IconProps) => (

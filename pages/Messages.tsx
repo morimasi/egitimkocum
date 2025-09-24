@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption } from '../types';
 import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon } from '../components/Icons';
@@ -161,7 +161,15 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg
                     
                     {msg.type === 'announcement' && <strong className="font-bold block mb-1">📢 Duyuru</strong>}
                     {msg.type === 'audio' ? <div className="w-64"><AudioRecorder initialAudio={msg.audioUrl} readOnly /></div>
-                    : msg.type === 'file' ? <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
+                    : msg.type === 'file' ? (
+                        msg.imageUrl ? (
+                            <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+                                <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" />
+                            </a>
+                        ) : (
+                            <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
+                        )
+                    )
                     : msg.type === 'poll' && msg.poll ? (
                         <div>
                             <p className="font-bold mb-2">{msg.poll.question}</p>
@@ -215,7 +223,7 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg
 
 
 const Messages = () => {
-    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus, addReaction } = useDataContext();
+    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus, addReaction, uploadFile } = useDataContext();
     const { addToast, startCall, initialFilters, setInitialFilters } = useUI();
     
     const [selectedContactId, setSelectedContactId] = useState<string | null>(initialFilters.contactId || null);
@@ -225,6 +233,7 @@ const Messages = () => {
     const [showAudioRecorder, setShowAudioRecorder] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -318,19 +327,30 @@ const Messages = () => {
         setShowAudioRecorder(false);
     };
 
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file && currentUser && selectedContactId) {
-            const fileUrl = URL.createObjectURL(file);
-            sendMessage({
-                senderId: currentUser.id,
-                receiverId: selectedContactId,
-                text: file.name,
-                type: 'file',
-                fileName: file.name,
-                fileUrl: fileUrl,
-            });
-            addToast("Dosya başarıyla gönderildi.", "success");
+            setIsUploading(true);
+            try {
+                const fileUrl = await uploadFile(file, `messages/${currentUser.id}`);
+                const isImage = file.type.startsWith('image/');
+                
+                sendMessage({
+                    senderId: currentUser.id,
+                    receiverId: selectedContactId,
+                    text: file.name,
+                    type: 'file',
+                    fileName: file.name,
+                    fileUrl: fileUrl,
+                    fileType: file.type,
+                    imageUrl: isImage ? fileUrl : undefined,
+                });
+                addToast("Dosya başarıyla gönderildi.", "success");
+            } catch (error) {
+                 addToast("Dosya gönderilirken bir hata oluştu.", "error");
+            } finally {
+                setIsUploading(false);
+            }
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -348,18 +368,52 @@ const Messages = () => {
         }, 2000);
     };
     
-    const getUnreadCount = (contactId: string) => {
-        if (!currentUser) return 0;
-        return messages.filter(m => m.receiverId === currentUser.id && m.senderId === contactId && !m.readBy.includes(currentUser.id)).length;
-    };
-    
-    const getLastMessage = (contactId: string): Message | undefined => {
-        if (!currentUser) return undefined;
-        let userMessages = [];
-        if (contactId === 'announcements') userMessages = messages.filter(m => m.type === 'announcement');
-        else userMessages = messages.filter(m => (m.senderId === currentUser.id && m.receiverId === contactId) || (m.senderId === contactId && m.receiverId === currentUser.id));
-        return userMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-    };
+    const unreadCounts = useMemo(() => {
+        if (!currentUser) return new Map<string, number>();
+        const counts = new Map<string, number>();
+        messages.forEach(msg => {
+            if (msg.receiverId === currentUser.id && !msg.readBy.includes(currentUser.id)) {
+                const currentCount = counts.get(msg.senderId) || 0;
+                counts.set(msg.senderId, currentCount + 1);
+            }
+        });
+        return counts;
+    }, [messages, currentUser]);
+
+    const lastMessagesMap = useMemo(() => {
+        if (!currentUser) return new Map<string, Message>();
+        
+        const messageGroups = new Map<string, Message[]>();
+        messages.forEach(msg => {
+            let contactId: string | null = null;
+            if (msg.type === 'announcement') {
+                contactId = 'announcements';
+            } else if (msg.senderId === currentUser.id) {
+                contactId = msg.receiverId;
+            } else {
+                contactId = msg.senderId;
+            }
+
+            if (contactId) {
+                if (!messageGroups.has(contactId)) {
+                    messageGroups.set(contactId, []);
+                }
+                messageGroups.get(contactId)!.push(msg);
+            }
+        });
+
+        const map = new Map<string, Message>();
+        studentContacts.forEach(contact => {
+            const userMessages = messageGroups.get(contact.id);
+            if (userMessages && userMessages.length > 0) {
+                const lastMsg = userMessages.reduce((latest, current) => 
+                    new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
+                );
+                map.set(contact.id, lastMsg);
+            }
+        });
+        return map;
+    }, [messages, currentUser, studentContacts]);
     
     if (!currentUser) return null;
 
@@ -375,8 +429,8 @@ const Messages = () => {
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         {studentContacts.map(contact => {
-                            const unreadCount = getUnreadCount(contact.id);
-                            const lastMessage = getLastMessage(contact.id);
+                            const unreadCount = unreadCounts.get(contact.id) || 0;
+                            const lastMessage = lastMessagesMap.get(contact.id);
                             return (
                                 <div key={contact.id} onClick={() => setSelectedContactId(contact.id)} className={`flex items-center p-3 cursor-pointer transition-colors ${selectedContactId === contact.id ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                                     <div className="relative"><img src={contact.profilePicture} alt={contact.name} className="w-12 h-12 rounded-full" />{unreadCount > 0 && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800"></span>}</div>
@@ -419,7 +473,7 @@ const Messages = () => {
                                                 <input type="text" value={newMessage} onChange={handleTyping} placeholder="Mesajınızı yazın..." className={`flex-1 p-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 ${replyingTo ? 'rounded-b-full rounded-t-none' : 'rounded-full'}`}/>
                                                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
                                                 {isCoach && <button type="button" onClick={() => setIsPollModalOpen(true)} className="ml-3 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Anket Oluştur"><PollIcon className="w-5 h-5"/></button>}
-                                                <button type="button" onClick={() => fileInputRef.current?.click()} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Dosya Ekle"><PaperclipIcon className="w-5 h-5"/></button>
+                                                <button type="button" onClick={() => fileInputRef.current?.click()} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Dosya Ekle" disabled={isUploading}><PaperclipIcon className="w-5 h-5"/></button>
                                                 <button type="button" onClick={() => setShowAudioRecorder(true)} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Sesli Mesaj Gönder"><MicIcon className="w-5 h-5"/></button>
                                                 <button type="submit" className="ml-1 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
                                             </form>

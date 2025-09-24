@@ -20,7 +20,6 @@ const STATUS_NAMES = {
 const CoachAnalytics = () => {
     const { assignments, students } = useDataContext();
 
-    // FIX: Changed property access from dot notation to bracket notation for type safety.
     const statusData = [
         { name: STATUS_NAMES[AssignmentStatus.Pending], value: assignments.filter(a => a.status === AssignmentStatus.Pending).length },
         { name: STATUS_NAMES[AssignmentStatus.Submitted], value: assignments.filter(a => a.status === AssignmentStatus.Submitted).length },
@@ -47,7 +46,6 @@ const CoachAnalytics = () => {
                 <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <PieChart>
-                            {/* FIX: Ensure 'percent' is treated as a number to prevent arithmetic operation errors. */}
                             <Pie data={statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`}>
                                 {statusData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus]} />
@@ -82,7 +80,6 @@ const StudentAnalytics = () => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const myAssignments = currentUser ? getAssignmentsForStudent(currentUser.id) : [];
 
-    // FIX: Changed property access from dot notation to bracket notation for type safety.
     const statusData = [
         { name: STATUS_NAMES[AssignmentStatus.Pending], value: myAssignments.filter(a => a.status === AssignmentStatus.Pending).length },
         { name: STATUS_NAMES[AssignmentStatus.Submitted], value: myAssignments.filter(a => a.status === AssignmentStatus.Submitted).length },
@@ -97,7 +94,6 @@ const StudentAnalytics = () => {
                 <div style={{ width: '100%', height: 300 }}>
                      <ResponsiveContainer>
                         <PieChart>
-                            {/* FIX: Ensure 'percent' is treated as a number to prevent arithmetic operation errors. */}
                             <Pie data={statusData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`}>
                                 {statusData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[Object.keys(STATUS_NAMES).find(key => STATUS_NAMES[key as AssignmentStatus] === entry.name) as AssignmentStatus]} />

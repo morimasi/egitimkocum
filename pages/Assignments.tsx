@@ -208,7 +208,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
 
 
 const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (next: boolean) => void }) => {
-    const { currentUser, updateAssignment } = useDataContext();
+    const { currentUser, updateAssignment, uploadFile } = useDataContext();
     const { addToast } = useUI();
     const [grade, setGrade] = useState<string>('');
     const [feedback, setFeedback] = useState('');
@@ -216,6 +216,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const [textSubmission, setTextSubmission] = useState('');
     const [isSuggestingGrade, setIsSuggestingGrade] = useState(false);
     const [gradeRationale, setGradeRationale] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
 
 
     useEffect(() => {
@@ -257,17 +258,24 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if(e.target.files && e.target.files.length > 0 && currentUser) {
             const file = e.target.files[0];
-            const fileUrl = URL.createObjectURL(file);
-
-            await updateAssignment({ 
-                ...assignment, 
-                status: AssignmentStatus.Submitted, 
-                fileUrl: fileUrl, 
-                fileName: file.name,
-                submittedAt: new Date().toISOString() 
-            });
-            addToast("Ödev dosyası başarıyla yüklendi.", "success");
-            onClose();
+            setIsUploading(true);
+            try {
+                const fileUrl = await uploadFile(file, `submissions/${currentUser.id}`);
+                await updateAssignment({ 
+                    ...assignment, 
+                    status: AssignmentStatus.Submitted, 
+                    fileUrl: fileUrl, 
+                    fileName: file.name,
+                    submittedAt: new Date().toISOString() 
+                });
+                addToast("Ödev dosyası başarıyla yüklendi.", "success");
+                onClose();
+            } catch (error) {
+                console.error("File upload error:", error);
+                addToast("Dosya yüklenirken bir hata oluştu.", "error");
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
     
@@ -309,7 +317,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             if (result) {
                 setGrade(result.suggestedGrade.toString());
                 setGradeRationale(result.rationale);
-                addToast("Not önerisi başarıyla alındı.", "success");
+                addToast("Not önerisi başarıyla alındıı.", "success");
             } else {
                 throw new Error("API'den geçerli bir sonuç alınamadı.");
             }
@@ -323,11 +331,18 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const handleCoachFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            const url = URL.createObjectURL(file);
-            const newAttachment = { name: file.name, url };
-            const updatedAttachments = [...(assignment.coachAttachments || []), newAttachment];
-            await updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
-            addToast("Dosya başarıyla eklendi.", "success");
+            setIsUploading(true);
+            try {
+                const url = await uploadFile(file, `coach-attachments/${currentUser.id}`);
+                const newAttachment = { name: file.name, url };
+                const updatedAttachments = [...(assignment.coachAttachments || []), newAttachment];
+                await updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
+                addToast("Dosya başarıyla eklendi.", "success");
+            } catch(error) {
+                addToast("Dosya eklenirken hata oluştu.", "error");
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -413,9 +428,9 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                         <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
                          {assignment.submissionType === 'file' && (
                             <div>
-                                <label className="w-full text-center cursor-pointer bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 block">
-                                    Dosya Yükle
-                                    <input type="file" className="hidden" onChange={handleFileUpload} />
+                                <label className={`w-full text-center cursor-pointer bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 block ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                    {isUploading ? 'Yükleniyor...' : 'Dosya Yükle'}
+                                    <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading}/>
                                 </label>
                             </div>
                         )}
@@ -452,35 +467,47 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 )}
 
                 {isCoach && (
-                     <div className="space-y-4 pt-4 border-t dark:border-gray-600">
+                     <div className="mt-6">
                         {assignment.status === AssignmentStatus.Submitted ? (
-                             <div className="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                                <h4 className="font-semibold text-lg">Değerlendirme</h4>
-                                <div>
-                                    <label htmlFor="grade-input" className="block text-sm font-medium mb-1">Not (0-100)</label>
-                                    <div className="flex items-center gap-2">
-                                        <input id="grade-input" type="number" min="0" max="100" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"/>
-                                        <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex-shrink-0 flex items-center px-3 py-2 text-sm rounded-md bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-300 dark:hover:bg-primary-900 disabled:opacity-50">
-                                            <SparklesIcon className={`w-4 h-4 mr-1.5 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
-                                            {isSuggestingGrade ? '...' : 'Not Öner'}
-                                        </button>
+                             <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+                                <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-t-lg border-b dark:border-gray-200 dark:border-gray-700">
+                                    <h3 className="text-lg font-semibold" id="degerlendirme-paneli">Değerlendirme</h3>
+                                </div>
+                                <div className="p-4 space-y-5" role="region" aria-labelledby="degerlendirme-paneli">
+                                    <div>
+                                        <label htmlFor="grade-input" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Not (0-100)</label>
+                                        <div className="flex items-center gap-2">
+                                            <input id="grade-input" type="number" min="0" max="100" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"/>
+                                            <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex-shrink-0 flex items-center px-3 py-2 text-sm rounded-md bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-300 dark:hover:bg-primary-900 disabled:opacity-50 transition-colors">
+                                                <SparklesIcon className={`w-4 h-4 mr-1.5 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
+                                                {isSuggestingGrade ? '...' : 'Not Öner'}
+                                            </button>
+                                        </div>
+                                        {gradeRationale && <p className="text-xs text-gray-500 mt-1.5 pl-1">✨ {gradeRationale}</p>}
                                     </div>
-                                    {gradeRationale && <p className="text-xs text-gray-500 mt-1 pl-1">✨ {gradeRationale}</p>}
-                                </div>
-                                <div>
-                                     <label htmlFor="feedback-textarea" className="block text-sm font-medium mb-1">Geri Bildirim</label>
-                                     <textarea id="feedback-textarea" value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"/>
-                                     <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                                        {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
-                                     </button>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Sesli Geri Bildirim</label>
-                                    <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
-                                </div>
-                                <div className="text-right pt-2">
-                                    <button onClick={handleGradeSubmit} className="px-6 py-2 rounded-md bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors">Notu Kaydet</button>
+                                    <div>
+                                         <label htmlFor="feedback-textarea" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Geri Bildirim</label>
+                                         <textarea id="feedback-textarea" value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"/>
+                                         <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+                                            {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
+                                         </button>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Sesli Geri Bildirim</label>
+                                        <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Dosya Ekle</label>
+                                        <p className="text-xs text-gray-500 mb-2">Öğrenciyle paylaşmak için bir dosya (ör. notlandırma anahtarı, örnek çözüm) ekleyin.</p>
+                                        <label className={`cursor-pointer bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1.5 text-sm rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 inline-block transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                            {isUploading ? 'Yükleniyor...' : 'Dosya Seç...'}
+                                            <input type="file" className="hidden" onChange={handleCoachFileUpload} disabled={isUploading}/>
+                                        </label>
+                                    </div>
+                                    <div className="text-right pt-4 border-t dark:border-gray-600">
+                                        <button onClick={handleGradeSubmit} className="px-6 py-2 rounded-md bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors">Notu Kaydet</button>
+                                    </div>
                                 </div>
                             </div>
                         ) : assignment.status === AssignmentStatus.Graded ? (
@@ -494,15 +521,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                                 </div>
                             </div>
                         ) : null}
-
-                        <div>
-                            <h4 className="font-semibold">Dosya Ekle</h4>
-                            <p className="text-sm text-gray-500 mb-2">Öğrenciyle paylaşmak için bir dosya (ör. notlandırma anahtarı, örnek çözüm) ekleyin.</p>
-                            <label className="cursor-pointer bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1.5 text-sm rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 inline-block transition-colors">
-                                Dosya Seç...
-                                <input type="file" className="hidden" onChange={handleCoachFileUpload} />
-                            </label>
-                        </div>
                     </div>
                 )}
             </div>

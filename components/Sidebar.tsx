@@ -48,9 +48,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const { theme, toggleTheme } = useUI();
     const { currentUser, students, logout } = useDataContext();
 
-    // FIX: Refactored navItems creation to an imperative approach to fix TypeScript type inference issues.
-    // The previous complex expression with spreads and ternaries caused the 'page' property to be
-    // widened to 'string', which is not assignable to the 'Page' type. This is more readable and type-safe.
+    // Refactored navItems creation to a simple imperative approach for type safety.
     const navItems: NavItemProps[] = [];
     if (currentUser?.role === UserRole.SuperAdmin) {
         navItems.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
@@ -79,7 +77,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);
         if (selectedUser) {
-            await login(selectedUser.email);
+            await login(selectedUser.email, 'password123'); // FIX: Added demo password
         }
     };
 

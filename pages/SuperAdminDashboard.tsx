@@ -7,13 +7,14 @@ import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const SuperAdminDashboard = () => {
-    const { currentUser, users, updateUser, deleteUser, addUser } = useDataContext();
+    const { currentUser, users, updateUser, deleteUser, addUser, seedDatabase } = useDataContext();
     const { addToast } = useUI();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [isSeeding, setIsSeeding] = useState(false);
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
@@ -43,6 +44,21 @@ const SuperAdminDashboard = () => {
         setUserToDelete(null);
     };
     
+    const handleSeed = async () => {
+        if(window.confirm("Veritabanını demo verileriyle doldurmak istediğinizden emin misiniz? Bu işlem mevcut verilerin üzerine yazabilir.")) {
+            setIsSeeding(true);
+            try {
+                await seedDatabase();
+                addToast("Veritabanı başarıyla demo verileriyle dolduruldu.", "success");
+            } catch(e) {
+                console.error(e);
+                addToast("Veritabanı doldurulurken bir hata oluştu.", "error");
+            } finally {
+                setIsSeeding(false);
+            }
+        }
+    };
+
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -54,23 +70,26 @@ const SuperAdminDashboard = () => {
         const [role, setRole] = useState(user?.role || UserRole.Student);
         const [isLoading, setIsLoading] = useState(false);
 
-        const handleSubmit = (e: React.FormEvent) => {
+        const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
             setIsLoading(true);
             const userData = { name, email, role, profilePicture: user?.profilePicture || `https://i.pravatar.cc/150?u=${email}` };
             
-            // Simulate network delay
-            setTimeout(() => {
+            try {
                 if (user) {
-                    updateUser({ ...user, ...userData });
+                    await updateUser({ ...user, ...userData });
                     addToast("Kullanıcı başarıyla güncellendi.", "success");
                 } else {
-                    addUser(userData);
-                    addToast("Kullanıcı başarıyla eklendi.", "success");
+                    // This is simplified. Real app requires creating user in Auth first.
+                    await addUser(userData);
+                    addToast("Kullanıcı başarıyla Firestore'a eklendi.", "success");
                 }
-                setIsLoading(false);
                 onClose();
-            }, 300);
+            } catch (error) {
+                 addToast("İşlem sırasında bir hata oluştu.", "error");
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         return (
@@ -120,6 +139,17 @@ const SuperAdminDashboard = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
+             <Card title="Veritabanı Yönetimi" className="border-orange-500 border">
+                 <div className="flex flex-col md:flex-row justify-between items-center">
+                    <div>
+                        <h4 className="font-semibold">Demo Verilerini Yükle</h4>
+                        <p className="text-sm text-gray-500 mt-1">Uygulamayı ilk kez kuruyorsanız, veritabanını hazır demo verileriyle (kullanıcılar, ödevler vb.) doldurmak için bu butonu kullanın.</p>
+                    </div>
+                    <button onClick={handleSeed} className="mt-2 md:mt-0 w-full md:w-auto px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 whitespace-nowrap" disabled={isSeeding}>
+                        {isSeeding ? 'Yükleniyor...' : 'Demo Verilerini Yükle'}
+                    </button>
+                </div>
+            </Card>
             <Card>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <input

@@ -45,15 +45,17 @@ const Tour = () => {
             position: 'bottom',
             action: () => setActivePage('dashboard'),
         },
-        // FIX: Explicitly cast the object to TourStep to resolve a type inference issue with the 'position' property.
-        ...(isCoach ? [{
+    ];
+
+    if (isCoach) {
+        tourSteps.push({
             id: 'tour-step-4',
             title: 'Yeni Ödev Oluşturma',
             content: 'Öğrencilerinize yeni bir ödev atamak için bu butonu kullanabilirsiniz.',
             position: 'bottom',
             action: () => setActivePage('assignments'),
-        } as TourStep] : []),
-    ];
+        });
+    }
 
     useEffect(() => {
         if (isTourActive && tourStep < tourSteps.length) {
@@ -102,7 +104,7 @@ const Tour = () => {
         } else if (isTourActive) {
             endTour();
         }
-    }, [isTourActive, tourStep]);
+    }, [isTourActive, tourStep, tourSteps, endTour]);
 
     if (!isTourActive || tourStep >= tourSteps.length) {
         return null;

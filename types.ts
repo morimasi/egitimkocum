@@ -70,6 +70,8 @@ export interface Message {
   type: 'text' | 'file' | 'audio' | 'announcement' | 'poll';
   fileUrl?: string;
   fileName?: string;
+  fileType?: string;
+  imageUrl?: string;
   audioUrl?: string;
   readBy: string[];
   reactions?: Reaction;

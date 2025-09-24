@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MicIcon, PlayIcon, PauseIcon, StopIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';
+import { useDataContext } from '../contexts/DataContext';
 
 interface AudioRecorderProps {
     onSave?: (audioUrl: string) => void;
@@ -14,21 +15,28 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioURL, setAudioURL] = useState(initialAudio || '');
     const [duration, setDuration] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<number | null>(null);
     const { addToast } = useUI();
+    const { uploadFile, currentUser } = useDataContext();
+
+    useEffect(() => {
+        setAudioURL(initialAudio || '');
+    }, [initialAudio])
 
     useEffect(() => {
         if (audioRef.current) {
             const updateTime = () => setDuration(audioRef.current!.currentTime);
             const onEnded = () => setIsPlaying(false);
-            audioRef.current.addEventListener('timeupdate', updateTime);
-            audioRef.current.addEventListener('ended', onEnded);
+            const audioEl = audioRef.current;
+            audioEl.addEventListener('timeupdate', updateTime);
+            audioEl.addEventListener('ended', onEnded);
             return () => {
-                audioRef.current?.removeEventListener('timeupdate', updateTime);
-                audioRef.current?.removeEventListener('ended', onEnded);
+                audioEl?.removeEventListener('timeupdate', updateTime);
+                audioEl?.removeEventListener('ended', onEnded);
             }
         }
     }, [audioURL, isPlaying]);
@@ -43,12 +51,23 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
             };
             mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const localAudioUrl = URL.createObjectURL(blob);
-                setAudioURL(localAudioUrl);
-                if (onSave) onSave(localAudioUrl);
+                if (onSave && currentUser) {
+                    setIsUploading(true);
+                    try {
+                        const uploadedUrl = await uploadFile(new File([blob], "audio.webm"), `audio-feedback/${currentUser.id}`);
+                        setAudioURL(uploadedUrl);
+                        onSave(uploadedUrl);
+                    } catch (error) {
+                        addToast("Ses kaydı yüklenirken hata oluştu.", "error");
+                    } finally {
+                        setIsUploading(false);
+                    }
+                } else {
+                     const localAudioUrl = URL.createObjectURL(blob);
+                     setAudioURL(localAudioUrl);
+                }
 
                 chunksRef.current = [];
-                 // Stop all tracks to turn off mic indicator
                 stream.getTracks().forEach(track => track.stop());
             };
             mediaRecorderRef.current.start();
@@ -99,12 +118,14 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
     return (
         <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
             {!readOnly && (
-                 <button type="button" onClick={isRecording ? stopRecording : startRecording} className={`p-2 rounded-full ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                 <button type="button" onClick={isRecording ? stopRecording : startRecording} className={`p-2 rounded-full ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-600'}`} disabled={isUploading}>
                     {isRecording ? <StopIcon className="w-5 h-5" /> : <MicIcon className="w-5 h-5" />}
                 </button>
             )}
 
-            {audioURL && (
+            {isUploading && <p className="text-xs text-gray-500 px-2">Yükleniyor...</p>}
+
+            {!isUploading && audioURL && (
                 <>
                     <audio ref={audioRef} src={audioURL} preload="auto" />
                     <button type="button" onClick={togglePlay} className="p-2 rounded-full bg-gray-200 dark:bg-gray-600">
@@ -116,7 +137,7 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
                 </>
             )}
              {isRecording && !audioURL && <div className="text-sm font-mono text-red-500 w-20 text-center">{formatTime(duration)}</div>}
-             {!isRecording && !audioURL && <p className="text-xs text-gray-500 px-2">Kayıt için mikrofon simgesine tıklayın.</p>}
+             {!isRecording && !audioURL && !isUploading && <p className="text-xs text-gray-500 px-2">Kayıt için mikrofon simgesine tıklayın.</p>}
         </div>
     );
 };

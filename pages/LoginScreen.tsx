@@ -9,6 +9,7 @@ interface LoginScreenProps {
 const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
     const { login } = useDataContext();
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -18,13 +19,13 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
         setIsLoading(true);
 
         try {
-            const user = await login(email);
+            const user = await login(email, password);
             if (!user) {
                 setError('Kullanıcı bulunamadı veya e-posta/şifre hatalı.');
             }
             // On successful login, AppContent will automatically switch views
         } catch (err) {
-            setError('Giriş sırasında bir hata oluştu.');
+            setError('Giriş sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
         } finally {
             setIsLoading(false);
         }
@@ -32,10 +33,11 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
 
     const handleDemoLogin = async (demoEmail: string) => {
         setEmail(demoEmail);
+        setPassword('password123'); // Demo password
         setError('');
         setIsLoading(true);
         try {
-            const user = await login(demoEmail);
+            const user = await login(demoEmail, 'password123');
             if (!user) {
                 setError('Demo kullanıcısı bulunamadı.');
             }
@@ -59,8 +61,7 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Giriş Yap</p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-                    <div>
-                        <label htmlFor="email" className="sr-only">E-posta Adresi</label>
+                    <div className='space-y-4'>
                         <input
                             id="email"
                             name="email"
@@ -73,8 +74,19 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
                             placeholder="E-posta Adresi"
                             disabled={isLoading}
                         />
+                         <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-500 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            placeholder="Şifre"
+                            disabled={isLoading}
+                        />
                     </div>
-                     {/* For the demo, we are using a hardcoded password 'password123' */}
                     {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                     <div>
                         <button

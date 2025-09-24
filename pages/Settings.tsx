@@ -8,10 +8,11 @@ import { useUI } from '../contexts/UIContext';
 import SuperAdminDashboard from './SuperAdminDashboard';
 
 const StudentSettings = () => {
-    const { currentUser, updateUser } = useDataContext();
+    const { currentUser, updateUser, uploadFile } = useDataContext();
     const { addToast, startTour } = useUI();
     const [name, setName] = useState(currentUser?.name || '');
     const [email, setEmail] = useState(currentUser?.email || '');
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleProfileUpdate = (e: React.FormEvent) => {
@@ -22,12 +23,19 @@ const StudentSettings = () => {
         }
     };
 
-    const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && currentUser) {
-            const newProfilePictureUrl = URL.createObjectURL(file);
-            updateUser({ ...currentUser, profilePicture: newProfilePictureUrl });
-            addToast("Profil fotoğrafı güncellendi.", "success");
+            setIsUploading(true);
+            try {
+                const newProfilePictureUrl = await uploadFile(file, `profile-pictures/${currentUser.id}`);
+                await updateUser({ ...currentUser, profilePicture: newProfilePictureUrl });
+                addToast("Profil fotoğrafı güncellendi.", "success");
+            } catch (error) {
+                addToast("Profil fotoğrafı güncellenirken bir hata oluştu.", "error");
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
     
@@ -52,9 +60,14 @@ const StudentSettings = () => {
             <Card title="Profil Ayarları">
                 <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="flex flex-col items-center">
-                        <img src={currentUser?.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
+                        <div className="relative">
+                            <img src={currentUser?.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
+                            {isUploading && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white">...</div>}
+                        </div>
                         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleProfilePictureChange} className="hidden" />
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline">Fotoğrafı Değiştir</button>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline" disabled={isUploading}>
+                            {isUploading ? 'Yükleniyor...' : 'Fotoğrafı Değiştir'}
+                        </button>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">Ad Soyad</label>
@@ -62,7 +75,7 @@ const StudentSettings = () => {
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">E-posta</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" disabled/>
                     </div>
                     <div className="text-right">
                         <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Kaydet</button>
@@ -88,7 +101,6 @@ const StudentSettings = () => {
 };
 
 const CoachSettings = () => {
-    const { startTour } = useUI();
     // Coach-specific settings can be added here in the future.
     // For now, it will be similar to student settings for profile management.
     return (
@@ -97,13 +109,21 @@ const CoachSettings = () => {
 };
 
 const AdminSettings = () => {
-    const { resetData } = useDataContext();
+    const { seedDatabase } = useDataContext();
     const { addToast, startTour } = useUI();
+    const [isSeeding, setIsSeeding] = useState(false);
 
-    const handleReset = () => {
-        if(window.confirm("Tüm uygulama verilerini sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
-            resetData();
-            addToast("Uygulama verileri başarıyla sıfırlandı.", "success");
+    const handleSeed = async () => {
+        if(window.confirm("Veritabanını demo verileriyle doldurmak istediğinizden emin misiniz? Bu işlem mevcut verilerin üzerine yazabilir.")) {
+            setIsSeeding(true);
+            try {
+                await seedDatabase();
+                addToast("Veritabanı başarıyla demo verileriyle dolduruldu.", "success");
+            } catch(e) {
+                addToast("Veritabanı doldurulurken bir hata oluştu.", "error");
+            } finally {
+                setIsSeeding(false);
+            }
         }
     };
     
@@ -116,13 +136,15 @@ const AdminSettings = () => {
                 </div>
             </Card>
 
-            <Card title="Tehlikeli Alan" className="border-red-500 border">
+            <Card title="Veritabanı Yönetimi" className="border-orange-500 border">
                  <div className="flex justify-between items-center">
                     <div>
-                        <h4 className="font-semibold">Uygulama Verilerini Sıfırla</h4>
+                        <h4 className="font-semibold">Demo Verilerini Yükle</h4>
                         <p className="text-sm text-gray-500">Bu işlem tüm kullanıcıları, ödevleri ve mesajları başlangıç durumuna döndürür.</p>
                     </div>
-                    <button onClick={handleReset} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Verileri Sıfırla</button>
+                    <button onClick={handleSeed} className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700" disabled={isSeeding}>
+                        {isSeeding ? 'Yükleniyor...' : 'Veritabanını Doldur'}
+                    </button>
                 </div>
             </Card>
         </div>

@@ -1,8 +1,6 @@
 
-
 import React from 'react';
 
-// FIX: Add optional children prop to allow for custom skeleton content.
 interface SkeletonProps {
     className?: string;
     children?: React.ReactNode;
@@ -12,7 +10,6 @@ export const SkeletonText = ({ className = '' }: SkeletonProps) => (
     <div className={`bg-gray-200 dark:bg-gray-700 rounded animate-pulse ${className}`}></div>
 );
 
-// FIX: Update SkeletonCard to accept and render children, with a fallback to its default structure.
 export const SkeletonCard = ({ className = '', children }: SkeletonProps) => (
     <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md animate-pulse ${className}`}>
         {children || (
