@@ -156,9 +156,10 @@ const CoachDashboard = () => {
         const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
         const avg = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
         const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-        const showAlert = avg < 60 && avg > 0 || overdue > 0;
+        const showAlert = (avg < 60 && avg > 0) || overdue > 0;
         return { ...s, showAlert, avg, overdue };
-    }).filter(s => s.showAlert);
+    }).filter(s => s.showAlert)
+      .sort((a, b) => (b.overdue - a.overdue) || (a.avg - b.avg));
     
     const unreadMessagesCount = messages.filter(m => m.receiverId === currentUser?.id && !m.readBy.includes(currentUser.id)).length;
 
@@ -171,20 +172,27 @@ const CoachDashboard = () => {
                  <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<XIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card title="Hızlı Erişim" className="lg:col-span-1">
-                     <ul className="space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Öğrenciler</h3>
-                        {students.slice(0, 5).map(s => {
-                             const hasAlert = studentsWithAlerts.some(alertStudent => alertStudent.id === s.id);
-                             return (
-                                <li key={s.id} onClick={() => setActivePage('students')} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                                    <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
-                                    <span className="ml-3 font-medium">{s.name}</span>
-                                    {hasAlert && <span title="Düşük not ortalaması veya gecikmiş ödev"><AlertTriangleIcon className="w-4 h-4 text-yellow-500 ml-auto" /></span>}
+                <Card title="Dikkat Gerektiren Öğrenciler" className="lg:col-span-1">
+                    {studentsWithAlerts.length > 0 ? (
+                        <ul className="space-y-3">
+                            {studentsWithAlerts.map(s => (
+                                <li key={s.id} onClick={() => setActivePage('students')} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center">
+                                            <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
+                                            <span className="ml-3 font-medium">{s.name}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`}><AlertTriangleIcon className="w-5 h-5 text-red-500" /></span>}
+                                            {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`}><AlertTriangleIcon className="w-5 h-5 text-yellow-500" /></span>}
+                                        </div>
+                                    </div>
                                 </li>
-                            )
-                        })}
-                    </ul>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">Harika! Tüm öğrencileriniz yolunda görünüyor.</p>
+                    )}
                 </Card>
                 <Card title="Ödev Durum Dağılımı" className="lg:col-span-2">
                     <div style={{ width: '100%', height: 250 }}>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, AssignmentStatus } from '../types';
 import { useMockData } from '../hooks/useMockData';
 
 interface DataContextType {
@@ -147,9 +147,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setAssignments(prev => [...prev, ...newAssignments]);
     }, [setAssignments]);
 
+    const addNotification = useCallback((userId: string, message: string, link?: AppNotification['link']) => {
+        const newNotification: AppNotification = {
+            id: `notif-${Date.now()}`,
+            userId,
+            message,
+            timestamp: new Date().toISOString(),
+            isRead: false,
+            link,
+        };
+        setNotifications(prev => [newNotification, ...prev]);
+    }, [setNotifications]);
+
     const updateAssignment = useCallback((updatedAssignment: Assignment) => {
-        setAssignments(prev => prev.map(a => a.id === updatedAssignment.id ? updatedAssignment : a));
-    }, [setAssignments]);
+        setAssignments(prevAssignments => {
+            const originalAssignment = prevAssignments.find(a => a.id === updatedAssignment.id);
+    
+            if (originalAssignment && originalAssignment.status !== AssignmentStatus.Graded && updatedAssignment.status === AssignmentStatus.Graded) {
+                const coachName = coach?.name || 'Koçun';
+                addNotification(
+                    updatedAssignment.studentId, 
+                    `${coachName}, "${updatedAssignment.title}" ödevini notlandırdı.`,
+                    { page: 'assignments' }
+                );
+            }
+    
+            return prevAssignments.map(a => a.id === updatedAssignment.id ? updatedAssignment : a);
+        });
+    }, [setAssignments, coach, addNotification]);
 
     const updateUser = useCallback((updatedUser: User) => {
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
@@ -231,10 +256,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (msg.id === messageId) {
                 const newReactions = { ...(msg.reactions || {}) };
                 const userHasReactedWithEmoji = newReactions[emoji]?.includes(userId);
+                // User can only have one reaction, so remove any existing reaction from this user
                 Object.keys(newReactions).forEach(key => {
                     newReactions[key] = newReactions[key].filter(id => id !== userId);
                     if (newReactions[key].length === 0) delete newReactions[key];
                 });
+                // If the user is not toggling off the same emoji, add the new reaction
                 if (!userHasReactedWithEmoji) {
                     if (!newReactions[emoji]) newReactions[emoji] = [];
                     newReactions[emoji].push(userId);
@@ -252,12 +279,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (msg.id === messageId && msg.poll) {
                 const newPoll = { ...msg.poll };
                 let userAlreadyVotedForThisOption = false;
+                // Allow changing vote: first remove user's vote from all options
                 const newOptions = newPoll.options.map((opt, index) => {
                     if (index === optionIndex && opt.votes.includes(userId)) userAlreadyVotedForThisOption = true;
                     const filteredVotes = opt.votes.filter(v => v !== userId);
                     return { ...opt, votes: filteredVotes };
                 });
-                if (!userAlreadyVotedForThisOption) newOptions[optionIndex].votes.push(userId);
+                 // If not toggling off, add the vote
+                if (!userAlreadyVotedForThisOption) {
+                    newOptions[optionIndex].votes.push(userId);
+                }
                 return { ...msg, poll: { ...newPoll, options: newOptions } };
             }
             return msg;

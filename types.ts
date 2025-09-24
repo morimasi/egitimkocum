@@ -101,7 +101,7 @@ export interface AppNotification {
   isRead: boolean;
   link?: {
     page: Page;
-    filter?: { [key: string]: any };
+    filter?: { [key:string]: any };
   };
 }
 

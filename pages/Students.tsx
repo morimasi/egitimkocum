@@ -4,7 +4,7 @@ import { User, Assignment, AssignmentStatus } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
 
@@ -139,9 +139,21 @@ const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect
     const averageGrade = gradedAssignments.length > 0
         ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length)
         : 0;
+
+    const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+    const hasAlert = (averageGrade > 0 && averageGrade < 60) || overdueCount > 0;
+    
+    let alertTitle = '';
+    if (overdueCount > 0) alertTitle += `${overdueCount} gecikmiş ödev. `;
+    if (averageGrade > 0 && averageGrade < 60) alertTitle += `Not ortalaması: ${averageGrade}.`;
         
     return (
-        <Card className="flex flex-col text-center items-center cursor-pointer" onClick={() => onSelect(student)}>
+        <Card className="flex flex-col text-center items-center cursor-pointer relative" onClick={() => onSelect(student)}>
+             {hasAlert && (
+                 <div className="absolute top-4 right-4" title={alertTitle.trim()}>
+                    <AlertTriangleIcon className="w-5 h-5 text-yellow-500" />
+                </div>
+            )}
             <img src={student.profilePicture} alt={student.name} className="w-24 h-24 rounded-full -mt-12 border-4 border-white dark:border-gray-800" />
             <h4 className="text-xl font-bold mt-4">{student.name}</h4>
             <p className="text-sm text-gray-500">{student.email}</p>
