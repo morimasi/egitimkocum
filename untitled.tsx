@@ -1,3 +1,4 @@
+/*
 İşte size özel olarak hazırladığım, adım adım ilerleyecek stratejik planım:
 Stratejik Plan: Firebase Entegrasyonu ile Gerçek Zamanlı Veri Altyapısına Geçiş
 Bu planın temel amacı, useMockData.ts dosyasını tamamen ortadan kaldırarak uygulamanın veri katmanını Cloud Firestore (veritabanı), Firebase Authentication (kullanıcı yönetimi) ve Firebase Storage (dosya depolama) servisleri üzerine inşa etmektir.
@@ -30,3 +31,4 @@ Kalıcı ve Paylaşılan Veri: Tüm veriler bulutta saklanır. Kullanıcılar fa
 Ölçeklenebilirlik: Uygulamanızın kullanıcı sayısı arttığında Firebase altyapısı bu yükü otomatik olarak karşılar.
 Güvenlik: Firebase, kullanıcı kimlik doğrulama ve veritabanı güvenlik kuralları gibi konularda endüstri standardı çözümler sunar.
 Hızlı Geliştirme: Karmaşık backend işlemleriyle uğraşmak yerine doğrudan ön yüz geliştirmesine odaklanmamızı sağlar.
+*/

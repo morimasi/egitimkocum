@@ -76,10 +76,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     
     // Switch between student and coach view for demo
     const { login, users } = useDataContext();
-    const handleUserChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);
         if (selectedUser) {
-            login(selectedUser.email);
+            await login(selectedUser.email);
         }
     };
 
@@ -128,7 +128,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                         <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
                     </div>
-                     <button onClick={logout} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Çıkış Yap">
+                     <button onClick={() => logout()} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Çıkış Yap">
                         <LogoutIcon className="w-5 h-5" />
                     </button>
                 </div>

@@ -12,31 +12,38 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Simulate network delay
-        setTimeout(() => {
-            const user = login(email);
+        try {
+            const user = await login(email);
             if (!user) {
-                setError('Kullanıcı bulunamadı veya e-posta hatalı.');
+                setError('Kullanıcı bulunamadı veya e-posta/şifre hatalı.');
             }
+            // On successful login, AppContent will automatically switch views
+        } catch (err) {
+            setError('Giriş sırasında bir hata oluştu.');
+        } finally {
             setIsLoading(false);
-        }, 500);
+        }
     };
 
-    const handleDemoLogin = (demoEmail: string) => {
+    const handleDemoLogin = async (demoEmail: string) => {
         setEmail(demoEmail);
+        setError('');
         setIsLoading(true);
-        setTimeout(() => {
-            const user = login(demoEmail);
+        try {
+            const user = await login(demoEmail);
             if (!user) {
                 setError('Demo kullanıcısı bulunamadı.');
             }
+        } catch (err) {
+            setError('Giriş sırasında bir hata oluştu.');
+        } finally {
             setIsLoading(false);
-        }, 300);
+        }
     }
 
     return (
@@ -67,6 +74,7 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
                             disabled={isLoading}
                         />
                     </div>
+                     {/* For the demo, we are using a hardcoded password 'password123' */}
                     {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                     <div>
                         <button

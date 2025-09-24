@@ -7,28 +7,28 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
-    const { register, login } = useDataContext();
+    const { register } = useDataContext();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleRegister = (e: React.FormEvent) => {
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Simulate network delay
-        setTimeout(() => {
-            const newUser = register(name, email);
-            if (newUser) {
-                // Automatically log in the new user
-                login(newUser.email);
-            } else {
-                setError('Bu e-posta adresi zaten kullanılıyor.');
+        try {
+            const newUser = await register(name, email);
+            if (!newUser) {
+                setError('Bu e-posta adresi zaten kullanılıyor veya bir hata oluştu.');
             }
+            // On successful registration, AppContent will automatically log in and switch views
+        } catch (err) {
+             setError('Kayıt sırasında bir hata oluştu.');
+        } finally {
             setIsLoading(false);
-        }, 500);
+        }
     };
 
     return (
@@ -74,6 +74,7 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
                             disabled={isLoading}
                         />
                     </div>
+                    {/* For the demo, we are using a hardcoded password 'password123' */}
                     {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                     <div>
                         <button

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { User, Assignment, Message, UserRole, AssignmentStatus, AppNotification, AssignmentTemplate, Resource, Goal } from '../types';
 
 // Helper to create downloadable dummy files for the demo
@@ -61,6 +60,7 @@ const initialTemplates: AssignmentTemplate[] = [
 
   // Ders Bazlı Şablonlar
   { id: 'temp-ders-1', title: 'Matematik', description: 'Matematik dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu tekrar et'}, {text: 'Verilen alıştırmaları çöz'}, {text: 'Sonuçları kontrol et'}] },
+  // FIX: Removed malformed line from array
   { id: 'temp-ders-2', title: 'Türkçe', description: 'Türkçe dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Metni oku ve anla'}, {text: 'Soruları cevapla'}, {text: 'Yazım ve dilbilgisi kurallarına dikkat et'}] },
   { id: 'temp-ders-3', title: 'Fizik', description: 'Fizik dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve formülleri gözden geçir'}, {text: 'Problemleri çöz'}, {text: 'Birim dönüşümlerine dikkat et'}] },
   { id: 'temp-ders-4', title: 'Kimya', description: 'Kimya dersi için verilecek olan ödevin açıklaması.', checklist: [{text: 'Konuyu ve reaksiyonları incele'}, {text: 'Soruları yanıtla'}, {text: 'Denklemleri doğru yazdığından emin ol'}] },
@@ -85,14 +85,6 @@ const initialGoals: Goal[] = [
 
 
 export const useMockData = () => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
-  const [templates, setTemplates] = useState<AssignmentTemplate[]>(initialTemplates);
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [goals, setGoals] = useState<Goal[]>(initialGoals);
-
   const getInitialData = () => {
     return {
       users: initialUsers,
@@ -105,21 +97,5 @@ export const useMockData = () => {
     }
   }
 
-  return {
-    users,
-    setUsers,
-    assignments,
-    setAssignments,
-    messages,
-    setMessages,
-    notifications, 
-    setNotifications,
-    templates,
-    setTemplates,
-    resources,
-    setResources,
-    goals,
-    setGoals,
-    getInitialData
-  };
+  return { getInitialData };
 };
