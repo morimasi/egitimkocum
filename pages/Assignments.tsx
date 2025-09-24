@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, Assignment, AssignmentStatus, User } from '../types';
+import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback } from '../services/geminiService';
+import AudioRecorder from '../components/AudioRecorder';
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -37,13 +38,15 @@ const AssignmentRow = ({ assignment, onSelect, studentName }: { assignment: Assi
 };
 
 const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-    const { coach, students, addAssignment } = useDataContext();
+    const { coach, students, addAssignment, templates } = useDataContext();
     const { addToast } = useUI();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+    const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
 
     const handleGenerateDescription = async () => {
         if (!title) {
@@ -61,13 +64,28 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         }
     };
     
+    const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const templateId = e.target.value;
+        setSelectedTemplate(templateId);
+        const template = templates.find(t => t.id === templateId);
+        if (template) {
+            setTitle(template.title);
+            setDescription(template.description);
+            setChecklist(template.checklist);
+        } else {
+            setTitle('');
+            setDescription('');
+            setChecklist([]);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || !description || !dueDate || selectedStudents.length === 0 || !coach) {
             addToast("Lütfen tüm alanları doldurun ve en az bir öğrenci seçin.", "error");
             return;
         }
-        const newAssignmentBase = {
+        const newAssignmentBase: Omit<Assignment, 'id' | 'studentId'> = {
             title,
             description,
             dueDate,
@@ -77,7 +95,9 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             fileUrl: null,
             coachId: coach.id,
             submittedAt: null,
-            coachAttachments: []
+            coachAttachments: [],
+            checklist: checklist.map((item, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
+            feedbackReaction: null,
         };
         addAssignment(newAssignmentBase, selectedStudents);
         addToast("Ödev başarıyla oluşturuldu.", "success");
@@ -87,11 +107,20 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         setDescription('');
         setDueDate('');
         setSelectedStudents([]);
+        setSelectedTemplate('');
+        setChecklist([]);
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Yeni Ödev Oluştur">
             <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1">Şablondan Seç</label>
+                    <select value={selectedTemplate} onChange={handleTemplateChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Şablon Yok</option>
+                        {templates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                    </select>
+                </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Ödev Başlığı</label>
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
@@ -178,7 +207,24 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
             addToast("Dosya başarıyla eklendi.", "success");
         }
     };
+
+    const handleChecklistToggle = (itemId: string) => {
+        const updatedChecklist = assignment.checklist?.map(item => 
+            item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
+        );
+        updateAssignment({ ...assignment, checklist: updatedChecklist });
+    };
+
+    const handleAudioSave = (audioUrl: string) => {
+        updateAssignment({ ...assignment, audioFeedbackUrl: audioUrl });
+        addToast("Sesli geri bildirim kaydedildi.", "success");
+    };
     
+    const handleFeedbackReaction = (reaction: '👍' | '🤔') => {
+        updateAssignment({ ...assignment, feedbackReaction: reaction });
+        addToast("Geri bildiriminiz için teşekkürler!", "success");
+    };
+
     return (
         <Modal isOpen={!!assignment} onClose={onClose} title={assignment.title}>
             <div className="space-y-4">
@@ -186,6 +232,27 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                 <p><strong className="font-semibold">Teslim Tarihi:</strong> {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
                 <p><strong className="font-semibold">Durum:</strong> {getStatusChip(assignment.status)}</p>
                 <p className="text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded-md">{assignment.description}</p>
+                
+                {assignment.checklist && assignment.checklist.length > 0 && (
+                     <div>
+                        <strong className="font-semibold block mb-2">Kontrol Listesi:</strong>
+                        <ul className="space-y-2">
+                           {assignment.checklist.map(item => (
+                                <li key={item.id} className="flex items-center">
+                                    <input 
+                                        type="checkbox" 
+                                        id={item.id}
+                                        checked={item.isCompleted} 
+                                        onChange={() => isCoach ? null : handleChecklistToggle(item.id)}
+                                        disabled={isCoach}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <label htmlFor={item.id} className={`ml-2 text-sm ${item.isCompleted ? 'line-through text-gray-500' : ''}`}>{item.text}</label>
+                                </li>
+                           ))}
+                        </ul>
+                    </div>
+                )}
                 
                 {assignment.fileUrl && <p><strong className="font-semibold">Teslim Edilen Dosya:</strong> <a href="#" className="text-primary-500">{assignment.fileUrl}</a></p>}
 
@@ -215,8 +282,21 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                 )}
                 {!isCoach && assignment.status === AssignmentStatus.Graded && (
                     <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
-                        <h4 className="font-semibold text-lg">Notunuz: {assignment.grade}/100</h4>
-                        <p className="mt-2 text-sm"><strong className="font-semibold">Koç Geri Bildirimi:</strong> {assignment.feedback}</p>
+                        <div className="flex justify-between items-start">
+                             <div>
+                                <h4 className="font-semibold text-lg">Notunuz: {assignment.grade}/100</h4>
+                                <p className="mt-2 text-sm"><strong className="font-semibold">Koç Geri Bildirimi:</strong> {assignment.feedback}</p>
+                                {assignment.audioFeedbackUrl && <AudioRecorder initialAudio={assignment.audioFeedbackUrl} readOnly={true} />}
+                             </div>
+                              {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full">{assignment.feedbackReaction}</span>}
+                        </div>
+                         {!assignment.feedbackReaction && (
+                            <div className="mt-4 pt-3 border-t dark:border-gray-600 flex items-center gap-2">
+                                <p className="text-sm font-medium">Geri bildirim faydalı oldu mu?</p>
+                                <button onClick={() => handleFeedbackReaction('👍')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">👍</button>
+                                <button onClick={() => handleFeedbackReaction('🤔')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">🤔</button>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -238,6 +318,10 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                                         {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim'}
                                      </button>
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Sesli Geri Bildirim</label>
+                                    <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
+                                </div>
                                 <div className="text-right">
                                     <button onClick={handleGradeSubmit} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
                                 </div>
@@ -245,8 +329,13 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                         )}
                          {assignment.status === AssignmentStatus.Graded && (
                             <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
-                                <h4 className="font-semibold text-lg">Not: {assignment.grade}/100</h4>
-                                <p className="mt-2 text-sm"><strong className="font-semibold">Geri Bildirim:</strong> {assignment.feedback}</p>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="font-semibold text-lg">Not: {assignment.grade}/100</h4>
+                                        <p className="mt-2 text-sm"><strong className="font-semibold">Geri Bildirim:</strong> {assignment.feedback}</p>
+                                    </div>
+                                    {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full" title={`Öğrenci reaksiyonu: ${assignment.feedbackReaction}`}>{assignment.feedbackReaction}</span>}
+                                </div>
                             </div>
                         )}
 
@@ -316,7 +405,7 @@ const Assignments = () => {
                             </select>
                         )}
                     </div>
-                    {isCoach && <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Yeni Ödev Oluştur</button>}
+                    {isCoach && <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full md:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700" id="tour-step-4">Yeni Ödev Oluştur</button>}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">

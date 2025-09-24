@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { MenuIcon, BellIcon, CheckCircleIcon } from './Icons';
+import { AppNotification } from '../types';
 
 const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onOpen: () => void }) => {
     const [isOpen, setIsOpen] = useState(false);
     const { currentUser, notifications } = useDataContext();
+    const { setActivePage } = useUI();
     const popoverRef = useRef<HTMLDivElement>(null);
 
     const userNotifications = notifications
@@ -17,6 +19,13 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
             onOpen();
         }
         setIsOpen(!isOpen);
+    };
+
+    const handleNotificationClick = (notification: AppNotification) => {
+        if (notification.link) {
+            setActivePage(notification.link.page, notification.link.filter);
+        }
+        setIsOpen(false);
     };
 
     useEffect(() => {
@@ -50,7 +59,7 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
                     </div>
                     <ul className="py-2 max-h-80 overflow-y-auto">
                         {userNotifications.length > 0 ? userNotifications.map(n => (
-                            <li key={n.id} className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${!n.isRead ? 'font-semibold' : ''}`}>
+                            <li key={n.id} onClick={() => handleNotificationClick(n)} className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${!n.isRead ? 'font-semibold' : ''}`}>
                                 <p className="text-sm text-gray-700 dark:text-gray-300">{n.message}</p>
                                 <p className="text-xs text-gray-400 mt-1">{new Date(n.timestamp).toLocaleString('tr-TR')}</p>
                             </li>
@@ -72,6 +81,7 @@ const Header = ({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void; }
     const { currentUser, notifications, markNotificationsAsRead } = useDataContext();
 
     const getPageTitle = () => {
+        if (currentUser?.role === 'superadmin') return 'Süper Admin Paneli';
         switch (activePage) {
             case 'dashboard': return 'Anasayfa';
             case 'assignments': return 'Ödevler';
@@ -79,6 +89,7 @@ const Header = ({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void; }
             case 'messages': return 'Mesajlar';
             case 'analytics': return 'Analitik';
             case 'settings': return 'Ayarlar';
+            case 'library': return 'Kütüphane';
             default: return 'Anasayfa';
         }
     };
@@ -95,7 +106,7 @@ const Header = ({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void; }
                     <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={markNotificationsAsRead} />
+                   {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={markNotificationsAsRead} />}
                     <div className="hidden sm:flex items-center">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-3">{currentUser?.name}</span>
                         <img className="h-9 w-9 rounded-full" src={currentUser?.profilePicture} alt="User avatar" />

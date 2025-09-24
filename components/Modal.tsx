@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { XIcon } from './Icons';
 
 interface ModalProps {
@@ -11,17 +11,53 @@ interface ModalProps {
 }
 
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) => {
+    const modalRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<Element | null>(null);
+
     useEffect(() => {
-        const handleEsc = (event: KeyboardEvent) => {
+        if (isOpen) {
+            triggerRef.current = document.activeElement;
+            const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            focusableElements?.[0]?.focus();
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 onClose();
             }
+            if (event.key === 'Tab' && modalRef.current) {
+                const focusableElements = Array.from(modalRef.current.querySelectorAll<HTMLElement>(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                ));
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (event.shiftKey) { // Shift + Tab
+                    if (document.activeElement === firstElement) {
+                        lastElement.focus();
+                        event.preventDefault();
+                    }
+                } else { // Tab
+                    if (document.activeElement === lastElement) {
+                        firstElement.focus();
+                        event.preventDefault();
+                    }
+                }
+            }
         };
-        window.addEventListener('keydown', handleEsc);
+
+        window.addEventListener('keydown', handleKeyDown);
+
         return () => {
-            window.removeEventListener('keydown', handleEsc);
+            window.removeEventListener('keydown', handleKeyDown);
+            if (triggerRef.current instanceof HTMLElement) {
+                triggerRef.current.focus();
+            }
         };
-    }, [onClose]);
+    }, [isOpen, onClose]);
+
 
     if (!isOpen) return null;
     
@@ -36,7 +72,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog" aria-labelledby={modalId}>
-            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-all duration-300 animate-scale-in`}>
+            <div ref={modalRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-all duration-300 animate-scale-in`}>
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <h3 id={modalId} className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
                     <button

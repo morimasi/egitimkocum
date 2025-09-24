@@ -1,11 +1,10 @@
-
 import React, { Fragment } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon,
+    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon,
 } from './Icons';
 
 interface NavItemProps {
@@ -25,6 +24,7 @@ const NavItem = ({ page, label, icon }: NavItemProps) => {
                 e.preventDefault();
                 setActivePage(page);
             }}
+            id={`nav-${page}`}
             className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
                 isActive
                     ? 'bg-primary-500 text-white shadow-lg'
@@ -45,30 +45,40 @@ interface SidebarProps {
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const { theme, toggleTheme } = useUI();
-    const { currentUser, students } = useDataContext();
+    const { currentUser, students, logout } = useDataContext();
 
-    const navItems: NavItemProps[] = [
-        { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
-        { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
-        ...(currentUser?.role === UserRole.Coach ? [{ page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> } as NavItemProps] : []),
-        { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" /> },
-        { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> },
+    // FIX: Removed explicit type annotation to allow TypeScript to correctly infer the array type from its contents. This resolves type errors related to conditional spreading.
+    const navItems = [
+        ...(currentUser?.role === UserRole.SuperAdmin ? [
+            { page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> }
+        ] : [
+            { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
+            { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> }
+        ]),
+        ...(currentUser?.role === UserRole.Coach ? [
+          { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+          { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> }
+        ] : []),
+        ...(currentUser?.role !== UserRole.SuperAdmin ? [
+            { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" /> },
+            { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
+        ] : []),
         { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
     ];
     
     // Switch between student and coach view for demo
-    const { setCurrentUser, users, coach } = useDataContext();
+    const { login, users } = useDataContext();
     const handleUserChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);
         if (selectedUser) {
-            setCurrentUser(selectedUser);
+            login(selectedUser.email);
         }
     };
 
 
     const sidebarContent = (
         <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-xl">
-            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700" id="tour-step-0">
                 <div className="flex items-center">
                     <div className="bg-primary-500 rounded-full p-2">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
@@ -80,18 +90,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 </button>
             </div>
 
-            <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+            <div className="flex-1 p-4 space-y-2 overflow-y-auto" id="tour-step-1">
                 <nav>
                     {navItems.map(item => <NavItem key={item.page} {...item} />)}
                 </nav>
             </div>
 
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className='mb-4'>
+                <div className='mb-4' id="tour-step-2">
                     <label htmlFor="user-switch" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kullanıcı Değiştir (Demo)</label>
                     <select id="user-switch" value={currentUser?.id} onChange={handleUserChange} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
-                         {coach && <option value={coach.id}>{coach.name} (Koç)</option>}
-                         {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                         {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
                     </select>
                 </div>
 
@@ -111,7 +120,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                         <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
                     </div>
-                     <button className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50">
+                     <button onClick={logout} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Çıkış Yap">
                         <LogoutIcon className="w-5 h-5" />
                     </button>
                 </div>

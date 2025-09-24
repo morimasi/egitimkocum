@@ -8,8 +8,8 @@ import { useUI } from '../contexts/UIContext';
 import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon } from '../components/Icons';
 import { DashboardSkeleton } from '../components/SkeletonLoader';
 
-const KpiCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
-    <Card className="flex items-center">
+const KpiCard = ({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
+    <Card className="flex items-center" id={id}>
         <div className={`p-3 rounded-full mr-4 ${color}`}>
             {icon}
         </div>
@@ -19,6 +19,43 @@ const KpiCard = ({ title, value, icon, color }: { title: string, value: string |
         </div>
     </Card>
 );
+
+const GoalsCard = () => {
+    const { currentUser, getGoalsForStudent, updateGoal } = useDataContext();
+    if (!currentUser) return null;
+
+    const goals = getGoalsForStudent(currentUser.id);
+
+    const handleToggleGoal = (goalId: string) => {
+        const goal = goals.find(g => g.id === goalId);
+        if(goal) {
+            updateGoal({...goal, isCompleted: !goal.isCompleted});
+        }
+    };
+    
+    return (
+        <Card title="Hedeflerim">
+            <ul className="space-y-3 max-h-56 overflow-y-auto pr-2">
+                {goals.length > 0 ? goals.map(goal => (
+                    <li key={goal.id} className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id={`goal-${goal.id}`}
+                            checked={goal.isCompleted}
+                            onChange={() => handleToggleGoal(goal.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                        />
+                        <label htmlFor={`goal-${goal.id}`} className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : ''}`}>
+                            {goal.text}
+                        </label>
+                    </li>
+                )) : (
+                    <p className="text-sm text-gray-500">Henüz bir hedef belirlemediniz.</p>
+                )}
+            </ul>
+        </Card>
+    );
+};
 
 const CoachDashboard = () => {
     const { students, assignments } = useDataContext();
@@ -42,7 +79,7 @@ const CoachDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tour-step-3">
                 <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-blue-500" />
                 <KpiCard title="Bekleyen Teslimler" value={pendingSubmissions} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
                 <KpiCard title="Toplam Ödev Sayısı" value={assignments.length} icon={<CheckCircleIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
@@ -170,7 +207,7 @@ const StudentDashboard = () => {
                 </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <KpiCard title="Bekleyen Ödev" value={pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-red-500" />
+                <KpiCard id="tour-step-3" title="Bekleyen Ödev" value={pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-red-500" />
                 <KpiCard title="Not Ortalaması" value={averageGrade} icon={<CheckCircleIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
                 <KpiCard title="Yeni Mesaj" value={unreadMessages} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
             </div>
@@ -190,18 +227,21 @@ const StudentDashboard = () => {
                         </ResponsiveContainer>
                     </div>
                 </Card>
-                <Card title="Yaklaşan Ödevler">
-                     <ul className="space-y-3">
-                        {upcomingAssignments.length > 0 ? upcomingAssignments.map(assignment => (
-                            <li key={assignment.id} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <p className="font-semibold">{assignment.title}</p>
-                                <p className="text-sm text-red-500">
-                                    Son Teslim: {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
-                                </p>
-                            </li>
-                        )) : <p className="text-sm text-gray-500">Yaklaşan ödeviniz bulunmamaktadır.</p>}
-                    </ul>
-                </Card>
+                <div className="flex flex-col gap-6">
+                    <GoalsCard />
+                    <Card title="Yaklaşan Ödevler">
+                         <ul className="space-y-3">
+                            {upcomingAssignments.length > 0 ? upcomingAssignments.map(assignment => (
+                                <li key={assignment.id} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <p className="font-semibold">{assignment.title}</p>
+                                    <p className="text-sm text-red-500">
+                                        Son Teslim: {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
+                                    </p>
+                                </li>
+                            )) : <p className="text-sm text-gray-500">Yaklaşan ödeviniz bulunmamaktadır.</p>}
+                        </ul>
+                    </Card>
+                </div>
              </div>
         </div>
     );

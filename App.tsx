@@ -8,10 +8,17 @@ import Students from './pages/Students';
 import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Library from './pages/Library';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import LoginScreen from './pages/LoginScreen';
+import RegisterScreen from './pages/RegisterScreen';
+import Tour from './components/Tour';
 import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
 import { useDataContext } from './contexts/DataContext';
 import { SkeletonCard, SkeletonText } from './components/SkeletonLoader';
+import { UserRole } from './types';
+import VideoCallModal from './components/VideoCallModal';
 
 const AppSkeleton = () => (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -49,10 +56,15 @@ const AppSkeleton = () => (
 
 const AppContent = () => {
     const { activePage } = useUI();
-    const { isLoading } = useDataContext();
+    const { currentUser, isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
+    const [showRegister, setShowRegister] = React.useState(false);
 
     const renderPage = () => {
+        if (currentUser?.role === UserRole.SuperAdmin) {
+            return <SuperAdminDashboard />;
+        }
+        
         switch (activePage) {
             case 'dashboard':
                 return <Dashboard />;
@@ -64,8 +76,12 @@ const AppContent = () => {
                 return <Messages />;
             case 'analytics':
                 return <Analytics />;
+            case 'library':
+                return <Library />;
             case 'settings':
                 return <Settings />;
+            case 'superadmin':
+                return <SuperAdminDashboard />;
             default:
                 return <Dashboard />;
         }
@@ -73,6 +89,13 @@ const AppContent = () => {
 
     if (isLoading) {
        return <AppSkeleton />;
+    }
+
+    if (!currentUser) {
+        if (showRegister) {
+            return <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} />;
+        }
+        return <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />;
     }
     
     return (
@@ -87,17 +110,19 @@ const AppContent = () => {
                 </main>
             </div>
             <ToastContainer />
+            <Tour />
+            <VideoCallModal />
         </div>
     );
 };
 
 const App = () => {
     return (
-        <UIProvider>
-            <DataProvider>
+        <DataProvider>
+            <UIProvider>
                 <AppContent />
-            </DataProvider>
-        </UIProvider>
+            </UIProvider>
+        </DataProvider>
     );
 };
 
