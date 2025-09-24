@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -12,10 +11,45 @@ import Settings from './pages/Settings';
 import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
 import { useDataContext } from './contexts/DataContext';
+import { SkeletonCard, SkeletonText } from './components/SkeletonLoader';
+
+const AppSkeleton = () => (
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+        {/* Skeleton Sidebar */}
+        <div className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 p-4 space-y-4">
+            <div className="flex items-center space-x-3">
+                 <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                 <SkeletonText className="w-2/3" />
+            </div>
+            <div className="space-y-2 pt-4">
+                {[...Array(6)].map((_, i) => <SkeletonText key={i} className="w-full h-10" />)}
+            </div>
+        </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Skeleton Header */}
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 h-16 flex items-center justify-between p-4">
+                <SkeletonText className="w-1/4 h-8" />
+                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            </div>
+             {/* Skeleton Main Content */}
+            <main className="flex-1 p-8">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <SkeletonCard className="h-24"/>
+                    <SkeletonCard className="h-24"/>
+                    <SkeletonCard className="h-24"/>
+                </div>
+                 <div className="mt-6">
+                    <SkeletonCard className="h-80"/>
+                </div>
+            </main>
+        </div>
+    </div>
+);
+
 
 const AppContent = () => {
     const { activePage } = useUI();
-    const { currentUser } = useDataContext();
+    const { isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
     const renderPage = () => {
@@ -37,12 +71,8 @@ const AppContent = () => {
         }
     };
 
-    if (!currentUser) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="w-16 h-16 border-4 border-primary-500 border-dashed rounded-full animate-spin"></div>
-            </div>
-        );
+    if (isLoading) {
+       return <AppSkeleton />;
     }
     
     return (

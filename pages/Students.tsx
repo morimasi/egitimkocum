@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, AssignmentStatus } from '../types';
 import Card from '../components/Card';
@@ -44,14 +43,47 @@ const StudentCard = ({ student }: { student: any }) => {
 
 const Students = () => {
     const { students } = useDataContext();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredStudents = useMemo(() => {
+        return students.filter(student =>
+            student.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [students, searchTerm]);
 
     return (
-        <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
-                {students.map(student => (
-                    <StudentCard key={student.id} student={student} />
-                ))}
+        <div className="space-y-6">
+            <div className="flex justify-end">
+                <input
+                    type="text"
+                    placeholder="Öğrenci ara..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-64"
+                />
             </div>
+
+            {students.length === 0 ? (
+                 <Card>
+                    <div className="text-center py-10">
+                        <h3 className="text-lg font-semibold">Henüz öğrenciniz yok.</h3>
+                        <p className="text-gray-500 mt-2">Ayarlar sayfasından yeni öğrenciler ekleyebilirsiniz.</p>
+                    </div>
+                </Card>
+            ) : filteredStudents.length === 0 ? (
+                 <Card>
+                    <div className="text-center py-10">
+                        <h3 className="text-lg font-semibold">Öğrenci bulunamadı.</h3>
+                        <p className="text-gray-500 mt-2">Arama kriterlerinizi değiştirmeyi deneyin.</p>
+                    </div>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
+                    {filteredStudents.map(student => (
+                        <StudentCard key={student.id} student={student} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

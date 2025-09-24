@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User, Assignment, Message, UserRole } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification } from '../types';
 import { useMockData } from '../hooks/useMockData';
 
 interface DataContextType {
@@ -11,10 +10,12 @@ interface DataContextType {
     messages: Message[];
     students: User[];
     coach: User | null;
+    notifications: AppNotification[];
+    isLoading: boolean;
+    typingStatus: { [userId: string]: boolean };
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesWithUser: (userId: string) => Message[];
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
-    // FIX: Corrected the type for assignmentData to not require studentId, matching the implementation.
     addAssignment: (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => void;
     updateAssignment: (updatedAssignment: Assignment) => void;
     updateUser: (updatedUser: User) => void;
@@ -22,23 +23,37 @@ interface DataContextType {
     addUser: (newUser: Omit<User, 'id'>) => void;
     resetData: () => void;
     markMessagesAsRead: (contactId: string) => void;
+    markNotificationsAsRead: () => void;
+    updateTypingStatus: (userId: string, isTyping: boolean) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-    const { users, setUsers, assignments, setAssignments, messages, setMessages, getInitialData } = useMockData();
+    const { users, setUsers, assignments, setAssignments, messages, setMessages, notifications, setNotifications, getInitialData } = useMockData();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [typingStatus, setTypingStatus] = useState<{ [userId: string]: boolean }>({});
 
     useEffect(() => {
-        // Simulate logging in as the coach by default.
-        // In a real app, this would come from an auth service.
         const coachUser = users.find(u => u.role === UserRole.Coach);
-        setCurrentUser(coachUser || null);
-    }, [users]);
+        // Simulate initial load
+        setTimeout(() => {
+            setCurrentUser(coachUser || null);
+            setIsLoading(false);
+        }, 500);
+    }, []); // Removed users dependency to only run once
     
     const students = users.filter(user => user.role === UserRole.Student);
     const coach = users.find(user => user.role === UserRole.Coach) || null;
+    
+    const handleSetCurrentUser = (user: User) => {
+        setIsLoading(true);
+        setTimeout(() => {
+            setCurrentUser(user);
+            setIsLoading(false);
+        }, 300); // Simulate loading for user switch
+    };
 
     const getAssignmentsForStudent = (studentId: string) => {
         return assignments.filter(a => a.studentId === studentId);
@@ -96,12 +111,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const resetData = () => {
-        const { users, assignments, messages } = getInitialData();
+        setIsLoading(true);
+        const { users, assignments, messages, notifications } = getInitialData();
         setUsers(users);
         setAssignments(assignments);
         setMessages(messages);
+        setNotifications(notifications);
         const coachUser = users.find(u => u.role === UserRole.Coach);
-        setCurrentUser(coachUser || null);
+        setTimeout(() => {
+            setCurrentUser(coachUser || null);
+            setIsLoading(false);
+        }, 300);
     };
 
     const markMessagesAsRead = (contactId: string) => {
@@ -115,15 +135,28 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         );
     };
 
+    const markNotificationsAsRead = () => {
+        if (!currentUser) return;
+        setNotifications(prev => 
+            prev.map(n => n.userId === currentUser.id ? { ...n, isRead: true } : n)
+        );
+    };
+
+    const updateTypingStatus = (userId: string, isTyping: boolean) => {
+        setTypingStatus(prev => ({ ...prev, [userId]: isTyping }));
+    };
 
     const value = {
         currentUser,
-        setCurrentUser,
+        setCurrentUser: handleSetCurrentUser,
         users,
         assignments,
         messages,
         students,
         coach,
+        notifications,
+        isLoading,
+        typingStatus,
         getAssignmentsForStudent,
         getMessagesWithUser,
         sendMessage,
@@ -134,6 +167,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         addUser,
         resetData,
         markMessagesAsRead,
+        markNotificationsAsRead,
+        updateTypingStatus
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

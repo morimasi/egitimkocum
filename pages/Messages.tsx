@@ -1,19 +1,26 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole } from '../types';
 import { SendIcon } from '../components/Icons';
 
+const TypingIndicator = () => (
+    <div className="flex items-center space-x-1 p-3">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+    </div>
+);
+
 const Messages = () => {
-    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead } = useDataContext();
+    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus } = useDataContext();
     const [selectedContact, setSelectedContact] = useState<User | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const typingTimeoutRef = useRef<number | null>(null);
 
     const contacts = currentUser?.role === UserRole.Coach ? students : (coach ? [coach] : []);
     
     useEffect(() => {
-        // Select the first contact by default
         if (!selectedContact && contacts.length > 0) {
             setSelectedContact(contacts[0]);
         }
@@ -23,13 +30,13 @@ const Messages = () => {
         if (selectedContact) {
             markMessagesAsRead(selectedContact.id);
         }
-    }, [selectedContact, markMessagesAsRead]);
+    }, [selectedContact, messages, markMessagesAsRead]);
     
     const conversation = selectedContact ? getMessagesWithUser(selectedContact.id) : [];
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversation]);
+    }, [conversation, typingStatus]);
 
 
     const handleSendMessage = (e: React.FormEvent) => {
@@ -42,14 +49,44 @@ const Messages = () => {
             type: 'text',
         });
         setNewMessage('');
+        if (currentUser && typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            updateTypingStatus(currentUser.id, false);
+        }
+    };
+
+    const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+        if (!currentUser) return;
+        
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        } else {
+            updateTypingStatus(currentUser.id, true);
+        }
+
+        typingTimeoutRef.current = window.setTimeout(() => {
+            updateTypingStatus(currentUser.id, false);
+            typingTimeoutRef.current = null;
+        }, 2000);
     };
     
     const getUnreadCount = (contactId: string) => {
         if (!currentUser) return 0;
-        return getMessagesWithUser(contactId).filter(m => m.receiverId === currentUser.id && !m.isRead).length;
+        return messages.filter(m => m.receiverId === currentUser.id && m.senderId === contactId && !m.isRead).length;
+    };
+    
+    const getLastMessage = (contactId: string): Message | undefined => {
+        if (!currentUser) return undefined;
+        const userMessages = messages
+            .filter(m => (m.senderId === currentUser.id && m.receiverId === contactId) || (m.senderId === contactId && m.receiverId === currentUser.id))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return userMessages[0];
     };
     
     if (!currentUser) return null;
+
+    const isContactTyping = selectedContact && typingStatus[selectedContact.id];
 
     return (
         <div className="flex h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
@@ -61,6 +98,7 @@ const Messages = () => {
                 <div className="flex-1 overflow-y-auto">
                     {contacts.map(contact => {
                         const unreadCount = getUnreadCount(contact.id);
+                        const lastMessage = getLastMessage(contact.id);
                         return (
                             <div
                                 key={contact.id}
@@ -71,12 +109,21 @@ const Messages = () => {
                                         : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                                 }`}
                             >
-                                <img src={contact.profilePicture} alt={contact.name} className="w-10 h-10 rounded-full mr-3" />
-                                <div className="flex-1">
-                                    <p className={`font-semibold text-sm ${selectedContact?.id === contact.id ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{contact.name}</p>
-                                    <p className={`text-xs ${selectedContact?.id === contact.id ? 'text-primary-200' : 'text-gray-500'}`}>{contact.role === UserRole.Coach ? 'Koç' : 'Öğrenci'}</p>
+                                <div className="relative">
+                                    <img src={contact.profilePicture} alt={contact.name} className="w-12 h-12 rounded-full" />
+                                    {unreadCount > 0 && 
+                                        <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800"></span>
+                                    }
                                 </div>
-                                {unreadCount > 0 && <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">{unreadCount}</span>}
+                                <div className="flex-1 ml-3 overflow-hidden">
+                                    <div className="flex justify-between items-center">
+                                        <p className={`font-semibold text-sm ${selectedContact?.id === contact.id ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{contact.name}</p>
+                                        {lastMessage && <p className={`text-xs flex-shrink-0 ${selectedContact?.id === contact.id ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
+                                    </div>
+                                    <p className={`text-xs truncate ${selectedContact?.id === contact.id ? 'text-primary-200' : 'text-gray-500'}`}>
+                                      {typingStatus[contact.id] ? <span className="italic text-green-500">yazıyor...</span> : (lastMessage ? (lastMessage.senderId === currentUser.id ? `Siz: ${lastMessage.text}` : lastMessage.text) : 'Henüz mesaj yok')}
+                                    </p>
+                                </div>
                             </div>
                         )
                     })}
@@ -102,6 +149,13 @@ const Messages = () => {
                                     </div>
                                 </div>
                             ))}
+                            {isContactTyping && (
+                                <div className="flex justify-start">
+                                    <div className="bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                        <TypingIndicator />
+                                    </div>
+                                </div>
+                            )}
                              <div ref={messagesEndRef} />
                         </div>
                         <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
@@ -109,11 +163,11 @@ const Messages = () => {
                                 <input
                                     type="text"
                                     value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onChange={handleTyping}
                                     placeholder="Mesajınızı yazın..."
                                     className="flex-1 p-2 border rounded-full bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 />
-                                <button type="submit" className="ml-3 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600">
+                                <button type="submit" className="ml-3 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder">
                                     <SendIcon className="w-5 h-5" />
                                 </button>
                             </form>

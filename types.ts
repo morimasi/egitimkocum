@@ -1,4 +1,3 @@
-
 export enum UserRole {
   Coach = 'coach',
   Student = 'student',
@@ -30,6 +29,7 @@ export interface Assignment {
   studentId: string;
   coachId: string;
   submittedAt: string | null;
+  coachAttachments?: { name: string; url: string }[];
 }
 
 export interface Message {
@@ -57,4 +57,16 @@ export interface ToastMessage {
 export interface ChartData {
   name: string;
   [key: string]: string | number;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  link?: {
+    page: Page;
+    filter?: { [key: string]: any };
+  };
 }

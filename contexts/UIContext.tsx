@@ -1,8 +1,11 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Page, ToastMessage, ToastType } from '../types';
 
 type Theme = 'light' | 'dark';
+
+interface InitialFilters {
+    studentId?: string;
+}
 
 interface UIContextType {
     theme: Theme;
@@ -12,6 +15,8 @@ interface UIContextType {
     toasts: ToastMessage[];
     addToast: (message: string, type: ToastType) => void;
     removeToast: (id: number) => void;
+    initialFilters: InitialFilters;
+    setInitialFilters: (filters: InitialFilters) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -26,6 +31,7 @@ export const UIProvider = ({ children }: { children: ReactNode }) => {
     });
     const [activePage, setActivePage] = useState<Page>('dashboard');
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
+    const [initialFilters, setInitialFilters] = useState<InitialFilters>({});
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -55,6 +61,8 @@ export const UIProvider = ({ children }: { children: ReactNode }) => {
         toasts,
         addToast,
         removeToast,
+        initialFilters,
+        setInitialFilters,
     };
 
     return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
