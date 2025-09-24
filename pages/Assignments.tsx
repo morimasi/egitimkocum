@@ -5,7 +5,7 @@ import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon, XIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
-import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist } from '../services/geminiService';
+import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
 
 const getStatusChip = (status: AssignmentStatus) => {
@@ -97,7 +97,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || !description || !dueDate || selectedStudents.length === 0 || !coach) {
             addToast("Lütfen tüm alanları doldurun ve en az bir öğrenci seçin.", "error");
@@ -118,7 +118,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             feedbackReaction: null,
             submissionType,
         };
-        addAssignment(newAssignmentBase, selectedStudents);
+        await addAssignment(newAssignmentBase, selectedStudents);
         addToast("Ödev başarıyla oluşturuldu.", "success");
         onClose();
         // Reset form
@@ -214,12 +214,16 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const [feedback, setFeedback] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [textSubmission, setTextSubmission] = useState('');
+    const [isSuggestingGrade, setIsSuggestingGrade] = useState(false);
+    const [gradeRationale, setGradeRationale] = useState('');
+
 
     useEffect(() => {
         if (assignment) {
             setGrade(assignment.grade?.toString() || '');
             setFeedback(assignment.feedback || '');
             setTextSubmission(assignment.textSubmission || '');
+            setGradeRationale('');
         }
     }, [assignment]);
 
@@ -227,7 +231,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     
     const isCoach = currentUser.role === UserRole.Coach;
 
-    const handleSubmission = () => {
+    const handleSubmission = async () => {
         let updatedAssignment: Assignment = { ...assignment, status: AssignmentStatus.Submitted, submittedAt: new Date().toISOString() };
         
         switch(assignment.submissionType) {
@@ -245,18 +249,20 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 return;
         }
 
-        updateAssignment(updatedAssignment);
+        await updateAssignment(updatedAssignment);
         addToast("Ödev başarıyla teslim edildi.", "success");
         onClose();
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.files && e.target.files.length > 0) {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if(e.target.files && e.target.files.length > 0 && currentUser) {
             const file = e.target.files[0];
-            updateAssignment({ 
+            const fileUrl = URL.createObjectURL(file);
+
+            await updateAssignment({ 
                 ...assignment, 
                 status: AssignmentStatus.Submitted, 
-                fileUrl: URL.createObjectURL(file), 
+                fileUrl: fileUrl, 
                 fileName: file.name,
                 submittedAt: new Date().toISOString() 
             });
@@ -265,12 +271,12 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         }
     };
     
-    const handleGradeSubmit = () => {
+    const handleGradeSubmit = async () => {
         if (!grade) {
             addToast("Lütfen bir not girin.", "error");
             return;
         }
-        updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback });
+        await updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback });
         addToast("Ödev notlandırıldı.", "success");
         if (onNavigate) {
             onNavigate(true);
@@ -295,30 +301,50 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         }
     };
 
-    const handleCoachFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSuggestGrade = async () => {
+        setIsSuggestingGrade(true);
+        setGradeRationale('');
+        try {
+            const result = await suggestGrade(assignment);
+            if (result) {
+                setGrade(result.suggestedGrade.toString());
+                setGradeRationale(result.rationale);
+                addToast("Not önerisi başarıyla alındı.", "success");
+            } else {
+                throw new Error("API'den geçerli bir sonuç alınamadı.");
+            }
+        } catch (e) {
+            addToast("Not önerisi oluşturulurken bir hata oluştu.", "error");
+        } finally {
+            setIsSuggestingGrade(false);
+        }
+    };
+
+    const handleCoachFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            const newAttachment = { name: file.name, url: URL.createObjectURL(file) };
+            const url = URL.createObjectURL(file);
+            const newAttachment = { name: file.name, url };
             const updatedAttachments = [...(assignment.coachAttachments || []), newAttachment];
-            updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
+            await updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
             addToast("Dosya başarıyla eklendi.", "success");
         }
     };
 
-    const handleChecklistToggle = (itemId: string) => {
+    const handleChecklistToggle = async (itemId: string) => {
         const updatedChecklist = assignment.checklist?.map(item => 
             item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
         );
-        updateAssignment({ ...assignment, checklist: updatedChecklist });
+        await updateAssignment({ ...assignment, checklist: updatedChecklist });
     };
 
-    const handleAudioSave = (audioUrl: string) => {
-        updateAssignment({ ...assignment, audioFeedbackUrl: audioUrl });
+    const handleAudioSave = async (audioUrl: string) => {
+        await updateAssignment({ ...assignment, audioFeedbackUrl: audioUrl });
         addToast("Sesli geri bildirim kaydedildi.", "success");
     };
     
-    const handleFeedbackReaction = (reaction: '👍' | '🤔') => {
-        updateAssignment({ ...assignment, feedbackReaction: reaction });
+    const handleFeedbackReaction = async (reaction: '👍' | '🤔') => {
+        await updateAssignment({ ...assignment, feedbackReaction: reaction });
         addToast("Geri bildiriminiz için teşekkürler!", "success");
     };
 
@@ -360,7 +386,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 {assignment.status !== AssignmentStatus.Pending && (
                     <div>
                         <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
-                        {assignment.submissionType === 'file' && assignment.fileUrl && <p><strong className="font-semibold">Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
+                        {assignment.submissionType === 'file' && assignment.fileUrl && <p><strong className="font-semibold">Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
                         {assignment.submissionType === 'text' && assignment.textSubmission && <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md whitespace-pre-wrap">{assignment.textSubmission}</div>}
                         {assignment.submissionType === 'completed' && <p className="text-sm text-gray-500">Öğrenci bu görevi 'Tamamlandı' olarak işaretledi.</p>}
                     </div>
@@ -373,7 +399,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                         <ul className="space-y-1">
                             {assignment.coachAttachments.map((file, index) => (
                                 <li key={index} className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded-md flex items-center justify-between">
-                                    <a href={file.url} download={file.name} className="text-primary-500 hover:underline">{file.name}</a>
+                                    <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">{file.name}</a>
                                 </li>
                             ))}
                         </ul>
@@ -427,31 +453,37 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
 
                 {isCoach && (
                      <div className="space-y-4 pt-4 border-t dark:border-gray-600">
-                        {assignment.status === AssignmentStatus.Submitted && (
-                             <div className="space-y-4">
-                                <h4 className="font-semibold">Not ve Geri Bildirim</h4>
+                        {assignment.status === AssignmentStatus.Submitted ? (
+                             <div className="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                                <h4 className="font-semibold text-lg">Değerlendirme</h4>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Not (0-100)</label>
-                                    <input type="number" min="0" max="100" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                                    <label htmlFor="grade-input" className="block text-sm font-medium mb-1">Not (0-100)</label>
+                                    <div className="flex items-center gap-2">
+                                        <input id="grade-input" type="number" min="0" max="100" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"/>
+                                        <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex-shrink-0 flex items-center px-3 py-2 text-sm rounded-md bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-300 dark:hover:bg-primary-900 disabled:opacity-50">
+                                            <SparklesIcon className={`w-4 h-4 mr-1.5 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
+                                            {isSuggestingGrade ? '...' : 'Not Öner'}
+                                        </button>
+                                    </div>
+                                    {gradeRationale && <p className="text-xs text-gray-500 mt-1 pl-1">✨ {gradeRationale}</p>}
                                 </div>
                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Geri Bildirim</label>
-                                     <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                                     <label htmlFor="feedback-textarea" className="block text-sm font-medium mb-1">Geri Bildirim</label>
+                                     <textarea id="feedback-textarea" value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"/>
                                      <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
                                         <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                                        {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim'}
+                                        {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
                                      </button>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Sesli Geri Bildirim</label>
                                     <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
                                 </div>
-                                <div className="text-right">
-                                    <button onClick={handleGradeSubmit} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
+                                <div className="text-right pt-2">
+                                    <button onClick={handleGradeSubmit} className="px-6 py-2 rounded-md bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors">Notu Kaydet</button>
                                 </div>
                             </div>
-                        )}
-                         {assignment.status === AssignmentStatus.Graded && (
+                        ) : assignment.status === AssignmentStatus.Graded ? (
                             <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -461,7 +493,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                                     {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full" title={`Öğrenci reaksiyonu: ${assignment.feedbackReaction}`}>{assignment.feedbackReaction}</span>}
                                 </div>
                             </div>
-                        )}
+                        ) : null}
 
                         <div>
                             <h4 className="font-semibold">Dosya Ekle</h4>
@@ -481,7 +513,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
 
 const Assignments = () => {
     const { currentUser, assignments, users, students, getAssignmentsForStudent } = useDataContext();
-    // FIX: Destructure addToast from useUI hook to make it available in this component.
     const { initialFilters, setInitialFilters, addToast } = useUI();
     
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);

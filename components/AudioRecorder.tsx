@@ -41,11 +41,12 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
             mediaRecorderRef.current.ondataavailable = (event) => {
                 chunksRef.current.push(event.data);
             };
-            mediaRecorderRef.current.onstop = () => {
+            mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const url = URL.createObjectURL(blob);
-                setAudioURL(url);
-                if(onSave) onSave(url);
+                const localAudioUrl = URL.createObjectURL(blob);
+                setAudioURL(localAudioUrl);
+                if (onSave) onSave(localAudioUrl);
+
                 chunksRef.current = [];
                  // Stop all tracks to turn off mic indicator
                 stream.getTracks().forEach(track => track.stop());

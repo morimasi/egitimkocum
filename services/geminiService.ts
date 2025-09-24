@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { Assignment, AssignmentStatus, User } from "../types";
 
 // Ensure API_KEY is available in the environment.
 if (!process.env.API_KEY) {
@@ -122,5 +123,108 @@ export const generateWeeklySummary = async (studentName: string, stats: { comple
   } catch(error) {
     console.error("Error generating weekly summary:", error);
     return "Haftalık özet oluşturulurken bir hata oluştu.";
+  }
+};
+
+export const generateStudentFocusSuggestion = async (studentName: string, assignments: Assignment[]): Promise<string> => {
+    try {
+        const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
+        const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+        const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A';
+
+        const prompt = `Öğrenci ${studentName}'in güncel durumu: ${pendingCount} bekleyen ödevi var ve not ortalaması ${avgGrade}. Bu öğrencinin başarılı olmak için bir sonraki adımda neye odaklanması gerektiği konusunda kısa (1-2 cümle), eyleme geçirilebilir ve motive edici bir tavsiye ver.`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { temperature: 0.7 },
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error generating student focus suggestion:", error);
+        return "Önceliklerini belirlemeye ve ödevlerini zamanında yapmaya odaklanarak harika bir hafta geçirebilirsin!";
+    }
+};
+
+export const generateCoachWeeklyInsights = async (students: User[], assignments: Assignment[]): Promise<string> => {
+    try {
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        const submittedThisWeek = assignments.filter(a => a.submittedAt && new Date(a.submittedAt) > oneWeekAgo).length;
+        const highPerformers = students.filter(s => {
+            const studentAssignments = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Graded && a.grade !== null);
+            if (studentAssignments.length === 0) return false;
+            const avg = studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length;
+            return avg >= 90;
+        }).map(s => s.name);
+
+        const needsAttention = students.filter(s => {
+             const overdueCount = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Pending && new Date(a.dueDate) < now).length;
+             return overdueCount > 1;
+        }).map(s => s.name);
+
+        const prompt = `Sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen kısa bir analiz yaz.
+        Veriler:
+        - Bu hafta teslim edilen toplam ödev sayısı: ${submittedThisWeek}
+        - Yüksek performans gösteren öğrenciler (Not ortalaması 90+): ${highPerformers.join(', ') || 'Yok'}
+        - Desteğe ihtiyacı olabilecek öğrenciler (1'den fazla gecikmiş ödevi olan): ${needsAttention.join(', ') || 'Yok'}
+
+        Genel bir değerlendirme yap, başarılı öğrencileri tebrik et ve yardıma ihtiyacı olabilecek öğrencilere nasıl yaklaşılacağına dair kısa bir öneride bulun.`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { temperature: 0.8 },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error generating coach weekly insights:", error);
+        return "Bu haftaki öğrenci performans verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci detaylarını manuel olarak kontrol edin.";
+    }
+};
+
+export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
+  try {
+    let submissionContent = '';
+    if (assignment.submissionType === 'text' && assignment.textSubmission) {
+      submissionContent = `Öğrencinin metin cevabı aşağıdadır:\n\n"${assignment.textSubmission}"`;
+    } else if (assignment.submissionType === 'file' && assignment.fileName) {
+      submissionContent = `Öğrenci "${assignment.fileName}" adında bir dosya yükledi. Dosya içeriğini analiz edemediğini varsayarak, sadece başlık ve açıklamaya göre ideal bir teslimat için not öner.`;
+    } else if (assignment.submissionType === 'completed') {
+        submissionContent = `Öğrenci bu görevi "Tamamlandı" olarak işaretledi. Bu tür görevler için genellikle tam puan verilir.`;
+    }
+
+    const prompt = `Sen bir eğitim koçunun asistanısın. Aşağıdaki ödevi değerlendirerek 100 üzerinden bir not ve notun için tek cümlelik kısa bir gerekçe öner.
+    
+    Ödev Başlığı: "${assignment.title}"
+    Ödev Açıklaması: "${assignment.description}"
+    Öğrenci Teslimatı: ${submissionContent}
+    
+    Cevabını JSON formatında, 'suggestedGrade' (bir sayı) ve 'rationale' (bir string) anahtarlarıyla ver.`;
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            suggestedGrade: { type: Type.INTEGER },
+            rationale: { type: Type.STRING },
+          },
+          required: ['suggestedGrade', 'rationale'],
+        },
+        temperature: 0.5,
+      },
+    });
+
+    const jsonString = response.text.trim();
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Error suggesting grade:", error);
+    return null;
   }
 };

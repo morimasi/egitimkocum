@@ -148,7 +148,7 @@ const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect
     if (averageGrade > 0 && averageGrade < 60) alertTitle += `Not ortalaması: ${averageGrade}.`;
         
     return (
-        <Card className="flex flex-col text-center items-center cursor-pointer relative" onClick={() => onSelect(student)}>
+        <Card className="flex flex-col text-center items-center cursor-pointer relative transition-transform duration-300 hover:-translate-y-1" onClick={() => onSelect(student)}>
              {hasAlert && (
                  <div className="absolute top-4 right-4" title={alertTitle.trim()}>
                     <AlertTriangleIcon className="w-5 h-5 text-yellow-500" />

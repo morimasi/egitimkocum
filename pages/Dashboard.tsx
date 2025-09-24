@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, AssignmentStatus, User } from '../types';
+import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon } from '../components/Icons';
-import { DashboardSkeleton } from '../components/SkeletonLoader';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon, SparklesIcon } from '../components/Icons';
+import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
+import { generateStudentFocusSuggestion, generateCoachWeeklyInsights } from '../services/geminiService';
 
-const KpiCard = ({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
+const KpiCard = React.memo(({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
     <Card className="flex items-center" id={id}>
         <div className={`p-3 rounded-full mr-4 ${color}`}>
             {icon}
@@ -17,7 +18,35 @@ const KpiCard = ({ title, value, icon, color, id }: { title: string, value: stri
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
         </div>
     </Card>
-);
+));
+
+const FocusAreaCard = () => {
+    const { currentUser, getAssignmentsForStudent } = useDataContext();
+    const [suggestion, setSuggestion] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const fetchSuggestion = async () => {
+            setIsLoading(true);
+            const assignments = getAssignmentsForStudent(currentUser.id);
+            const result = await generateStudentFocusSuggestion(currentUser.name, assignments);
+            setSuggestion(result);
+            setIsLoading(false);
+        };
+        fetchSuggestion();
+    }, [currentUser, getAssignmentsForStudent]);
+
+    return (
+        <Card>
+             <h4 className="font-semibold flex items-center mb-2">
+                <SparklesIcon className="w-5 h-5 mr-2 text-primary-500" />
+                Sıradaki Adım
+             </h4>
+             {isLoading ? <SkeletonText className="h-16 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300">{suggestion}</p>}
+        </Card>
+    );
+};
 
 const GoalsCard = () => {
     const { currentUser, getGoalsForStudent, updateGoal } = useDataContext();
@@ -113,6 +142,7 @@ const StudentDashboard = () => {
                     </ul>
                 </Card>
                 <div className="space-y-6">
+                    <FocusAreaCard />
                     <GoalsCard />
                     <Card title="Son Mesajlar">
                          <ul className="space-y-3">
@@ -129,6 +159,33 @@ const StudentDashboard = () => {
         </div>
     );
 };
+
+const WeeklyInsightsCard = () => {
+    const { students, assignments } = useDataContext();
+    const [insights, setInsights] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchInsights = async () => {
+            setIsLoading(true);
+            const result = await generateCoachWeeklyInsights(students, assignments);
+            setInsights(result);
+            setIsLoading(false);
+        };
+        fetchInsights();
+    }, [students, assignments]);
+
+    return (
+        <Card>
+            <h4 className="font-semibold flex items-center mb-2">
+                <SparklesIcon className="w-5 h-5 mr-2 text-primary-500" />
+                Haftalık Analiz
+            </h4>
+            {isLoading ? <SkeletonText className="h-20 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insights}</p>}
+        </Card>
+    );
+};
+
 
 const CoachDashboard = () => {
     const { students, assignments, messages, currentUser } = useDataContext();
@@ -171,7 +228,10 @@ const CoachDashboard = () => {
                 <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" />
                  <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<XIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-3">
+                    <WeeklyInsightsCard />
+                </div>
                 <Card title="Dikkat Gerektiren Öğrenciler" className="lg:col-span-1">
                     {studentsWithAlerts.length > 0 ? (
                         <ul className="space-y-3">
