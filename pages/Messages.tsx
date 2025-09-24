@@ -120,7 +120,7 @@ const ReactionPicker = ({ onSelect, onClose }: { onSelect: (emoji: string) => vo
     );
 };
 
-const MessageBubble = ({ msg, isOwnMessage, onReply, onReact }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void }) => {
+const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void }) => {
     const { findMessageById, voteOnPoll, currentUser, users } = useDataContext();
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -211,7 +211,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact }: { msg: Message, 
             </div>
         </div>
     );
-};
+});
 
 
 const Messages = () => {

@@ -101,7 +101,15 @@ const StudentDashboard = () => {
                                     <button onClick={() => setActivePage('assignments')} className="text-sm font-semibold text-primary-500 hover:underline">Detay</button>
                                 </li>
                             )
-                        }) : <p className="text-center text-gray-500 py-8">Yaklaşan bir ödevin yok. Harika iş!</p>}
+                        }) : (
+                             <p className="text-center text-gray-500 py-8">
+                                Harika iş! Yaklaşan bir ödevin yok. {' '}
+                                <button onClick={() => setActivePage('library')} className="font-semibold text-primary-500 hover:underline">
+                                    Kütüphaneden
+                                </button>
+                                {' '}yeni konular keşfetmeye ne dersin?
+                            </p>
+                        )}
                     </ul>
                 </Card>
                 <div className="space-y-6">
@@ -172,7 +180,6 @@ const CoachDashboard = () => {
                                 <li key={s.id} onClick={() => setActivePage('students')} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                                     <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
                                     <span className="ml-3 font-medium">{s.name}</span>
-                                    {/* FIX: Wrapped icon in a span with a title attribute to fix prop type error and provide a tooltip. */}
                                     {hasAlert && <span title="Düşük not ortalaması veya gecikmiş ödev"><AlertTriangleIcon className="w-4 h-4 text-yellow-500 ml-auto" /></span>}
                                 </li>
                             )

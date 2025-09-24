@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal } from '../types';
 import { useMockData } from '../hooks/useMockData';
 
@@ -52,51 +52,62 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         goals, setGoals,
         getInitialData 
     } = useMockData();
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [typingStatus, setTypingStatus] = useState<{ [userId: string]: boolean }>({});
-
-    useEffect(() => {
-        // Simulate initial load, but don't set a user
-        setTimeout(() => {
-            setIsLoading(false);
-        }, 500);
-    }, []);
     
-    const students = users.filter(user => user.role === UserRole.Student);
-    const coach = users.find(user => user.role === UserRole.Coach) || null;
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+        try {
+            const item = window.localStorage.getItem('currentUser');
+            return item ? JSON.parse(item) : null;
+        } catch (error) {
+            console.error("Failed to parse user from localStorage", error);
+            return null;
+        }
+    });
+    
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [typingStatus, setTypingStatus] = useState<{ [userId: string]: boolean }>({});
+    
+    useEffect(() => {
+        try {
+            if (currentUser) {
+                window.localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            } else {
+                window.localStorage.removeItem('currentUser');
+            }
+        } catch (error) {
+            console.error("Failed to save user to localStorage", error);
+        }
+    }, [currentUser]);
+    
+    const students = useMemo(() => users.filter(user => user.role === UserRole.Student), [users]);
+    const coach = useMemo(() => users.find(user => user.role === UserRole.Coach) || null, [users]);
 
-    const login = (email: string): User | null => {
+    const login = useCallback((email: string): User | null => {
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (user) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setCurrentUser(user);
-                setIsLoading(false);
-            }, 300);
+            setCurrentUser(user);
             return user;
         }
         return null;
-    };
+    }, [users]);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setCurrentUser(null);
-    };
+    }, []);
     
-    const register = (name: string, email: string): User | null => {
+    const register = useCallback((name: string, email: string): User | null => {
         if(users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-            return null; // User already exists
+            return null;
         }
         const newUser: User = {
             id: `user-${Date.now()}`,
             name,
             email,
-            role: UserRole.Student, // New users are students by default
+            role: UserRole.Student,
             profilePicture: `https://i.pravatar.cc/150?u=${email}`
         };
         setUsers(prev => [...prev, newUser]);
         return newUser;
-    };
+    }, [users, setUsers]);
 
     const getAssignmentsForStudent = useCallback((studentId: string) => {
         return assignments.filter(a => a.studentId === studentId);
@@ -116,7 +127,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     }, [currentUser, messages]);
 
-    const sendMessage = (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
+    const sendMessage = useCallback((message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
         if (!currentUser) return;
         const newMessage: Message = {
             ...message,
@@ -125,43 +136,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             readBy: [currentUser.id],
         };
         setMessages(prev => [...prev, newMessage]);
-    };
+    }, [currentUser, setMessages]);
     
-    const addAssignment = (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
+    const addAssignment = useCallback((assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
         const newAssignments: Assignment[] = studentIds.map(studentId => ({
             ...assignmentData,
             id: `asg-${Date.now()}-${studentId}`,
             studentId,
         }));
         setAssignments(prev => [...prev, ...newAssignments]);
-    };
+    }, [setAssignments]);
 
-    const updateAssignment = (updatedAssignment: Assignment) => {
+    const updateAssignment = useCallback((updatedAssignment: Assignment) => {
         setAssignments(prev => prev.map(a => a.id === updatedAssignment.id ? updatedAssignment : a));
-    };
+    }, [setAssignments]);
 
-    const updateUser = (updatedUser: User) => {
+    const updateUser = useCallback((updatedUser: User) => {
         setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
         if (currentUser && currentUser.id === updatedUser.id) {
             setCurrentUser(updatedUser);
         }
-    };
+    }, [currentUser, setUsers]);
     
-    const deleteUser = (userId: string) => {
+    const deleteUser = useCallback((userId: string) => {
         setUsers(prev => prev.filter(u => u.id !== userId));
         setAssignments(prev => prev.filter(a => a.studentId !== userId));
         setMessages(prev => prev.filter(m => m.senderId !== userId && m.receiverId !== userId));
-    };
+    }, [setUsers, setAssignments, setMessages]);
 
-    const addUser = (userData: Omit<User, 'id'>) => {
+    const addUser = useCallback((userData: Omit<User, 'id'>) => {
         const newUser: User = {
             ...userData,
             id: `user-${Date.now()}`,
         };
         setUsers(prev => [...prev, newUser]);
-    };
+    }, [setUsers]);
     
-    const resetData = () => {
+    const resetData = useCallback(() => {
         setIsLoading(true);
         const initialData = getInitialData();
         setUsers(initialData.users);
@@ -171,14 +182,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setTemplates(initialData.templates);
         setResources(initialData.resources);
         setGoals(initialData.goals);
+        setCurrentUser(null);
+        setIsLoading(false);
+    }, [getInitialData, setUsers, setAssignments, setMessages, setNotifications, setTemplates, setResources, setGoals]);
 
-        setTimeout(() => {
-            setCurrentUser(null); // Log out after reset
-            setIsLoading(false);
-        }, 300);
-    };
-
-    const markMessagesAsRead = (contactId: string) => {
+    const markMessagesAsRead = useCallback((contactId: string) => {
         if (!currentUser) return;
         setMessages(prev =>
             prev.map(m =>
@@ -187,99 +195,76 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     : m
             )
         );
-    };
+    }, [currentUser, setMessages]);
 
-    const markNotificationsAsRead = () => {
+    const markNotificationsAsRead = useCallback(() => {
         if (!currentUser) return;
         setNotifications(prev => 
             prev.map(n => n.userId === currentUser.id ? { ...n, isRead: true } : n)
         );
-    };
+    }, [currentUser, setNotifications]);
 
-    const updateTypingStatus = (userId: string, isTyping: boolean) => {
+    const updateTypingStatus = useCallback((userId: string, isTyping: boolean) => {
         setTypingStatus(prev => ({ ...prev, [userId]: isTyping }));
-    };
+    }, []);
 
     const getGoalsForStudent = useCallback((studentId: string) => {
         return goals.filter(g => g.studentId === studentId);
     }, [goals]);
 
-    const updateGoal = (updatedGoal: Goal) => {
+    const updateGoal = useCallback((updatedGoal: Goal) => {
         setGoals(prev => prev.map(g => g.id === updatedGoal.id ? updatedGoal : g));
-    };
+    }, [setGoals]);
 
-    const addGoal = (newGoalData: Omit<Goal, 'id'>) => {
+    const addGoal = useCallback((newGoalData: Omit<Goal, 'id'>) => {
         const newGoal: Goal = {
             ...newGoalData,
             id: `goal-${Date.now()}`,
         };
         setGoals(prev => [...prev, newGoal]);
-    };
+    }, [setGoals]);
     
-    const addReaction = (messageId: string, emoji: string) => {
+    const addReaction = useCallback((messageId: string, emoji: string) => {
         if (!currentUser) return;
         const userId = currentUser.id;
         setMessages(prev => prev.map(msg => {
             if (msg.id === messageId) {
                 const newReactions = { ...(msg.reactions || {}) };
-                
-                // Check if user already reacted with this emoji
                 const userHasReactedWithEmoji = newReactions[emoji]?.includes(userId);
-
-                // Remove user from any existing reaction
                 Object.keys(newReactions).forEach(key => {
                     newReactions[key] = newReactions[key].filter(id => id !== userId);
-                    if (newReactions[key].length === 0) {
-                        delete newReactions[key];
-                    }
+                    if (newReactions[key].length === 0) delete newReactions[key];
                 });
-                
-                // If the user didn't have this reaction, add it
                 if (!userHasReactedWithEmoji) {
-                    if (!newReactions[emoji]) {
-                        newReactions[emoji] = [];
-                    }
+                    if (!newReactions[emoji]) newReactions[emoji] = [];
                     newReactions[emoji].push(userId);
                 }
-                
                 return { ...msg, reactions: newReactions };
             }
             return msg;
         }));
-    };
+    }, [currentUser, setMessages]);
 
-    const voteOnPoll = (messageId: string, optionIndex: number) => {
+    const voteOnPoll = useCallback((messageId: string, optionIndex: number) => {
         if (!currentUser) return;
         const userId = currentUser.id;
         setMessages(prev => prev.map(msg => {
             if (msg.id === messageId && msg.poll) {
                 const newPoll = { ...msg.poll };
-                
                 let userAlreadyVotedForThisOption = false;
-
                 const newOptions = newPoll.options.map((opt, index) => {
-                    // Check if user voted for the clicked option
-                    if (index === optionIndex && opt.votes.includes(userId)) {
-                        userAlreadyVotedForThisOption = true;
-                    }
-                    // Remove user's vote from any option
+                    if (index === optionIndex && opt.votes.includes(userId)) userAlreadyVotedForThisOption = true;
                     const filteredVotes = opt.votes.filter(v => v !== userId);
                     return { ...opt, votes: filteredVotes };
                 });
-
-                // If user didn't vote for this option before, add the vote.
-                // Otherwise, it was a click to remove the vote.
-                if (!userAlreadyVotedForThisOption) {
-                    newOptions[optionIndex].votes.push(userId);
-                }
-                
+                if (!userAlreadyVotedForThisOption) newOptions[optionIndex].votes.push(userId);
                 return { ...msg, poll: { ...newPoll, options: newOptions } };
             }
             return msg;
         }));
-    };
+    }, [currentUser, setMessages]);
 
-    const toggleResourceRecommendation = (resourceId: string, studentId: string) => {
+    const toggleResourceRecommendation = useCallback((resourceId: string, studentId: string) => {
         setResources(prev => prev.map(res => {
             if (res.id === resourceId) {
                 const recommended = res.recommendedTo || [];
@@ -291,45 +276,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
             return res;
         }));
-    };
+    }, [setResources]);
 
-
-    const value = {
-        currentUser,
-        users,
-        assignments,
-        messages,
-        students,
-        coach,
-        notifications,
-        templates,
-        resources,
-        goals,
-        isLoading,
-        typingStatus,
-        login,
-        logout,
-        register,
-        getAssignmentsForStudent,
-        getMessagesWithUser,
-        sendMessage,
-        addAssignment,
-        updateAssignment,
-        updateUser,
-        deleteUser,
-        addUser,
-        resetData,
-        markMessagesAsRead,
-        markNotificationsAsRead,
-        updateTypingStatus,
-        getGoalsForStudent,
-        updateGoal,
-        addGoal,
-        addReaction,
-        voteOnPoll,
-        findMessageById,
-        toggleResourceRecommendation,
-    };
+    const value = useMemo(() => ({
+        currentUser, users, assignments, messages, students, coach, notifications, templates, resources, goals, isLoading, typingStatus,
+        login, logout, register, getAssignmentsForStudent, getMessagesWithUser, sendMessage, addAssignment, updateAssignment,
+        updateUser, deleteUser, addUser, resetData, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
+        getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceRecommendation,
+    }), [
+        currentUser, users, assignments, messages, students, coach, notifications, templates, resources, goals, isLoading, typingStatus,
+        login, logout, register, getAssignmentsForStudent, getMessagesWithUser, sendMessage, addAssignment, updateAssignment,
+        updateUser, deleteUser, addUser, resetData, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
+        getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceRecommendation,
+    ]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

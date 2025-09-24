@@ -1,18 +1,7 @@
-
-import React from 'react';
+import React, { Suspense } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
 import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import Assignments from './pages/Assignments';
-import Students from './pages/Students';
-import Messages from './pages/Messages';
-import Analytics from './pages/Analytics';
-import Settings from './pages/Settings';
-import Library from './pages/Library';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import LoginScreen from './pages/LoginScreen';
-import RegisterScreen from './pages/RegisterScreen';
 import Tour from './components/Tour';
 import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
@@ -21,10 +10,24 @@ import { SkeletonCard, SkeletonText } from './components/SkeletonLoader';
 import { UserRole } from './types';
 import VideoCallModal from './components/VideoCallModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
+import ErrorBoundary from './components/ErrorBoundary';
+import PageSkeleton from './components/PageSkeleton';
+
+// Lazy load pages for better initial performance
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Assignments = React.lazy(() => import('./pages/Assignments'));
+const Students = React.lazy(() => import('./pages/Students'));
+const Messages = React.lazy(() => import('./pages/Messages'));
+const Analytics = React.lazy(() => import('./pages/Analytics'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Library = React.lazy(() => import('./pages/Library'));
+const SuperAdminDashboard = React.lazy(() => import('./pages/SuperAdminDashboard'));
+const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
+const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
+
 
 const AppSkeleton = () => (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-        {/* Skeleton Sidebar */}
         <div className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 p-4 space-y-4">
             <div className="flex items-center space-x-3">
                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
@@ -35,12 +38,10 @@ const AppSkeleton = () => (
             </div>
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Skeleton Header */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 h-16 flex items-center justify-between p-4">
                 <SkeletonText className="w-1/4 h-8" />
                 <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
             </div>
-             {/* Skeleton Main Content */}
             <main className="flex-1 p-8">
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <SkeletonCard className="h-24"/>
@@ -70,7 +71,6 @@ const AppContent = () => {
             const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
             
             if (!lastReportDate || new Date(lastReportDate) < oneWeekAgo) {
-                // To avoid showing on first ever login, we can check if there's any activity
                  setShowWeeklyReport(true);
             }
         }
@@ -115,10 +115,14 @@ const AppContent = () => {
     }
 
     if (!currentUser) {
-        if (showRegister) {
-            return <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} />;
-        }
-        return <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />;
+        return (
+            <Suspense fallback={<AppSkeleton />}>
+                {showRegister 
+                    ? <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} /> 
+                    : <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />
+                }
+            </Suspense>
+        );
     }
     
     return (
@@ -126,9 +130,11 @@ const AppContent = () => {
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8 animate-fade-in">
                     <div className="max-w-7xl mx-auto">
-                        {renderPage()}
+                        <Suspense fallback={<PageSkeleton />}>
+                            {renderPage()}
+                        </Suspense>
                     </div>
                 </main>
             </div>
@@ -144,7 +150,9 @@ const App = () => {
     return (
         <DataProvider>
             <UIProvider>
-                <AppContent />
+                <ErrorBoundary>
+                    <AppContent />
+                </ErrorBoundary>
             </UIProvider>
         </DataProvider>
     );

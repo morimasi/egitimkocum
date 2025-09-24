@@ -131,7 +131,7 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     );
 };
 
-const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
+const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
     const { getAssignmentsForStudent } = useDataContext();
     
     const assignments = getAssignmentsForStudent(student.id);
@@ -157,7 +157,7 @@ const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student:
             </div>
         </Card>
     );
-}
+});
 
 const Students = () => {
     const { students } = useDataContext();

@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { ToastMessage } from '../types';
@@ -52,7 +50,11 @@ const ToastContainer = () => {
     const { toasts, removeToast } = useUI();
 
     return (
-        <div className="fixed top-5 right-5 z-50 w-full max-w-sm">
+        <div 
+            className="fixed top-5 right-5 z-50 w-full max-w-sm"
+            role="alert"
+            aria-live="assertive"
+        >
             {toasts.map(toast => (
                 <Toast key={toast.id} toast={toast} onDismiss={removeToast} />
             ))}

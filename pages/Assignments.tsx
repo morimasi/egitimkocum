@@ -23,7 +23,7 @@ const getStatusChip = (status: AssignmentStatus) => {
 };
 
 
-const AssignmentRow = ({ assignment, onSelect, studentName }: { assignment: Assignment, onSelect: (assignment: Assignment) => void, studentName: string }) => {
+const AssignmentRow = React.memo(({ assignment, onSelect, studentName }: { assignment: Assignment, onSelect: (assignment: Assignment) => void, studentName: string }) => {
     const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
     
     return (
@@ -35,7 +35,7 @@ const AssignmentRow = ({ assignment, onSelect, studentName }: { assignment: Assi
             <td className="py-3 px-4 text-sm font-semibold text-center hidden md:table-cell">{assignment.grade ?? '-'}</td>
         </tr>
     );
-};
+});
 
 const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
@@ -207,14 +207,21 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
 };
 
 
-const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined }) => {
+const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (next: boolean) => void }) => {
     const { currentUser, updateAssignment } = useDataContext();
     const { addToast } = useUI();
-    const [grade, setGrade] = useState<string>(assignment?.grade?.toString() || '');
-    const [feedback, setFeedback] = useState(assignment?.feedback || '');
+    const [grade, setGrade] = useState<string>('');
+    const [feedback, setFeedback] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [textSubmission, setTextSubmission] = useState('');
-    const [activeTab, setActiveTab] = useState<SubmissionType>(assignment?.submissionType || 'file');
+
+    useEffect(() => {
+        if (assignment) {
+            setGrade(assignment.grade?.toString() || '');
+            setFeedback(assignment.feedback || '');
+            setTextSubmission(assignment.textSubmission || '');
+        }
+    }, [assignment]);
 
     if (!currentUser || !assignment) return null;
     
@@ -223,10 +230,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
     const handleSubmission = () => {
         let updatedAssignment: Assignment = { ...assignment, status: AssignmentStatus.Submitted, submittedAt: new Date().toISOString() };
         
-        switch(activeTab) {
-            case 'file':
-                addToast("Lütfen bir dosya seçin ve yükle butonuna basın.", "info");
-                return; // File is handled by its own input's onChange
+        switch(assignment.submissionType) {
             case 'text':
                 if (textSubmission.trim() === '') {
                     addToast("Lütfen metin cevabınızı girin.", "error");
@@ -235,8 +239,10 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                 updatedAssignment.textSubmission = textSubmission;
                 break;
             case 'completed':
-                // No extra data needed
                 break;
+             default: // file
+                addToast("Lütfen bir dosya seçin ve yükle butonuna basın.", "info");
+                return;
         }
 
         updateAssignment(updatedAssignment);
@@ -266,7 +272,11 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
         }
         updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback });
         addToast("Ödev notlandırıldı.", "success");
-        onClose();
+        if (onNavigate) {
+            onNavigate(true);
+        } else {
+            onClose();
+        }
     };
 
     const handleGenerateFeedback = async () => {
@@ -315,6 +325,12 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
     return (
         <Modal isOpen={!!assignment} onClose={onClose} title={assignment.title}>
             <div className="space-y-4">
+                 {onNavigate && (
+                    <div className="flex justify-between">
+                        <button onClick={() => onNavigate(false)} className="text-sm font-semibold text-primary-500 hover:underline">{"< Önceki"}</button>
+                        <button onClick={() => onNavigate(true)} className="text-sm font-semibold text-primary-500 hover:underline">{"Sonraki >"}</button>
+                    </div>
+                )}
                 <p><strong className="font-semibold">Öğrenci:</strong> {studentName}</p>
                 <p><strong className="font-semibold">Teslim Tarihi:</strong> {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
                 <p><strong className="font-semibold">Durum:</strong> {getStatusChip(assignment.status)}</p>
@@ -366,7 +382,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                     )}
                 </div>
                 
-                {/* Student View */}
                 {!isCoach && assignment.status === AssignmentStatus.Pending && (
                     <div className="border-t dark:border-gray-600 pt-4">
                         <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
@@ -410,7 +425,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
                     </div>
                 )}
 
-                {/* Coach View */}
                 {isCoach && (
                      <div className="space-y-4 pt-4 border-t dark:border-gray-600">
                         {assignment.status === AssignmentStatus.Submitted && (
@@ -467,7 +481,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName }: { assignmen
 
 const Assignments = () => {
     const { currentUser, assignments, users, students, getAssignmentsForStudent } = useDataContext();
-    const { initialFilters, setInitialFilters } = useUI();
+    // FIX: Destructure addToast from useUI hook to make it available in this component.
+    const { initialFilters, setInitialFilters, addToast } = useUI();
     
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
     const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>('all');
@@ -495,7 +510,6 @@ const Assignments = () => {
 
     const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor';
     
-    // Quick Grade State
     const [quickGradeAssignments, setQuickGradeAssignments] = useState<Assignment[]>([]);
     const [quickGradeIndex, setQuickGradeIndex] = useState(0);
 
@@ -505,12 +519,22 @@ const Assignments = () => {
             setQuickGradeAssignments(submitted);
             setQuickGradeIndex(0);
         } else {
-            alert("Değerlendirilecek ödev bulunmuyor.");
+            addToast("Değerlendirilecek ödev bulunmuyor.", "info");
         }
     };
     
     const handleQuickGradeClose = () => {
         setQuickGradeAssignments([]);
+    };
+
+    const handleQuickGradeNavigation = (next: boolean) => {
+        const newIndex = next ? quickGradeIndex + 1 : quickGradeIndex - 1;
+        if (newIndex >= 0 && newIndex < quickGradeAssignments.length) {
+            setQuickGradeIndex(newIndex);
+        } else {
+            handleQuickGradeClose();
+            addToast("Tüm ödevler değerlendirildi!", "success");
+        }
     };
     
     return (
@@ -534,8 +558,8 @@ const Assignments = () => {
                     </div>
                     {isCoach && (
                         <div className="flex gap-2 w-full md:w-auto">
-                             <button onClick={handleStartQuickGrade} className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">Hızlı Değerlendir</button>
-                            <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700" id="tour-step-4">Yeni Ödev Oluştur</button>
+                             <button onClick={handleStartQuickGrade} className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Hızlı Değerlendir</button>
+                            <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 whitespace-nowrap" id="tour-step-4">Yeni Ödev</button>
                         </div>
                     )}
                 </div>
@@ -573,6 +597,7 @@ const Assignments = () => {
                     assignment={quickGradeAssignments[quickGradeIndex]}
                     onClose={handleQuickGradeClose}
                     studentName={getUserName(quickGradeAssignments[quickGradeIndex].studentId)}
+                    onNavigate={handleQuickGradeNavigation}
                 />
             }
         </>
