@@ -42,18 +42,25 @@ const SuperAdminDashboard = () => {
         const [name, setName] = useState(user?.name || '');
         const [email, setEmail] = useState(user?.email || '');
         const [role, setRole] = useState(user?.role || UserRole.Student);
+        const [isLoading, setIsLoading] = useState(false);
 
         const handleSubmit = (e: React.FormEvent) => {
             e.preventDefault();
+            setIsLoading(true);
             const userData = { name, email, role, profilePicture: user?.profilePicture || `https://i.pravatar.cc/150?u=${email}` };
-            if (user) {
-                updateUser({ ...user, ...userData });
-                addToast("Kullanıcı başarıyla güncellendi.", "success");
-            } else {
-                addUser(userData);
-                addToast("Kullanıcı başarıyla eklendi.", "success");
-            }
-            onClose();
+            
+            // Simulate network delay
+            setTimeout(() => {
+                if (user) {
+                    updateUser({ ...user, ...userData });
+                    addToast("Kullanıcı başarıyla güncellendi.", "success");
+                } else {
+                    addUser(userData);
+                    addToast("Kullanıcı başarıyla eklendi.", "success");
+                }
+                setIsLoading(false);
+                onClose();
+            }, 300);
         };
 
         return (
@@ -61,11 +68,11 @@ const SuperAdminDashboard = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">Ad Soyad</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">E-posta</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">Rol</label>
@@ -76,8 +83,10 @@ const SuperAdminDashboard = () => {
                         </select>
                     </div>
                     <div className="flex justify-end pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
-                        <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
+                        <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed" disabled={isLoading}>
+                            {isLoading ? 'Kaydediliyor...' : 'Kaydet'}
+                        </button>
                     </div>
                 </form>
             </Modal>
@@ -135,7 +144,7 @@ const SuperAdminDashboard = () => {
                                     </td>
                                     <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
                                     <td className="py-3 px-4 text-center">{getRoleBadge(user.role)}</td>
-                                    <td className="py-3 px-4 text-right space-x-2">
+                                    <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
                                         <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
                                         {currentUser?.id !== user.id && (
                                             <button onClick={() => handleDelete(user.id)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>

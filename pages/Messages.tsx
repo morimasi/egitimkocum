@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole } from '../types';
-import { SendIcon, BellIcon, VideoIcon, MicIcon } from '../components/Icons';
+import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -55,7 +55,7 @@ const AnnouncementModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 
 const Messages = () => {
     const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus } = useDataContext();
-    const { startCall, initialFilters, setInitialFilters } = useUI();
+    const { addToast, startCall, initialFilters, setInitialFilters } = useUI();
     
     const [selectedContactId, setSelectedContactId] = useState<string | null>(initialFilters.contactId || null);
     const [newMessage, setNewMessage] = useState('');
@@ -63,6 +63,7 @@ const Messages = () => {
     const [showAudioRecorder, setShowAudioRecorder] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<number | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     useEffect(() => {
         if (initialFilters.contactId) {
@@ -123,6 +124,25 @@ const Messages = () => {
             audioUrl: audioUrl,
         });
         setShowAudioRecorder(false);
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file && currentUser && selectedContactId) {
+            sendMessage({
+                senderId: currentUser.id,
+                receiverId: selectedContactId,
+                text: file.name,
+                type: 'file',
+                fileName: file.name,
+                fileUrl: '#', // Mock URL
+            });
+            addToast("Dosya başarıyla gönderildi.", "success");
+        }
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,7 +220,7 @@ const Messages = () => {
                                             {lastMessage && <p className={`text-xs flex-shrink-0 ${selectedContactId === contact.id ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
                                         </div>
                                         <p className={`text-xs truncate ${selectedContactId === contact.id ? 'text-primary-200' : 'text-gray-500'}`}>
-                                        {typingStatus[contact.id] ? <span className="italic text-green-500">yazıyor...</span> : (lastMessage ? (lastMessage.type === 'audio' ? '🎤 Sesli Mesaj' : (lastMessage.senderId === currentUser.id && lastMessage.type !== 'announcement' ? `Siz: ${lastMessage.text}` : lastMessage.text)) : 'Henüz mesaj yok')}
+                                        {typingStatus[contact.id] ? <span className="italic text-green-500">yazıyor...</span> : (lastMessage ? (lastMessage.type === 'audio' ? '🎤 Sesli Mesaj' : (lastMessage.type === 'file' ? '📎 Dosya' : (lastMessage.senderId === currentUser.id && lastMessage.type !== 'announcement' ? `Siz: ${lastMessage.text}` : lastMessage.text))) : 'Henüz mesaj yok')}
                                         </p>
                                     </div>
                                 </div>
@@ -235,6 +255,11 @@ const Messages = () => {
                                                 <div className="w-64">
                                                     <AudioRecorder initialAudio={msg.audioUrl} readOnly />
                                                 </div>
+                                            ) : msg.type === 'file' ? (
+                                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 underline">
+                                                    <DocumentIcon className="w-6 h-6 flex-shrink-0" />
+                                                    <span>{msg.fileName}</span>
+                                                </a>
                                             ) : (
                                                 <p>{msg.text}</p>
                                             )}
@@ -267,10 +292,14 @@ const Messages = () => {
                                                 placeholder="Mesajınızı yazın..."
                                                 className="flex-1 p-2 border rounded-full bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             />
-                                            <button type="button" onClick={() => setShowAudioRecorder(true)} className="ml-3 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Sesli Mesaj Gönder">
+                                             <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="ml-3 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Dosya Ekle">
+                                                <PaperclipIcon className="w-5 h-5"/>
+                                            </button>
+                                            <button type="button" onClick={() => setShowAudioRecorder(true)} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Sesli Mesaj Gönder">
                                                 <MicIcon className="w-5 h-5"/>
                                             </button>
-                                            <button type="submit" className="ml-2 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder">
+                                            <button type="submit" className="ml-1 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder">
                                                 <SendIcon className="w-5 h-5" />
                                             </button>
                                         </form>

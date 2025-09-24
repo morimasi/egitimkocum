@@ -55,7 +55,17 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
             timerRef.current = window.setInterval(() => setDuration(prev => prev + 1), 1000);
         } catch (err) {
             console.error('Error starting recording:', err);
-            addToast("Mikrofon erişimi reddedildi veya bulunamadı.", "error");
+            if (err instanceof DOMException) {
+                if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    addToast("Kullanılabilir bir mikrofon bulunamadı. Lütfen bir mikrofon bağlayın.", "error");
+                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    addToast("Mikrofon erişimi reddedildi. Lütfen tarayıcı ayarlarından izin verin.", "error");
+                } else {
+                    addToast(`Mikrofon başlatılırken bir hata oluştu: ${err.message}`, "error");
+                }
+            } else {
+                addToast("Mikrofon başlatılırken bilinmeyen bir hata oluştu.", "error");
+            }
         }
     };
 

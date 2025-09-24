@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
 import Card from '../components/Card';
@@ -11,12 +11,22 @@ const StudentSettings = () => {
     const { addToast, startTour } = useUI();
     const [name, setName] = useState(currentUser?.name || '');
     const [email, setEmail] = useState(currentUser?.email || '');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleProfileUpdate = (e: React.FormEvent) => {
         e.preventDefault();
         if (currentUser) {
             updateUser({ ...currentUser, name, email });
             addToast("Profil başarıyla güncellendi.", "success");
+        }
+    };
+
+    const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && currentUser) {
+            const newProfilePictureUrl = URL.createObjectURL(file);
+            updateUser({ ...currentUser, profilePicture: newProfilePictureUrl });
+            addToast("Profil fotoğrafı güncellendi.", "success");
         }
     };
     
@@ -42,7 +52,8 @@ const StudentSettings = () => {
                 <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="flex flex-col items-center">
                         <img src={currentUser?.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
-                        <button type="button" className="text-sm text-primary-500 hover:underline">Fotoğrafı Değiştir</button>
+                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleProfilePictureChange} className="hidden" />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline">Fotoğrafı Değiştir</button>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">Ad Soyad</label>

@@ -69,17 +69,35 @@ const Library = () => {
             {activeTab === 'templates' && (
                 <div>
                      <h2 className="text-2xl font-bold mb-4">Ödev Şablonları</h2>
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {templates.map(template => <TemplateCard key={template.id} template={template} />)}
-                     </div>
+                     {templates.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {templates.map(template => <TemplateCard key={template.id} template={template} />)}
+                        </div>
+                     ) : (
+                        <Card>
+                            <div className="text-center py-10">
+                                <h3 className="text-lg font-semibold">Henüz ödev şablonu oluşturulmadı.</h3>
+                                <p className="text-gray-500 mt-2">Gelecekte hızlıca ödev atamak için buraya şablonlar ekleyebilirsiniz.</p>
+                            </div>
+                        </Card>
+                     )}
                 </div>
             )}
              {activeTab === 'resources' && (
                 <div>
                     <h2 className="text-2xl font-bold mb-4">Kaynaklar</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {resources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
-                    </div>
+                    {resources.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {resources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
+                        </div>
+                    ) : (
+                         <Card>
+                            <div className="text-center py-10">
+                                <h3 className="text-lg font-semibold">Henüz kaynak eklenmedi.</h3>
+                                <p className="text-gray-500 mt-2">Öğrencilerinizle paylaşmak için PDF, video veya bağlantı gibi kaynakları buraya ekleyin.</p>
+                            </div>
+                        </Card>
+                    )}
                 </div>
             )}
 

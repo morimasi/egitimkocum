@@ -47,24 +47,31 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const { theme, toggleTheme } = useUI();
     const { currentUser, students, logout } = useDataContext();
 
-    // FIX: Removed explicit type annotation to allow TypeScript to correctly infer the array type from its contents. This resolves type errors related to conditional spreading.
-    const navItems = [
-        ...(currentUser?.role === UserRole.SuperAdmin ? [
-            { page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> }
-        ] : [
+    // FIX: Refactored navItems creation to an imperative approach to fix TypeScript type inference issues.
+    // The previous complex expression with spreads and ternaries caused the 'page' property to be
+    // widened to 'string', which is not assignable to the 'Page' type. This is more readable and type-safe.
+    const navItems: NavItemProps[] = [];
+    if (currentUser?.role === UserRole.SuperAdmin) {
+        navItems.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
+    } else {
+        navItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> }
-        ]),
-        ...(currentUser?.role === UserRole.Coach ? [
+        );
+    }
+    if (currentUser?.role === UserRole.Coach) {
+        navItems.push(
           { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
           { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> }
-        ] : []),
-        ...(currentUser?.role !== UserRole.SuperAdmin ? [
+        );
+    }
+    if (currentUser?.role !== UserRole.SuperAdmin) {
+        navItems.push(
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" /> },
             { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
-        ] : []),
-        { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
-    ];
+        );
+    }
+    navItems.push({ page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> });
     
     // Switch between student and coach view for demo
     const { login, users } = useDataContext();
