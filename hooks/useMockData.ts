@@ -7,6 +7,7 @@ export const getMockData = () => {
       { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1' },
       { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1' },
       { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1' },
+      { id: 'student-5', name: 'Selin Doğan', email: 'selin.dogan@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-5', assignedCoachId: 'coach-1' },
       { id: 'superadmin-1', name: 'Admin User', email: 'admin@platform.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
     ];
     
@@ -15,7 +16,7 @@ export const getMockData = () => {
         { id: 'conv-2', participantIds: ['coach-1', 'student-2'], isGroup: false },
         { id: 'conv-3', participantIds: ['coach-1', 'student-3'], isGroup: false },
         { id: 'conv-4', participantIds: ['coach-1', 'student-4'], isGroup: false },
-        { id: 'conv-announcements', participantIds: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4'], isGroup: true, groupName: "Duyurular", groupImage: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png', adminId: 'coach-1' },
+        { id: 'conv-announcements', participantIds: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4', 'student-5'], isGroup: true, groupName: "Duyurular", groupImage: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png', adminId: 'coach-1' },
         { id: 'conv-group-1', participantIds: ['coach-1', 'student-1', 'student-2'], isGroup: true, groupName: "Proje Grubu", adminId: 'coach-1' },
     ];
 
@@ -32,6 +33,8 @@ export const getMockData = () => {
         { id: 'asg-7', studentId: 'student-4', coachId: 'coach-1', title: 'İngilizce Kelime Testi', description: 'Verilen 100 kelimeyi ezberle ve kendini sına.', dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: null, submittedAt: new Date().toISOString(), feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
         { id: 'asg-8', studentId: 'student-4', coachId: 'coach-1', title: 'Deneme Analizi', description: 'Son deneme sınavının analizini yap ve hatalarını çıkar.', dueDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 95, feedback: 'Analizin çok detaylı ve yerinde. Hatalarının üzerine gitmen seni başarıya ulaştıracaktır.', fileUrl: '#', fileName: 'deneme_analizi.xlsx', submittedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
         { id: 'asg-9', studentId: 'student-4', coachId: 'coach-1', title: 'Felsefe Makalesi Okuma', description: 'Platon\'un "Devlet" eserinden belirlenen bölümü oku ve ana fikirleri çıkar.', dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'completed', checklist: [{id: 'chk-asg9-1', text: 'Belirlenen bölümü oku', isCompleted: false}, {id: 'chk-asg9-2', text: 'Bölümdeki ana fikirleri listele', isCompleted: false}, {id: 'chk-asg9-3', text: 'Kendi yorumunu ekle', isCompleted: false}], coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-13', studentId: 'student-5', coachId: 'coach-1', title: 'Geometri Soru Bankası', description: 'Üçgenler konusu bitirilecek.', dueDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'completed', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
+        { id: 'asg-14', studentId: 'student-5', coachId: 'coach-1', title: 'Haftalık Deneme Sınavı', description: 'Bu haftaki deneme sınavına gir ve sonucunu yükle.', dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Submitted, grade: null, feedback: '', fileUrl: '#', submittedAt: new Date().toISOString(), feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: 'deneme_sonuc.pdf' },
     ];
     
     const messages: Message[] = [
@@ -72,6 +75,7 @@ export const getMockData = () => {
         {id: 'goal-2', studentId: 'student-2', text: 'Her gün 20 yeni İngilizce kelime ezberle.', isCompleted: true},
         {id: 'goal-3', studentId: 'student-3', text: 'Gecikmiş tarih ödevini bu hafta bitir.', isCompleted: false},
         {id: 'goal-4', studentId: 'student-4', text: 'Haftalık deneme sınavı netini 5 puan artır.', isCompleted: false},
+        {id: 'goal-5', studentId: 'student-5', text: 'Haftada en az 3 deneme çöz.', isCompleted: false},
     ];
 
     return { users, assignments, messages, templates, resources, goals, conversations };

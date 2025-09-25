@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -7,6 +8,7 @@ import { useUI } from '../contexts/UIContext';
 import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
+import VideoRecorder from '../components/VideoRecorder';
 
 
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
@@ -32,7 +34,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             addToast("Lütfen bir kaynak adı girin.", "error");
             return;
         }
-        if ((type === 'link' && !url) || (type !== 'link' && !file)) {
+        if ((type === 'link' && !url) || (type !== 'link' && !file && type !== 'video') || (type === 'video' && !url)) {
             addToast("Lütfen bir URL girin veya bir dosya seçin.", "error");
             return;
         }
@@ -47,7 +49,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             let resourceUrl = url;
             let resourceName = name;
 
-            if (type !== 'link' && file) {
+            if (type !== 'link' && type !== 'video' && file) {
                 if (!resourceName) {
                     resourceName = file.name;
                 }
@@ -83,7 +85,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
-                    <select value={type} onChange={e => handleTypeChange(e.target.value as any)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    {/* FIX: Typed the event object 'e' to React.ChangeEvent<HTMLSelectElement> to resolve the error on 'e.target.value'. */}
+                    <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.target.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>
                         <option value="pdf">PDF</option>
@@ -98,6 +101,11 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                     <div>
                         <label className="block text-sm font-medium mb-1">URL (Bağlantı)</label>
                         <input type="url" value={url} onChange={e => setUrl(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required />
+                    </div>
+                ) : type === 'video' ? (
+                    <div>
+                         <label className="block text-sm font-medium mb-1">Video</label>
+                         <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/>
                     </div>
                 ) : (
                     <div>

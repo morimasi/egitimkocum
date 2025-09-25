@@ -1,15 +1,13 @@
 
-
-
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
-import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon } from '../components/Icons';
+import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, PlusCircleIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
 import AnnouncementModal from '../components/AnnouncementModal';
+import VideoRecorder from '../components/VideoRecorder';
 
 
 const TypingIndicator = () => (
@@ -128,6 +126,49 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, convers
     
     const senderName = users.find(u => u.id === repliedToMessage?.senderId)?.name || '...';
     
+    const renderMessageContent = () => {
+        switch (msg.type) {
+            case 'video':
+                return <div className="w-64"><VideoRecorder initialVideo={msg.videoUrl} readOnly /></div>;
+            case 'audio':
+                return <div className="w-64"><AudioRecorder initialAudio={msg.audioUrl} readOnly /></div>;
+            case 'file':
+                return msg.imageUrl ? (
+                    <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+                        <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" />
+                    </a>
+                ) : (
+                    <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
+                );
+            case 'poll':
+                if (!msg.poll) return null;
+                return (
+                    <div>
+                        <p className="font-bold mb-2">{msg.poll.question}</p>
+                        <div className="space-y-2">
+                            {msg.poll.options.map((opt, i) => {
+                                const totalVotes = msg.poll!.options.reduce((acc, o) => acc + o.votes.length, 0);
+                                const percentage = totalVotes > 0 ? (opt.votes.length / totalVotes) * 100 : 0;
+                                const hasVoted = opt.votes.includes(currentUser!.id);
+
+                                return (
+                                    <div key={i} onClick={() => voteOnPoll(msg.id, i)} className="w-full text-left p-2 border rounded-md relative overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-600">
+                                        <div className="absolute top-0 left-0 h-full bg-primary-200 dark:bg-primary-800 transition-all duration-300" style={{width: `${percentage}%`}}></div>
+                                        <div className="relative z-10 flex justify-between items-center">
+                                            <span className={`font-medium ${hasVoted ? 'text-primary-800 dark:text-primary-100' : ''}`}>{opt.text}</span>
+                                            <span className={`text-sm font-semibold ${hasVoted ? 'text-primary-800 dark:text-primary-100' : 'text-gray-500'}`}>{opt.votes.length} oy</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                );
+            default:
+                return <p className="whitespace-pre-wrap">{msg.text}</p>;
+        }
+    };
+
     return (
         <div 
             className={`flex items-end gap-2 group ${isOwnMessage ? 'flex-row-reverse' : ''}`}
@@ -144,39 +185,8 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, convers
                     )}
                     
                     {msg.type === 'announcement' && <strong className="font-bold block mb-1">📢 Duyuru</strong>}
-                    {msg.type === 'audio' ? <div className="w-64"><AudioRecorder initialAudio={msg.audioUrl} readOnly /></div>
-                    : msg.type === 'file' ? (
-                        msg.imageUrl ? (
-                            <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-                                <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" />
-                            </a>
-                        ) : (
-                            <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
-                        )
-                    )
-                    : msg.type === 'poll' && msg.poll ? (
-                        <div>
-                            <p className="font-bold mb-2">{msg.poll.question}</p>
-                            <div className="space-y-2">
-                                {msg.poll.options.map((opt, i) => {
-                                    const totalVotes = msg.poll!.options.reduce((acc, o) => acc + o.votes.length, 0);
-                                    const percentage = totalVotes > 0 ? (opt.votes.length / totalVotes) * 100 : 0;
-                                    const hasVoted = opt.votes.includes(currentUser!.id);
-
-                                    return (
-                                        <div key={i} onClick={() => voteOnPoll(msg.id, i)} className="w-full text-left p-2 border rounded-md relative overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-600">
-                                            <div className="absolute top-0 left-0 h-full bg-primary-200 dark:bg-primary-800 transition-all duration-300" style={{width: `${percentage}%`}}></div>
-                                            <div className="relative z-10 flex justify-between items-center">
-                                                <span className={`font-medium ${hasVoted ? 'text-primary-800 dark:text-primary-100' : ''}`}>{opt.text}</span>
-                                                <span className={`text-sm font-semibold ${hasVoted ? 'text-primary-800 dark:text-primary-100' : 'text-gray-500'}`}>{opt.votes.length} oy</span>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )
-                    : <p className="whitespace-pre-wrap">{msg.text}</p>}
+                    
+                    {renderMessageContent()}
                     
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className="absolute -bottom-4 right-2 flex gap-1">
@@ -283,6 +293,22 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv:
     }, [currentUser, users]);
 
     const { name, picture } = getConversationDisplayInfo(conv);
+    
+    const lastMessageText = useMemo(() => {
+        if (!lastMessage) return 'Henüz mesaj yok';
+
+        const senderPrefix = lastMessage.senderId === currentUser?.id && lastMessage.type !== 'announcement' ? 'Siz: ' : '';
+        let content = '';
+
+        switch (lastMessage.type) {
+            case 'audio': content = '🎤 Sesli Mesaj'; break;
+            case 'video': content = '📹 Video Mesajı'; break;
+            case 'file': content = '📎 Dosya'; break;
+            default: content = lastMessage.text;
+        }
+        return senderPrefix + content;
+    }, [lastMessage, currentUser]);
+
 
     return (
         <div onClick={() => onSelect(conv.id)} className={`flex items-center p-3 cursor-pointer transition-colors ${isSelected ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
@@ -296,25 +322,100 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv:
                     {lastMessage && <p className={`text-xs flex-shrink-0 ${isSelected ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
                 </div>
                 <p className={`text-xs truncate ${isSelected ? 'text-primary-200' : 'text-gray-500'}`}>
-                    {lastMessage ? (lastMessage.type === 'audio' ? '🎤 Sesli Mesaj' : (lastMessage.type === 'file' ? '📎 Dosya' : (lastMessage.senderId === currentUser?.id && lastMessage.type !== 'announcement' ? `Siz: ${lastMessage.text}` : lastMessage.text))) : 'Henüz mesaj yok'}
+                    {lastMessageText}
                 </p>
             </div>
         </div>
     );
 });
 
+const NewMessageModal = ({ onClose, onSelectContact }: { onClose: () => void, onSelectContact: (userId: string) => void }) => {
+    const { users, conversations, currentUser } = useDataContext();
+
+    const contactsWithExistingChat = useMemo(() => {
+        if (!currentUser) return new Set();
+        const contactIds = new Set<string>();
+        conversations
+            .filter(c => !c.isGroup && c.participantIds.includes(currentUser.id))
+            .forEach(c => {
+                c.participantIds.forEach(id => {
+                    if (id !== currentUser.id) contactIds.add(id);
+                });
+            });
+        return contactIds;
+    }, [conversations, currentUser]);
+
+    // Determine which users to show based on the current user's role
+    const [availableContacts, modalTitle, modalDescription] = useMemo(() => {
+        if (!currentUser) return [[], '', ''];
+
+        let contacts: User[] = [];
+        let title = "Yeni Sohbet Başlat";
+        let description = "Sohbet başlatmak için bir kişi seçin.";
+
+        switch (currentUser.role) {
+            case UserRole.Student:
+                const coach = users.find(u => u.id === currentUser.assignedCoachId);
+                if (coach && !contactsWithExistingChat.has(coach.id)) {
+                    contacts = [coach];
+                }
+                title = "Koçunla Sohbet Başlat";
+                description = "Koçunla yeni bir sohbet başlat.";
+                break;
+
+            case UserRole.Coach:
+                contacts = users.filter(u =>
+                    u.role === UserRole.Student &&
+                    u.assignedCoachId === currentUser.id &&
+                    !contactsWithExistingChat.has(u.id)
+                );
+                description = "Sohbet başlatmak için bir öğrenci seçin.";
+                break;
+            
+            case UserRole.SuperAdmin:
+                contacts = users.filter(u =>
+                    u.id !== currentUser.id &&
+                    !contactsWithExistingChat.has(u.id)
+                );
+                break;
+        }
+        return [contacts, title, description];
+    }, [users, currentUser, contactsWithExistingChat]);
+    
+    return (
+        <Modal isOpen={true} onClose={onClose} title={modalTitle}>
+            <p className="text-sm text-gray-500 mb-4">{modalDescription}</p>
+            {availableContacts.length > 0 ? (
+                <ul className="space-y-2 max-h-80 overflow-y-auto">
+                    {availableContacts.map(contact => (
+                        <li key={contact.id} onClick={() => onSelectContact(contact.id)} className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                            <img src={contact.profilePicture} alt={contact.name} className="w-10 h-10 rounded-full" />
+                            <span className="ml-3 font-semibold">{contact.name}</span>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-center text-gray-500 py-8">Yeni sohbet başlatılacak kimse bulunmuyor.</p>
+            )}
+        </Modal>
+    );
+};
+
 
 const Messages = () => {
-    const { currentUser, users, conversations, getMessagesForConversation, sendMessage, markMessagesAsRead, typingStatus, addReaction, uploadFile, unreadCounts, lastMessagesMap, startGroupChat, addUserToConversation } = useDataContext();
+    const { currentUser, users, conversations, getMessagesForConversation, sendMessage, markMessagesAsRead, typingStatus, addReaction, uploadFile, lastMessagesMap, startGroupChat, findOrCreateConversation, addUserToConversation } = useDataContext();
     const { addToast, startCall, initialFilters, setInitialFilters } = useUI();
     
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.contactId || null);
     const [newMessage, setNewMessage] = useState('');
+    const [conversationSearch, setConversationSearch] = useState('');
     const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+    const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
     const [isPollModalOpen, setIsPollModalOpen] = useState(false);
     const [isGroupInfoModalOpen, setIsGroupInfoModalOpen] = useState(false);
     const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
     const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+    const [showVideoRecorder, setShowVideoRecorder] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -337,18 +438,38 @@ const Messages = () => {
                 return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
             });
     }, [conversations, currentUser, lastMessagesMap]);
+    
+    const getConversationDisplayInfo = useCallback((conv: Conversation) => {
+        if (!currentUser) return { name: '...', picture: '' };
+        if (conv.isGroup) {
+            return { name: conv.groupName || 'Grup Sohbeti', picture: conv.groupImage || 'https://i.pravatar.cc/150?u=group-' + conv.id };
+        } else {
+            const otherUserId = conv.participantIds.find(id => id !== currentUser.id);
+            const otherUser = users.find(u => u.id === otherUserId);
+            return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
+        }
+    }, [currentUser, users]);
+
+    const filteredConversations = useMemo(() => {
+        if (!conversationSearch) return userConversations;
+        return userConversations.filter(conv => {
+            const { name } = getConversationDisplayInfo(conv);
+            return name.toLowerCase().includes(conversationSearch.toLowerCase());
+        });
+    }, [userConversations, conversationSearch, getConversationDisplayInfo]);
+
 
     const selectedConversation = useMemo(() => userConversations.find(c => c.id === selectedConversationId) || null, [userConversations, selectedConversationId]);
 
     useEffect(() => {
         if (initialFilters.contactId) {
-            const conversation = userConversations.find(c => !c.isGroup && c.participantIds.includes(initialFilters.contactId!));
-            if (conversation) setSelectedConversationId(conversation.id);
+            const conversation = userConversations.find(c => c.id === initialFilters.contactId || (!c.isGroup && c.participantIds.includes(initialFilters.contactId!)));
+            if (conversation) {
+                setSelectedConversationId(conversation.id);
+            }
             setInitialFilters({});
-        } else if (!selectedConversationId && userConversations.length > 0) {
-            setSelectedConversationId(userConversations[0].id);
         }
-    }, [userConversations, selectedConversationId, initialFilters, setInitialFilters]);
+    }, [userConversations, initialFilters, setInitialFilters]);
     
     useEffect(() => {
         if (selectedConversationId) {
@@ -385,15 +506,79 @@ const Messages = () => {
         setNewMessage('');
         setReplyingTo(null);
     };
+    
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !currentUser || !selectedConversationId) return;
 
-    const handleStartNewGroup = async (userId: string) => {
-        if (!currentUser) return;
-        const otherUser = users.find(u => u.id === userId);
-        if (!otherUser) return;
-        const groupName = `${currentUser.name}, ${otherUser.name}`;
-        const newConvId = await startGroupChat([currentUser.id, userId], groupName);
-        if (newConvId) setSelectedConversationId(newConvId);
+        setIsUploading(true);
+        try {
+            const fileUrl = await uploadFile(file, `chat-files/${currentUser.id}`);
+            const messageData: Partial<Message> = {
+                fileUrl,
+                fileName: file.name,
+                fileType: file.type,
+                text: `Dosya: ${file.name}`
+            };
+
+            if (file.type.startsWith('image/')) {
+                messageData.imageUrl = fileUrl;
+            }
+
+            sendMessage({
+                senderId: currentUser.id,
+                conversationId: selectedConversationId,
+                type: 'file',
+                ...messageData
+            } as any);
+            addToast("Dosya gönderildi.", "success");
+        } catch (error) {
+            console.error("File upload error:", error);
+            addToast("Dosya gönderilirken bir hata oluştu.", "error");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
     };
+
+    const handleAudioSave = (audioUrl: string) => {
+        if (!currentUser || !selectedConversationId || !audioUrl) return;
+        sendMessage({
+            senderId: currentUser.id,
+            conversationId: selectedConversationId,
+            type: 'audio',
+            audioUrl: audioUrl,
+            text: 'Sesli Mesaj'
+        });
+        setShowAudioRecorder(false);
+    };
+    
+    const handleVideoSave = (videoUrl: string | null) => {
+        if (!videoUrl) {
+            setShowVideoRecorder(false);
+            return;
+        }
+        if (!currentUser || !selectedConversationId) return;
+        sendMessage({
+            senderId: currentUser.id,
+            conversationId: selectedConversationId,
+            type: 'video',
+            videoUrl: videoUrl,
+            text: 'Video Mesajı'
+        });
+        setShowVideoRecorder(false);
+    };
+
+    const handleStartNewConversation = async (userId: string) => {
+        const newConvId = await findOrCreateConversation(userId);
+        if (newConvId) {
+            setSelectedConversationId(newConvId);
+        }
+        setIsNewMessageModalOpen(false);
+    };
+
 
     const handleAddUsersToConversation = async (userIds: string[]) => {
         if (!selectedConversation) return;
@@ -410,30 +595,31 @@ const Messages = () => {
             }
         }
     };
-    
-    const getConversationDisplayInfo = useCallback((conv: Conversation) => {
-        if (!currentUser) return { name: '...', picture: '' };
-        if (conv.isGroup) {
-            return { name: conv.groupName || 'Grup Sohbeti', picture: conv.groupImage || 'https://i.pravatar.cc/150?u=group-' + conv.id };
-        } else {
-            const otherUserId = conv.participantIds.find(id => id !== currentUser.id);
-            const otherUser = users.find(u => u.id === otherUserId);
-            return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
-        }
-    }, [currentUser, users]);
 
     if (!currentUser) return null;
     
     return (
         <>
-            <div className="flex h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative">
+            <div className="flex h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
                 <div className={`w-full lg:w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ${selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                         <h2 className="text-lg font-semibold">Sohbetler</h2>
-                        {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
+                        <div className="flex items-center gap-1">
+                             <button onClick={() => setIsNewMessageModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Yeni Mesaj"><PlusCircleIcon className="w-5 h-5"/></button>
+                             {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
+                        </div>
+                    </div>
+                     <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input 
+                            type="search" 
+                            value={conversationSearch} 
+                            onChange={e => setConversationSearch(e.target.value)} 
+                            placeholder="Sohbetlerde ara..."
+                            className="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
                     </div>
                     <div className="flex-1 overflow-y-auto">
-                        {userConversations.map(conv => (
+                        {filteredConversations.map(conv => (
                             <ConversationListItem
                                 key={conv.id}
                                 conv={conv}
@@ -487,12 +673,42 @@ const Messages = () => {
                                 <div ref={messagesEndRef} />
                                 {showScrollToBottom && <button onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })} className="absolute bottom-4 right-4 bg-primary-500 text-white w-10 h-10 rounded-full shadow-lg animate-bounce">↓</button>}
                             </div>
-                            <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                           <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                                {replyingTo && (
+                                    <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-t-lg flex justify-between items-center text-sm mb-2">
+                                        <div>
+                                            <p className="font-semibold text-primary-500">Yanıtlanıyor:</p>
+                                            <p className="text-gray-600 dark:text-gray-300 truncate">{replyingTo.text}</p>
+                                        </div>
+                                        <button onClick={() => setReplyingTo(null)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><XIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
+                                {isUploading && <div className="text-center text-sm text-gray-500 p-2">Dosya yükleniyor...</div>}
                                 {selectedConversation.id !== 'conv-announcements' ? (
-                                    <form onSubmit={handleSendMessage} className="flex items-center">
-                                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Mesajınızı yazın..." className={`flex-1 p-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full`}/>
-                                        <button type="submit" className="ml-2 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
-                                    </form>
+                                    showAudioRecorder ? (
+                                        <div className="flex items-center justify-center gap-4">
+                                            <AudioRecorder onSave={handleAudioSave} />
+                                            <button onClick={() => setShowAudioRecorder(false)} className="text-sm text-red-500 hover:underline">İptal</button>
+                                        </div>
+                                    ) : showVideoRecorder ? (
+                                        <div>
+                                            <VideoRecorder onSave={handleVideoSave} />
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0" title="Dosya Ekle"><PaperclipIcon className="w-5 h-5" /></button>
+                                            <input type="text" value={newMessage} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e); }} placeholder="Mesajınızı yazın..." className="flex-1 px-4 py-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full"/>
+                                            {newMessage.trim() ? (
+                                                <button type="submit" className="p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600 shrink-0 transition-all" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
+                                            ) : (
+                                                <div className="flex items-center shrink-0">
+                                                    <button type="button" onClick={() => setShowAudioRecorder(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Sesli Mesaj"><MicIcon className="w-5 h-5" /></button>
+                                                    <button type="button" onClick={() => setShowVideoRecorder(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Video Mesaj"><VideoIcon className="w-5 h-5" /></button>
+                                                </div>
+                                            )}
+                                        </form>
+                                    )
                                 ) : <p className="text-center text-sm text-gray-400">Duyurulara yanıt verilemez.</p>}
                             </div>
                         </>
@@ -500,6 +716,7 @@ const Messages = () => {
                 </div>
             </div>
             {isAnnouncementModalOpen && <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setIsAnnouncementModalOpen(false)} />}
+            {isNewMessageModalOpen && <NewMessageModal onClose={() => setIsNewMessageModalOpen(false)} onSelectContact={handleStartNewConversation} />}
             {isGroupInfoModalOpen && <GroupInfoModal conversation={selectedConversation} onClose={() => setIsGroupInfoModalOpen(false)} />}
             {isAddToGroupModalOpen && selectedConversation && <AddToGroupModal conversation={selectedConversation} onClose={() => setIsAddToGroupModalOpen(false)} onAddUsers={handleAddUsersToConversation} />}
         </>

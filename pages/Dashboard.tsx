@@ -49,25 +49,31 @@ const AnnouncementsCard = React.memo(() => {
 const StudentWelcomeHeader = React.memo(() => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const [suggestion, setSuggestion] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
+    const handleGenerateSuggestion = async () => {
         if (!currentUser) return;
-        const fetchSuggestion = async () => {
-            setIsLoading(true);
-            const assignments = getAssignmentsForStudent(currentUser.id);
-            const result = await generateStudentFocusSuggestion(currentUser.name, assignments);
-            setSuggestion(result);
-            setIsLoading(false);
-        };
-        fetchSuggestion();
-    }, [currentUser, getAssignmentsForStudent]);
+        setIsLoading(true);
+        const assignments = getAssignmentsForStudent(currentUser.id);
+        const result = await generateStudentFocusSuggestion(currentUser.name, assignments);
+        setSuggestion(result);
+        setIsLoading(false);
+    };
+
 
     return (
         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
             <h1 className="text-2xl md:text-3xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
-            <div className="mt-2 text-white/80 h-10">
-                 {isLoading ? <SkeletonText className="h-5 w-3/4 bg-white/30" /> : <p>{suggestion}</p>}
+            <div className="mt-2 text-white/80 min-h-[40px] flex items-center">
+                 {isLoading ? (
+                    <SkeletonText className="h-5 w-3/4 bg-white/30" />
+                ) : suggestion ? (
+                    <p>{suggestion}</p>
+                ) : (
+                    <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-md transition-colors">
+                        ✨ Günlük Tavsiyeni Al
+                    </button>
+                )}
             </div>
         </Card>
     );
@@ -202,25 +208,30 @@ const StudentDashboard = () => (
 const CoachWelcomeHeader = React.memo(() => {
     const { currentUser, students, assignments } = useDataContext();
     const [insights, setInsights] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
+    const handleGenerateInsights = async () => {
         if (!currentUser) return;
-        const fetchInsights = async () => {
-            setIsLoading(true);
-            const result = await generatePersonalCoachSummary(currentUser.name, students, assignments);
-            setInsights(result);
-            setIsLoading(false);
-        };
-        fetchInsights();
-    }, [currentUser, students, assignments]);
+        setIsLoading(true);
+        const result = await generatePersonalCoachSummary(currentUser.name, students, assignments);
+        setInsights(result);
+        setIsLoading(false);
+    };
 
     return (
         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
              <h1 className="text-2xl md:text-3xl font-bold text-white">Merhaba, {currentUser?.name}!</h1>
-             <p className="mt-2 text-white/80">İşte haftalık koçluk özetin ve tavsiyeler:</p>
-             <div className="mt-4 p-4 bg-white/10 rounded-lg text-sm h-24">
-                {isLoading ? <SkeletonText className="h-full w-full bg-white/20" /> : <p className="whitespace-pre-wrap">{insights}</p>}
+             <p className="mt-2 text-white/80">Haftalık koçluk özetini ve tavsiyelerini görmek için butona tıkla.</p>
+             <div className="mt-4 p-4 bg-white/10 rounded-lg text-sm min-h-[96px]">
+                {isLoading ? (
+                    <SkeletonText className="h-full w-full bg-white/20" />
+                ) : insights ? (
+                    <p className="whitespace-pre-wrap">{insights}</p>
+                ) : (
+                    <button onClick={handleGenerateInsights} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-md transition-colors">
+                        ✨ Haftalık Özeti Oluştur
+                    </button>
+                )}
              </div>
         </Card>
     );

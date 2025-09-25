@@ -10,6 +10,7 @@ import { generateAssignmentDescription, generateSmartFeedback, generateAssignmen
 import AudioRecorder from '../components/AudioRecorder';
 import FileUpload from '../components/FileUpload';
 import EmptyState from '../components/EmptyState';
+import VideoRecorder from '../components/VideoRecorder';
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -71,6 +72,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
     const [submissionType, setSubmissionType] = useState<SubmissionType>('file');
+    const [videoDescriptionUrl, setVideoDescriptionUrl] = useState<string | null>(null);
 
     const handleGenerateDescription = async () => {
         if (!title) {
@@ -139,6 +141,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             checklist: checklist.map((item, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
             feedbackReaction: null,
             submissionType,
+            videoDescriptionUrl,
         };
         await addAssignment(newAssignmentBase, selectedStudents);
         addToast("Ödev başarıyla oluşturuldu.", "success");
@@ -151,6 +154,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         setSelectedTemplate('');
         setChecklist([]);
         setSubmissionType('file');
+        setVideoDescriptionUrl(null);
     };
 
     return (
@@ -202,7 +206,12 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                     <button type="button" onClick={() => setChecklist([...checklist, { text: '' }])} className="mt-2 text-sm text-primary-600 font-semibold hover:text-primary-800">+ Madde Ekle</button>
                 </div>
                  <div>
+                    <label className="block text-sm font-medium mb-1">Video Açıklaması (İsteğe Bağlı)</label>
+                    <VideoRecorder onSave={setVideoDescriptionUrl} />
+                </div>
+                 <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
+                    {/* FIX: Typed the event object 'e' to React.ChangeEvent<HTMLSelectElement> to resolve the error on 'e.target.value'. */}
                     <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
@@ -396,6 +405,13 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 <p><strong className="font-semibold">Teslim Tarihi:</strong> {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
                 <p><strong className="font-semibold">Durum:</strong> {getStatusChip(assignment.status)}</p>
                 <p className="text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded-md">{assignment.description}</p>
+                
+                 {assignment.videoDescriptionUrl && (
+                    <div>
+                        <strong className="font-semibold block mb-2">Video Açıklaması:</strong>
+                        <VideoRecorder initialVideo={assignment.videoDescriptionUrl} readOnly />
+                    </div>
+                )}
                 
                 {assignment.checklist && assignment.checklist.length > 0 && (
                      <div>

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -45,7 +46,8 @@ const TabItem = React.memo(({ page, label, icon, badge }: TabItemProps) => {
 const TabBar = () => {
     const { currentUser, unreadCounts } = useDataContext();
 
-    const totalUnreadMessages = Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0);
+    // FIX: Explicitly cast `count` to a number within the reduce function to prevent type errors.
+    const totalUnreadMessages = Array.from(unreadCounts.values()).reduce((sum, count) => sum + Number(count), 0);
 
     const tabItems: TabItemProps[] = [];
 

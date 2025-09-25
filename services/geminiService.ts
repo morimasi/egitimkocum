@@ -1,6 +1,36 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Assignment, AssignmentStatus, User } from "../types";
 
+// Caching helper functions
+const getFromCache = <T>(key: string, ttl: number): T | null => {
+    try {
+        const cachedItem = sessionStorage.getItem(key);
+        if (!cachedItem) return null;
+
+        const { data, timestamp } = JSON.parse(cachedItem);
+        if (Date.now() - timestamp < ttl) {
+            return data as T;
+        }
+        sessionStorage.removeItem(key);
+        return null;
+    } catch (e) {
+        console.error("Failed to read from cache", e);
+        return null;
+    }
+};
+
+const setInCache = <T>(key: string, data: T) => {
+    try {
+        const item = { data, timestamp: Date.now() };
+        sessionStorage.setItem(key, JSON.stringify(item));
+    } catch (e) {
+        console.error("Failed to write to cache", e);
+    }
+};
+
+const ONE_HOUR = 60 * 60 * 1000;
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
 // Ensure API_KEY is available in the environment.
 if (!process.env.API_KEY) {
     console.error("API_KEY environment variable not set.");
@@ -9,6 +39,9 @@ if (!process.env.API_KEY) {
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const generateAssignmentDescription = async (title: string): Promise<string> => {
+  const cacheKey = `genDesc_${title}`;
+  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
+  if (cached) return cached;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -17,6 +50,7 @@ export const generateAssignmentDescription = async (title: string): Promise<stri
         temperature: 0.7,
       },
     });
+    setInCache(cacheKey, response.text);
     return response.text;
   } catch (error) {
     console.error("Error generating assignment description:", error);
@@ -25,6 +59,9 @@ export const generateAssignmentDescription = async (title: string): Promise<stri
 };
 
 export const generateSmartFeedback = async (grade: number, assignmentTitle: string): Promise<string> => {
+  const cacheKey = `genFeedback_${assignmentTitle}_${grade}`;
+  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
+  if (cached) return cached;
   try {
     const prompt = `Bir öğrencinin "${assignmentTitle}" ödevinden 100 üzerinden ${grade} aldığını varsayarak, hem yapıcı hem de motive edici bir geri bildirim yaz.
     - Eğer not yüksekse (85+): Öğrencinin güçlü yönlerini vurgula ve onu tebrik et. Gelecekte kendini nasıl daha da geliştirebileceğine dair bir ipucu ver.
@@ -39,6 +76,7 @@ export const generateSmartFeedback = async (grade: number, assignmentTitle: stri
         temperature: 0.8,
       },
     });
+    setInCache(cacheKey, response.text);
     return response.text;
   } catch (error) {
     console.error("Error generating smart feedback:", error);
@@ -47,6 +85,9 @@ export const generateSmartFeedback = async (grade: number, assignmentTitle: stri
 };
 
 export const generateAssignmentChecklist = async (title: string, description: string): Promise<{ text: string }[]> => {
+  const cacheKey = `genChecklist_${title}_${description.substring(0, 50)}`;
+  const cached = getFromCache<{ text: string }[]>(cacheKey, ONE_HOUR);
+  if (cached) return cached;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -71,7 +112,9 @@ export const generateAssignmentChecklist = async (title: string, description: st
     });
 
     const jsonString = response.text.trim();
-    return JSON.parse(jsonString);
+    const result = JSON.parse(jsonString);
+    setInCache(cacheKey, result);
+    return result;
   } catch (error) {
     console.error("Error generating assignment checklist:", error);
     return [];
@@ -79,6 +122,9 @@ export const generateAssignmentChecklist = async (title: string, description: st
 };
 
 export const suggestStudentGoal = async (studentName: string, averageGrade: number, overdueAssignments: number): Promise<string> => {
+  const cacheKey = `suggestGoal_${studentName}_${averageGrade}_${overdueAssignments}`;
+  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
+  if (cached) return cached;
   try {
     const prompt = `Öğrenci ${studentName}'in mevcut durumu: Not ortalaması 100 üzerinden ${averageGrade} ve vadesi geçmiş ${overdueAssignments} ödevi var. Bu öğrenci için S.M.A.R.T. (Spesifik, Ölçülebilir, Ulaşılabilir, İlgili, Zaman-sınırlı) bir hedef öner. Hedef, öğrenciyi motive etmeli ve performansını artırmaya yönelik olmalı. Sadece tek cümlelik hedefin metnini döndür.`;
 
@@ -89,7 +135,7 @@ export const suggestStudentGoal = async (studentName: string, averageGrade: numb
         temperature: 0.8,
       },
     });
-
+    setInCache(cacheKey, response.text);
     return response.text;
   } catch (error) {
     console.error("Error suggesting student goal:", error);
@@ -98,6 +144,9 @@ export const suggestStudentGoal = async (studentName: string, averageGrade: numb
 };
 
 export const generateWeeklySummary = async (studentName: string, stats: { completed: number, avgGrade: number | string, goals: number }): Promise<string> => {
+    const cacheKey = `weeklySummary_${studentName}_${stats.completed}_${stats.avgGrade}_${stats.goals}`;
+    const cached = getFromCache<string>(cacheKey, ONE_HOUR);
+    if(cached) return cached;
   try {
     const prompt = `Sen bir eğitim koçusun. Öğrencin ${studentName} için geçen haftaki performansına dayanarak kısa, pozitif ve motive edici bir özet yaz.
     Geçen haftanın verileri:
@@ -120,6 +169,7 @@ export const generateWeeklySummary = async (studentName: string, stats: { comple
         },
     });
 
+    setInCache(cacheKey, response.text);
     return response.text;
   } catch(error) {
     console.error("Error generating weekly summary:", error);
@@ -128,11 +178,15 @@ export const generateWeeklySummary = async (studentName: string, stats: { comple
 };
 
 export const generateStudentFocusSuggestion = async (studentName: string, assignments: Assignment[]): Promise<string> => {
-    try {
-        const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
-        const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-        const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A';
+    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
+    const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+    const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A';
 
+    const cacheKey = `studentFocus_${studentName}_${pendingCount}_${avgGrade}`;
+    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
+    if(cached) return cached;
+
+    try {
         const prompt = `Öğrenci ${studentName}'in güncel durumu: ${pendingCount} bekleyen ödevi var ve not ortalaması ${avgGrade}. Bu öğrencinin başarılı olmak için bir sonraki adımda neye odaklanması gerektiği konusunda kısa (1-2 cümle), eyleme geçirilebilir ve motive edici bir tavsiye ver.`;
 
         const response = await ai.models.generateContent({
@@ -140,6 +194,7 @@ export const generateStudentFocusSuggestion = async (studentName: string, assign
             contents: prompt,
             config: { temperature: 0.7 },
         });
+        setInCache(cacheKey, response.text);
         return response.text;
     } catch (error) {
         console.error("Error generating student focus suggestion:", error);
@@ -148,25 +203,29 @@ export const generateStudentFocusSuggestion = async (studentName: string, assign
 };
 
 export const generatePersonalCoachSummary = async (coachName: string, students: User[], assignments: Assignment[]): Promise<string> => {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const submittedThisWeek = assignments.filter(a => a.submittedAt && new Date(a.submittedAt) > oneWeekAgo).length;
+    const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+
+    const highPerformersCount = students.filter(s => {
+        const studentAssignments = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Graded && a.grade !== null);
+        if (studentAssignments.length === 0) return false;
+        const avg = studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length;
+        return avg >= 90;
+    }).length;
+
+    const needsAttentionCount = students.filter(s => {
+         const overdueCount = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Pending && new Date(a.dueDate) < now).length;
+         return overdueCount > 1;
+    }).length;
+    
+    const cacheKey = `coachSummary_${coachName}_${submittedThisWeek}_${toGradeCount}_${needsAttentionCount}_${highPerformersCount}`;
+    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
+    if (cached) return cached;
+
     try {
-        const now = new Date();
-        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
-        const submittedThisWeek = assignments.filter(a => a.submittedAt && new Date(a.submittedAt) > oneWeekAgo).length;
-        const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-
-        const highPerformersCount = students.filter(s => {
-            const studentAssignments = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Graded && a.grade !== null);
-            if (studentAssignments.length === 0) return false;
-            const avg = studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length;
-            return avg >= 90;
-        }).length;
-
-        const needsAttentionCount = students.filter(s => {
-             const overdueCount = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Pending && new Date(a.dueDate) < now).length;
-             return overdueCount > 1;
-        }).length;
-
         const prompt = `Merhaba ${coachName}, sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen ve sana özel eyleme geçirilebilir tavsiyeler sunan kısa bir analiz yaz. Öğrenci isimlerini KESİNLİKLE kullanma. Genel trendlere ve sayılara odaklan.
         
         İşte bu haftanın verileri:
@@ -188,6 +247,7 @@ export const generatePersonalCoachSummary = async (coachName: string, students: 
             config: { temperature: 0.7 },
         });
 
+        setInCache(cacheKey, response.text);
         return response.text;
     } catch (error) {
         console.error("Error generating personal coach summary:", error);
@@ -197,6 +257,9 @@ export const generatePersonalCoachSummary = async (coachName: string, students: 
 
 
 export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
+  const cacheKey = `suggestGrade_${assignment.id}`;
+  const cached = getFromCache<{ suggestedGrade: number, rationale: string }>(cacheKey, ONE_HOUR);
+  if (cached) return cached;
   try {
     let submissionContent = '';
     if (assignment.submissionType === 'text' && assignment.textSubmission) {
@@ -233,7 +296,9 @@ export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedG
     });
 
     const jsonString = response.text.trim();
-    return JSON.parse(jsonString);
+    const result = JSON.parse(jsonString);
+    setInCache(cacheKey, result);
+    return result;
   } catch (error) {
     console.error("Error suggesting grade:", error);
     return null;
@@ -241,6 +306,9 @@ export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedG
 };
 
 export const generateStudentAnalyticsInsight = async (studentName: string, data: { avgGrade: number | string; completionRate: number; topSubject: string; lowSubject: string }): Promise<string> => {
+    const cacheKey = `studentInsight_${studentName}_${data.avgGrade}_${data.completionRate}`;
+    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
+    if (cached) return cached;
     try {
         const prompt = `Sen bir motive edici ve eğlenceli bir oyun koçusun. Öğrencin ${studentName} için aşağıdaki performans verilerini analiz et ve ona özel, oyunlaştırılmış bir dille kısa bir analiz ve teşvik mesajı yaz.
 
@@ -264,6 +332,7 @@ export const generateStudentAnalyticsInsight = async (studentName: string, data:
             config: { temperature: 0.8 },
         });
 
+        setInCache(cacheKey, response.text);
         return response.text;
     } catch (error) {
         console.error("Error generating student analytics insight:", error);
@@ -273,6 +342,9 @@ export const generateStudentAnalyticsInsight = async (studentName: string, data:
 
 
 export const generateCoachAnalyticsInsight = async (studentsData: { name: string, avgGrade: number, completionRate: number, overdue: number }[]): Promise<string> => {
+    const cacheKey = `coachInsight_${studentsData.length}_${studentsData.reduce((acc, s) => acc + s.avgGrade, 0)}`;
+    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
+    if(cached) return cached;
     try {
         const classAvgGrade = studentsData.reduce((sum, s) => sum + s.avgGrade, 0) / (studentsData.length || 1);
         const highPerformers = studentsData.filter(s => s.avgGrade >= 90).length;
@@ -292,7 +364,7 @@ export const generateCoachAnalyticsInsight = async (studentsData: { name: string
         2.  **Öne Çıkan Noktalar:** Verilerdeki pozitif ve dikkat edilmesi gereken trendleri (örneğin, "Sınıfın %${((highPerformers / totalStudents) * 100).toFixed(0)}'ı yüksek performans gösteriyor, bu harika bir başarı.") bir veya iki madde halinde belirt.
         3.  **Stratejik Öneriler:** Koçun bu hafta odaklanabileceği 1-2 somut eylem önerisi sun. (Örn: "Düşük ortalamalı öğrenci grubuyla birebir görüşmeler planlayarak temel eksiklikleri tespit edebilirsin." veya "Yüksek performanslı gruba ek kaynaklar sunarak onları daha da ileri taşıyabilirsin.")
 
-        Tonun profesyonel, veri odaklı ve destekleyici olsun. Sadece rapor metnini döndür.`;
+        Tonun profesyonel,sıcak,samimi, birazdaespirili ama gerçekçi, veri odaklı ve destekleyici olsun. Sadece rapor metnini döndür.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -300,6 +372,7 @@ export const generateCoachAnalyticsInsight = async (studentsData: { name: string
             config: { temperature: 0.6 },
         });
 
+        setInCache(cacheKey, response.text);
         return response.text;
     } catch (error) {
         console.error("Error generating coach analytics insight:", error);

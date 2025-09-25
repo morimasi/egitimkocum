@@ -227,6 +227,7 @@ interface DataContextType {
     unreadCounts: Map<string, number>;
     lastMessagesMap: Map<string, Message>;
     startGroupChat: (participantIds: string[], groupName: string) => Promise<string | undefined>;
+    findOrCreateConversation: (otherParticipantId: string) => Promise<string | undefined>;
     addUserToConversation: (conversationId: string, userId: string) => Promise<void>;
     removeUserFromConversation: (conversationId: string, userId: string) => Promise<void>;
     endConversation: (conversationId: string) => Promise<void>;
@@ -497,6 +498,31 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             });
             return newConversation.id;
         };
+        
+        const findOrCreateConversation = async (otherParticipantId: string) => {
+            if (!state.currentUser) return;
+            const currentUserId = state.currentUser.id;
+
+            const existingConversation = state.conversations.find(c =>
+                !c.isGroup &&
+                c.participantIds.length === 2 &&
+                c.participantIds.includes(currentUserId) &&
+                c.participantIds.includes(otherParticipantId)
+            );
+
+            if (existingConversation) {
+                return existingConversation.id;
+            }
+
+            const newConversation: Conversation = {
+                id: `conv-${Date.now()}`,
+                participantIds: [currentUserId, otherParticipantId],
+                isGroup: false,
+            };
+            dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
+            return newConversation.id;
+        };
+
 
         const addUserToConversation = async (conversationId: string, userId: string) => {
             const conversation = state.conversations.find(c => c.id === conversationId);
@@ -575,6 +601,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             unreadCounts,
             lastMessagesMap,
             startGroupChat,
+            findOrCreateConversation,
             addUserToConversation,
             removeUserFromConversation,
             endConversation,

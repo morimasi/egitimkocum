@@ -44,6 +44,7 @@ export interface Assignment {
   coachAttachments?: { name: string; url: string }[];
   checklist?: ChecklistItem[];
   audioFeedbackUrl?: string | null;
+  videoDescriptionUrl?: string | null;
   feedbackReaction?: '👍' | '🤔' | null;
   submissionType?: SubmissionType;
   textSubmission?: string | null;
@@ -79,12 +80,13 @@ export interface Message {
   conversationId: string;
   text: string;
   timestamp: string;
-  type: 'text' | 'file' | 'audio' | 'announcement' | 'poll' | 'system';
+  type: 'text' | 'file' | 'audio' | 'video' | 'announcement' | 'poll' | 'system';
   fileUrl?: string;
   fileName?: string;
   fileType?: string;
   imageUrl?: string;
   audioUrl?: string;
+  videoUrl?: string;
   readBy: string[];
   reactions?: Reaction;
   replyTo?: string; // ID of the message being replied to

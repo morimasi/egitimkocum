@@ -126,24 +126,20 @@ const SubjectPerformanceChart = ({ assignments }: { assignments: Assignment[] })
 
 const AiStudentInsight = ({ user, assignments }: { user: User, assignments: Assignment[] }) => {
     const [insight, setInsight] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchInsight = async () => {
-            setIsLoading(true);
-            // This is a simplified derivation of subjects for the demo
-            const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-            const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 0;
-            const completionRate = assignments.length > 0 ? (assignments.filter(a => a.status !== AssignmentStatus.Pending).length / assignments.length) * 100 : 0;
-            const topSubject = gradedAssignments.filter(a=> a.grade! >= 90).map(a => a.title.split(' ')[0])[0] || 'Matematik';
-            const lowSubject = gradedAssignments.filter(a=> a.grade! < 70).map(a => a.title.split(' ')[0])[0] || 'Fizik';
+    const handleGenerateInsight = async () => {
+        setIsLoading(true);
+        const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+        const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 0;
+        const completionRate = assignments.length > 0 ? (assignments.filter(a => a.status !== AssignmentStatus.Pending).length / assignments.length) * 100 : 0;
+        const topSubject = gradedAssignments.filter(a=> a.grade! >= 90).map(a => a.title.split(' ')[0])[0] || 'Matematik';
+        const lowSubject = gradedAssignments.filter(a=> a.grade! < 70).map(a => a.title.split(' ')[0])[0] || 'Fizik';
 
-            const result = await generateStudentAnalyticsInsight(user.name, { avgGrade, completionRate, topSubject, lowSubject });
-            setInsight(result);
-            setIsLoading(false);
-        };
-        fetchInsight();
-    }, [user, assignments]);
+        const result = await generateStudentAnalyticsInsight(user.name, { avgGrade, completionRate, topSubject, lowSubject });
+        setInsight(result);
+        setIsLoading(false);
+    };
 
     return (
         <Card>
@@ -151,7 +147,20 @@ const AiStudentInsight = ({ user, assignments }: { user: User, assignments: Assi
                 <SparklesIcon className="w-5 h-5 mr-2 text-primary-500" />
                 Kişisel Koçun
             </h4>
-            {isLoading ? <SkeletonText className="h-24 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insight}</p>}
+            <div className="min-h-[96px]">
+                {isLoading ? (
+                    <SkeletonText className="h-24 w-full" />
+                ) : insight ? (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insight}</p>
+                ) : (
+                     <div className="flex flex-col items-center justify-center h-full text-center">
+                        <p className="text-sm text-gray-500 mb-3">Oyunlaştırılmış analizini ve teşvik mesajını görmek için butona tıkla.</p>
+                        <button onClick={handleGenerateInsight} className="px-4 py-2 text-sm font-semibold bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-900 rounded-md transition-colors">
+                            Analizi Oluştur
+                        </button>
+                    </div>
+                )}
+            </div>
         </Card>
     );
 };
@@ -252,25 +261,22 @@ const GradeDistributionChart = ({ assignments }: { assignments: Assignment[] }) 
 
 const AiCoachInsight = ({ students, assignments }: { students: User[], assignments: Assignment[] }) => {
     const [insight, setInsight] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchInsight = async () => {
-            setIsLoading(true);
-            const studentData = students.map(student => {
-                const studentAssignments = assignments.filter(a => a.studentId === student.id);
-                const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-                const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
-                const completionRate = studentAssignments.length > 0 ? (studentAssignments.filter(a => a.status !== AssignmentStatus.Pending).length / studentAssignments.length) * 100 : 0;
-                const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-                return { name: student.name, avgGrade, completionRate, overdue };
-            });
-            const result = await generateCoachAnalyticsInsight(studentData);
-            setInsight(result);
-            setIsLoading(false);
-        };
-        fetchInsight();
-    }, [students, assignments]);
+    const handleGenerateInsight = async () => {
+        setIsLoading(true);
+        const studentData = students.map(student => {
+            const studentAssignments = assignments.filter(a => a.studentId === student.id);
+            const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+            const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
+            const completionRate = studentAssignments.length > 0 ? (studentAssignments.filter(a => a.status !== AssignmentStatus.Pending).length / studentAssignments.length) * 100 : 0;
+            const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+            return { name: student.name, avgGrade, completionRate, overdue };
+        });
+        const result = await generateCoachAnalyticsInsight(studentData);
+        setInsight(result);
+        setIsLoading(false);
+    };
 
     return (
         <Card>
@@ -278,7 +284,20 @@ const AiCoachInsight = ({ students, assignments }: { students: User[], assignmen
                 <SparklesIcon className="w-5 h-5 mr-2 text-primary-500" />
                 Yapay Zeka Analisti
             </h4>
-            {isLoading ? <SkeletonText className="h-24 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insight}</p>}
+            <div className="min-h-[96px]">
+                {isLoading ? (
+                    <SkeletonText className="h-24 w-full" />
+                ) : insight ? (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insight}</p>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <p className="text-sm text-gray-500 mb-3">Sınıf verilerini analiz ederek stratejik bir özet raporu oluşturun.</p>
+                        <button onClick={handleGenerateInsight} className="px-4 py-2 text-sm font-semibold bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-900 rounded-md transition-colors">
+                            Raporu Oluştur
+                        </button>
+                    </div>
+                )}
+            </div>
         </Card>
     );
 };
