@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation } from '../types';
 import { getMockData } from '../hooks/useMockData';
@@ -315,8 +316,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const lastMessagesMap = useMemo(() => {
         const map = new Map<string, Message>();
-        // By iterating over messages, we can build the map more efficiently
-        // than iterating over conversations and then filtering/sorting messages for each.
         state.messages.forEach(msg => {
             const existingLastMessage = map.get(msg.conversationId);
             if (!existingLastMessage || new Date(msg.timestamp) > new Date(existingLastMessage.timestamp)) {

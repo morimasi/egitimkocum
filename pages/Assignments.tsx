@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
@@ -185,7 +186,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    <select value={submissionType} onChange={(e) => setSubmissionType((e.target as HTMLSelectElement).value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
                         <option value="completed">Sadece Tamamlandı İşareti</option>
@@ -560,7 +561,6 @@ const Assignments = () => {
     }, [searchTerm]);
     
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
-    const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
 
     const displayedAssignments = useMemo(() => {
         if (!currentUser) return [];
@@ -569,10 +569,9 @@ const Assignments = () => {
             case UserRole.Student:
                 return getAssignmentsForStudent(currentUser.id);
             case UserRole.Coach:
-                const studentIds = students.map(s => s.id); // `students` is pre-filtered by context for a coach
-                return assignments.filter(a => studentIds.includes(a.studentId));
             case UserRole.SuperAdmin:
-                return assignments; // Super Admin sees all assignments
+                const studentIds = students.map(s => s.id);
+                return assignments.filter(a => studentIds.includes(a.studentId));
             default:
                 return [];
         }
@@ -622,16 +621,16 @@ const Assignments = () => {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <div className="flex flex-wrap gap-2">
                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
-                        <select value={filterStatus} onChange={e => setFilterStatus((e.target as HTMLSelectElement).value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekliyor</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
                             <option value={AssignmentStatus.Graded}>Notlandırıldı</option>
                         </select>
-                         {(isCoach || isSuperAdmin) && (
-                            <select value={filterStudent} onChange={e => setFilterStudent((e.target as HTMLSelectElement).value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                         {isCoach && (
+                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
-                                {(isSuperAdmin ? allStudents : students).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                     </div>
@@ -648,7 +647,7 @@ const Assignments = () => {
                             <thead className="bg-gray-50 dark:bg-gray-700/50">
                                 <tr>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
-                                    {(isCoach || isSuperAdmin) && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
+                                    {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>

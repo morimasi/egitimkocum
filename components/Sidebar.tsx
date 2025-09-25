@@ -1,5 +1,6 @@
 
 
+
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -66,7 +67,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         const items: NavItemProps[] = [];
         if (!currentUser) return [];
 
-        // Base items for both Coach and Student (and now SuperAdmin)
         if (currentUser.role === UserRole.Student) {
             items.push(
                 { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
@@ -85,19 +85,16 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             );
         }
         
-        // Add SuperAdmin specific link
         if (currentUser.role === UserRole.SuperAdmin) {
             items.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
         }
         
-        // Settings is for everyone
         items.push({ page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> });
 
         return items;
 
     }, [currentUser, totalUnreadMessages]);
     
-    // Switch between student and coach view for demo
     const { login, users } = useDataContext();
     const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);

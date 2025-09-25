@@ -1,4 +1,5 @@
 
+
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -60,7 +61,7 @@ const AppSkeleton = () => (
 
 
 const AppContent = () => {
-    const { activePage } = useUI();
+    const { activePage, setActivePage } = useUI();
     const { currentUser, isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
@@ -98,6 +99,22 @@ const AppContent = () => {
     };
 
     const renderPage = () => {
+        // SuperAdmin can access coach pages.
+        if (currentUser?.role === UserRole.SuperAdmin && activePage !== 'superadmin') {
+             switch (activePage) {
+                case 'dashboard': return <Dashboard />;
+                case 'assignments': return <Assignments />;
+                case 'students': return <Students />;
+                case 'messages': return <Messages />;
+                case 'analytics': return <Analytics />;
+                case 'library': return <Library />;
+                case 'settings': return <Settings />;
+                default: // Fallback to their own dashboard
+                    setActivePage('superadmin');
+                    return <SuperAdminDashboard />;
+            }
+        }
+        
         switch (activePage) {
             case 'dashboard':
                 return <Dashboard />;
@@ -114,11 +131,11 @@ const AppContent = () => {
             case 'settings':
                 return <Settings />;
             case 'superadmin':
-                 // Ensure only superadmins can see this page
                 if (currentUser?.role === UserRole.SuperAdmin) {
                     return <SuperAdminDashboard />;
                 }
-                return <Dashboard />; // Fallback for non-superadmins
+                // Fallback for non-superadmins trying to access the page
+                return <Dashboard />; 
             default:
                 return <Dashboard />;
         }
