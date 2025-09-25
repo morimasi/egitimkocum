@@ -211,7 +211,6 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    {/* FIX: Typed the event object 'e' to React.ChangeEvent<HTMLSelectElement> to resolve the error on 'e.target.value'. */}
                     <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
