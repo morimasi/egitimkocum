@@ -1,6 +1,7 @@
 
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Page, ToastMessage, ToastType, User, AssignmentStatus } from '../types';
 
 type Theme = 'light' | 'dark';
@@ -56,10 +57,10 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     const [callState, setCallState] = useState<CallState>('idle');
     const [callContact, setCallContact] = useState<User | null>(null);
 
-    const setActivePage = (page: Page, filters: InitialFilters = {}) => {
+    const setActivePage = useCallback((page: Page, filters: InitialFilters = {}) => {
         _setActivePage(page);
         setInitialFilters(filters);
-    };
+    }, []);
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -76,53 +77,51 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         }
     }, []);
     
-    const startTour = () => {
+    const startTour = useCallback(() => {
         setActivePage('dashboard');
         setTourStep(0);
         setIsTourActive(true);
-    };
+    }, [setActivePage]);
 
-    const nextTourStep = () => {
+    const nextTourStep = useCallback(() => {
         setTourStep(prev => prev + 1);
-    };
+    }, []);
 
-    const endTour = () => {
+    const endTour = useCallback(() => {
         setIsTourActive(false);
         setTourStep(0);
         localStorage.setItem('tourCompleted', 'true');
-    };
+    }, []);
     
-    const toggleTheme = () => {
+    const toggleTheme = useCallback(() => {
         setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-    };
+    }, []);
 
-    const addToast = (message: string, type: ToastType) => {
+    const addToast = useCallback((message: string, type: ToastType) => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type }]);
-    };
+    }, []);
 
-    const removeToast = (id: number) => {
+    const removeToast = useCallback((id: number) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
-    };
+    }, []);
 
     // Call management
-    const startCall = (contact: User) => {
+    const startCall = useCallback((contact: User) => {
         setCallContact(contact);
         setCallState('calling');
-    };
+    }, []);
 
-    const answerCall = () => {
-        if(callState === 'calling') {
-            setCallState('in-call');
-        }
-    };
+    const answerCall = useCallback(() => {
+        setCallState(prev => (prev === 'calling' ? 'in-call' : prev));
+    }, []);
     
-    const endCall = () => {
+    const endCall = useCallback(() => {
         setCallState('idle');
         setCallContact(null);
-    };
+    }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         theme,
         toggleTheme,
         activePage,
@@ -142,7 +141,11 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         startCall,
         answerCall,
         endCall,
-    };
+    }), [
+        theme, activePage, toasts, initialFilters, isTourActive, tourStep, callState, callContact,
+        toggleTheme, setActivePage, addToast, removeToast, startTour, nextTourStep, endTour,
+        startCall, answerCall, endCall
+    ]);
 
     return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };

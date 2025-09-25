@@ -1,7 +1,8 @@
 
 
 
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
 import Card from '../components/Card';
@@ -584,7 +585,7 @@ const Assignments = () => {
             .filter(a => a.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
     }, [displayedAssignments, filterStatus, filterStudent, debouncedSearchTerm]);
 
-    const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor';
+    const getUserName = useCallback((id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor', [users]);
     
     const [quickGradeAssignments, setQuickGradeAssignments] = useState<Assignment[]>([]);
     const [quickGradeIndex, setQuickGradeIndex] = useState(0);

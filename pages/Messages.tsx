@@ -1,7 +1,8 @@
 
 
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
 import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon } from '../components/Icons';
@@ -270,7 +271,7 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv:
     const unreadCount = unreadCounts.get(conv.id) || 0;
     const lastMessage = lastMessagesMap.get(conv.id);
 
-    const getConversationDisplayInfo = (c: Conversation) => {
+    const getConversationDisplayInfo = useCallback((c: Conversation) => {
         if (!currentUser) return { name: '...', picture: '' };
         if (c.isGroup) {
             return { name: c.groupName || 'Grup Sohbeti', picture: c.groupImage || 'https://i.pravatar.cc/150?u=group-' + c.id };
@@ -279,7 +280,7 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv:
             const otherUser = users.find(u => u.id === otherUserId);
             return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
         }
-    };
+    }, [currentUser, users]);
 
     const { name, picture } = getConversationDisplayInfo(conv);
 
@@ -410,7 +411,7 @@ const Messages = () => {
         }
     };
     
-    const getConversationDisplayInfo = (conv: Conversation) => {
+    const getConversationDisplayInfo = useCallback((conv: Conversation) => {
         if (!currentUser) return { name: '...', picture: '' };
         if (conv.isGroup) {
             return { name: conv.groupName || 'Grup Sohbeti', picture: conv.groupImage || 'https://i.pravatar.cc/150?u=group-' + conv.id };
@@ -419,7 +420,7 @@ const Messages = () => {
             const otherUser = users.find(u => u.id === otherUserId);
             return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
         }
-    };
+    }, [currentUser, users]);
 
     if (!currentUser) return null;
     

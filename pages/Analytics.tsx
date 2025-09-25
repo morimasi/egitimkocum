@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
@@ -267,7 +268,7 @@ const AiCoachInsight = ({ students, assignments }: { students: User[], assignmen
 
 // --- Super Admin Dashboard ---
 const CoachPerformanceTable = ({ coaches, students, assignments }: { coaches: User[], students: User[], assignments: Assignment[] }) => {
-    const coachData = coaches.map(coach => {
+    const coachData = useMemo(() => coaches.map(coach => {
         const myStudents = students.filter(s => s.assignedCoachId === coach.id);
         const studentIds = myStudents.map(s => s.id);
         const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
@@ -279,7 +280,7 @@ const CoachPerformanceTable = ({ coaches, students, assignments }: { coaches: Us
             studentCount: myStudents.length,
             avgGrade,
         };
-    });
+    }), [coaches, students, assignments]);
 
     return (
         <Card title="Koç Performans Tablosu">
@@ -309,7 +310,7 @@ const CoachPerformanceTable = ({ coaches, students, assignments }: { coaches: Us
 
 // --- Main Component & Dashboards ---
 
-const StatCard = ({ title, value, icon, subtext }: { title: string, value: string | number, icon: React.ReactNode, subtext?: string }) => (
+const StatCard = React.memo(({ title, value, icon, subtext }: { title: string, value: string | number, icon: React.ReactNode, subtext?: string }) => (
     <Card>
         <div className="flex justify-between items-start">
             <div>
@@ -322,7 +323,7 @@ const StatCard = ({ title, value, icon, subtext }: { title: string, value: strin
             </div>
         </div>
     </Card>
-);
+));
 
 const TimeFilterComponent = ({ filter, setFilter }: { filter: TimeFilter, setFilter: (f: TimeFilter) => void }) => {
     const filters: {key: TimeFilter, label: string}[] = [{key: '7d', label: 'Son 7 Gün'}, {key: '30d', label: 'Son 30 Gün'}, {key: 'all', label: 'Tüm Zamanlar'}];

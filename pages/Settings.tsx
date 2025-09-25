@@ -1,6 +1,8 @@
 
 
-import React, { useState, useRef } from 'react';
+
+
+import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
 import Card from '../components/Card';
@@ -83,7 +85,7 @@ const StudentSettings = () => {
     const goals = getGoalsForStudent(currentUser.id);
     const completedGoals = goals.filter(g => g.isCompleted);
 
-    const achievements = [
+    const achievements = useMemo(() => [
         {
             icon: <StarIcon className="w-8 h-8 text-yellow-500" />,
             title: "İlk Adım",
@@ -108,7 +110,7 @@ const StudentSettings = () => {
             description: "3'ten fazla hedef tamamladın.",
             isUnlocked: completedGoals.length >= 3,
         }
-    ];
+    ], [completedAssignments, avgGrade, completedGoals]);
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,7 +169,7 @@ const CoachSettings = () => {
     const gradedAssignments = assignments.filter(a => a.grade !== null);
     const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 'N/A';
 
-     const quickActions = [
+     const quickActions = useMemo(() => [
         {
             label: "Yeni Ödev Oluştur",
             icon: <PlusCircleIcon className="w-6 h-6 text-blue-500" />,
@@ -188,7 +190,7 @@ const CoachSettings = () => {
             icon: <LibraryIcon className="w-6 h-6 text-purple-500" />,
             action: () => setActivePage('library')
         }
-    ];
+    ], [setActivePage]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -248,7 +250,7 @@ const CoachSettings = () => {
 
 const AdminSettings = () => {
     const { setActivePage } = useUI();
-    const quickActions = [
+    const quickActions = useMemo(() => [
         {
             label: "Yeni Ödev Oluştur",
             icon: <PlusCircleIcon className="w-6 h-6 text-blue-500" />,
@@ -269,7 +271,7 @@ const AdminSettings = () => {
             icon: <LibraryIcon className="w-6 h-6 text-purple-500" />,
             action: () => setActivePage('library')
         }
-    ];
+    ], [setActivePage]);
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto pt-8">
