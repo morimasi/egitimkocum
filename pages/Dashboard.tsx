@@ -24,7 +24,7 @@ const AnnouncementsCard = React.memo(() => {
     }
 
     return (
-        <Card title="Son Duyurular" id="tour-announcements">
+        <Card title="Son Duyurular" id="tour-announcements" className="h-full">
              <ul className="space-y-3">
                 {announcements.map(msg => (
                      <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-start space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'conv-announcements'})}>
@@ -227,7 +227,7 @@ const CoachWelcomeHeader = React.memo(() => {
 });
 
 const StatCard = React.memo(({ title, value, icon, onClick }: { title: string, value: string | number, icon: React.ReactNode, onClick?: () => void }) => (
-    <Card className="flex items-start justify-between p-5 transition-transform hover:-translate-y-1 animate-float-subtle" onClick={onClick}>
+    <Card className="flex items-start justify-between p-5 transition-transform hover:-translate-y-1" onClick={onClick}>
         <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
@@ -299,36 +299,42 @@ const CoachDashboard = () => {
         <div className="space-y-8">
             <CoachWelcomeHeader />
             <QuickActionsCard onAnnounceClick={() => setAnnouncementModalOpen(true)} />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <StatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('students')} />
                 <StatCard title="Değerlendirilecek" value={stats.pendingCount} icon={<AssignmentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Submitted })} />
                 <StatCard title="Gecikmiş Ödev" value={stats.overdueCount} icon={<XIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
                 <StatCard title="Okunmamış Mesaj" value={stats.unreadMessagesCount} icon={<MessagesIcon className="w-6 h-6"/>} onClick={() => setActivePage('messages')} />
-            </div>
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                 <div className="lg:col-span-2 space-y-8">
-                     <Card title="Dikkat Gerektiren Öğrenciler">
-                        {studentsWithAlerts.length > 0 ? (
-                            <ul className="space-y-3">
-                                {studentsWithAlerts.slice(0, 5).map(s => (
-                                    <li key={s.id} onClick={() => setActivePage('students')} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center">
-                                                <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
-                                                <span className="ml-3 font-medium">{s.name}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`}><AlertTriangleIcon className="w-5 h-5 text-red-500" /></span>}
-                                                {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`}><AlertTriangleIcon className="w-5 h-5 text-yellow-500" /></span>}
-                                            </div>
+                
+                 <Card title="Dikkat Gerektiren Öğrenciler" className="sm:col-span-2 md:col-span-3 lg:col-span-2 bg-gradient-to-br from-yellow-400 to-orange-500 text-white dark:from-yellow-500 dark:to-orange-600">
+                    {studentsWithAlerts.length > 0 ? (
+                        <ul className="space-y-3">
+                            {studentsWithAlerts.slice(0, 5).map(s => (
+                                <li key={s.id} onClick={() => setActivePage('students')} className="p-2 rounded-lg hover:bg-white/20 cursor-pointer">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center">
+                                            <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
+                                            <span className="ml-3 font-medium">{s.name}</span>
                                         </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-gray-500 text-center py-4">Harika! Tüm öğrencileriniz yolunda görünüyor.</p>
-                        )}
-                    </Card>
+                                        <div className="flex items-center space-x-2">
+                                            {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`}><AlertTriangleIcon className="w-5 h-5" /></span>}
+                                            {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`}><AlertTriangleIcon className="w-5 h-5" /></span>}
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                             <CheckCircleIcon className="w-10 h-10 mb-2 text-white/80" />
+                             <p className="text-sm font-semibold">Harika! Tüm öğrencileriniz yolunda görünüyor.</p>
+                        </div>
+                    )}
+                </Card>
+            </div>
+             
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                 <div className="lg:col-span-2">
                     <Card title="Ödev Durum Dağılımı">
                          <div style={{ width: '100%', height: 250 }}>
                             <ResponsiveContainer>
@@ -345,7 +351,7 @@ const CoachDashboard = () => {
                         </div>
                     </Card>
                  </div>
-                 <div className="lg:col-span-1 space-y-8">
+                 <div className="lg:col-span-1">
                     <AnnouncementsCard />
                  </div>
             </div>

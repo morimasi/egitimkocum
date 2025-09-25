@@ -4,22 +4,23 @@ import { useDataContext } from '../contexts/DataContext';
 import { Resource, UserRole } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon } from '../components/Icons';
+import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
 
 
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
-    const { addResource, uploadFile, currentUser } = useDataContext();
+    const { addResource, uploadFile, currentUser, students } = useDataContext();
     const { addToast } = useUI();
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
-    const [type, setType] = useState<'pdf' | 'link' | 'video'>('link');
+    const [type, setType] = useState<Resource['type']>('link');
     const [isPublic, setIsPublic] = useState(true);
     const [file, setFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [assignedTo, setAssignedTo] = useState<string[]>([]);
 
-    const handleTypeChange = (newType: 'pdf' | 'link' | 'video') => {
+    const handleTypeChange = (newType: Resource['type']) => {
         setType(newType);
         setUrl('');
         setFile(null);
@@ -33,6 +34,10 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
         }
         if ((type === 'link' && !url) || (type !== 'link' && !file)) {
             addToast("Lütfen bir URL girin veya bir dosya seçin.", "error");
+            return;
+        }
+        if (!isPublic && assignedTo.length === 0) {
+            addToast("Lütfen özel kaynağı en az bir öğrenciye atayın.", "error");
             return;
         }
         if (!currentUser) return;
@@ -49,7 +54,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 resourceUrl = await uploadFile(file, `library/${currentUser.id}/${file.name}`);
             }
 
-            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: [] });
+            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: isPublic ? [] : assignedTo });
             addToast("Kaynak başarıyla eklendi.", "success");
             onClose();
         } catch (error) {
@@ -59,6 +64,15 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             setIsLoading(false);
         }
     };
+    
+    const mimeTypes: {[key in Resource['type']]?: string} = {
+        pdf: '.pdf',
+        video: 'video/*',
+        image: 'image/*',
+        audio: 'audio/*',
+        document: '.doc,.docx,.txt,.rtf,.odt',
+        spreadsheet: '.xls,.xlsx,.csv',
+    }
 
     return (
         <Modal isOpen={true} onClose={onClose} title="Yeni Kaynak Ekle">
@@ -73,6 +87,10 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>
                         <option value="pdf">PDF</option>
+                        <option value="image">Görsel</option>
+                        <option value="audio">Ses Dosyası</option>
+                        <option value="document">Doküman</option>
+                        <option value="spreadsheet">Hesap Tablosu</option>
                     </select>
                 </div>
 
@@ -96,7 +114,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                                     type="file" 
                                     className="sr-only" 
                                     onChange={e => setFile(e.target.files ? e.target.files[0] : null)} 
-                                    accept={type === 'pdf' ? '.pdf' : 'video/*'} 
+                                    accept={mimeTypes[type]}
                                     required
                                 />
                             </label>
@@ -108,9 +126,20 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                     <input type="checkbox" id="isPublic" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                     <label htmlFor="isPublic" className="ml-2 text-sm">Herkese Açık</label>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 -mt-2">
                     İşaretli ise, bu kaynak tüm öğrenciler tarafından görülebilir. İşaretli değilse, sadece sizin atadığınız öğrenciler görebilir.
                 </p>
+
+                {!isPublic && (
+                     <div>
+                        <label className="block text-sm font-medium mb-1">Öğrencileri Ata</label>
+                        <select multiple value={assignedTo} onChange={e => setAssignedTo(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                         <p className="text-xs text-gray-500 mt-1">Birden çok öğrenci seçmek için Ctrl (veya Mac'te Cmd) tuşunu basılı tutun.</p>
+                    </div>
+                )}
+
                 <div className="flex justify-end pt-4">
                     <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
                     <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
@@ -169,6 +198,10 @@ const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete, ...props }
         pdf: <DocumentIcon className="w-8 h-8 text-red-500" />,
         link: <LinkIcon className="w-8 h-8 text-blue-500" />,
         video: <VideoIcon className="w-8 h-8 text-purple-500" />,
+        image: <ImageIcon className="w-8 h-8 text-teal-500" />,
+        audio: <AudioFileIcon className="w-8 h-8 text-orange-500" />,
+        document: <DocumentIcon className="w-8 h-8 text-gray-500" />,
+        spreadsheet: <SpreadsheetIcon className="w-8 h-8 text-green-500" />,
     };
     
     return (
@@ -207,7 +240,7 @@ const Library = () => {
     const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState<'all' | 'pdf' | 'link' | 'video'>('all');
+    const [filterType, setFilterType] = useState<'all' | Resource['type']>('all');
     const [filterStudent, setFilterStudent] = useState('all');
     
     const isCoachOrAdmin = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
@@ -280,6 +313,10 @@ const Library = () => {
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>
                         <option value="pdf">PDF</option>
+                        <option value="image">Görsel</option>
+                        <option value="audio">Ses Dosyası</option>
+                        <option value="document">Doküman</option>
+                        <option value="spreadsheet">Hesap Tablosu</option>
                     </select>
                     {isCoachOrAdmin && activeTab === 'private' && (
                         <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">

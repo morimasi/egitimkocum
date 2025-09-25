@@ -49,6 +49,7 @@ type Action =
     | { type: 'DELETE_USER'; payload: string }
     | { type: 'MARK_MESSAGES_AS_READ'; payload: { conversationId: string; currentUserId: string } }
     | { type: 'SET_NOTIFICATIONS'; payload: AppNotification[] }
+    | { type: 'ADD_NOTIFICATIONS'; payload: AppNotification[] }
     | { type: 'MARK_NOTIFICATIONS_AS_READ'; payload: { userId: string } }
     | { type: 'SET_TYPING_STATUS'; payload: { userId: string; isTyping: boolean } }
     | { type: 'ADD_GOAL'; payload: Goal }
@@ -101,6 +102,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             })};
         case 'SET_NOTIFICATIONS':
              return { ...state, notifications: action.payload };
+        case 'ADD_NOTIFICATIONS':
+             return { ...state, notifications: [...state.notifications, ...action.payload] };
         case 'MARK_NOTIFICATIONS_AS_READ':
             return { ...state, notifications: state.notifications.map(n => n.userId === action.payload.userId ? { ...n, isRead: true } : n) };
         case 'SET_TYPING_STATUS':
@@ -434,14 +437,30 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
         };
 
-        const addResource = async (resourceData: Omit<Resource, 'id' | 'uploaderId'>) => {
+        const addResource = async (resourceData: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => {
             if (!state.currentUser) return;
             const newResource: Resource = {
-                ...resourceData,
+                name: resourceData.name,
+                type: resourceData.type,
+                url: resourceData.url,
+                isPublic: resourceData.isPublic,
                 id: `res-${Date.now()}`,
                 uploaderId: state.currentUser.id,
+                assignedTo: resourceData.assignedTo || []
             };
             dispatch({ type: 'ADD_RESOURCE', payload: newResource });
+
+            if (!newResource.isPublic && newResource.assignedTo && newResource.assignedTo.length > 0) {
+                const notificationsToAdd: AppNotification[] = newResource.assignedTo.map(studentId => ({
+                    id: `notif-${Date.now()}-${studentId}`,
+                    userId: studentId,
+                    message: `${state.currentUser?.name} sizinle yeni bir kaynak paylaştı: "${newResource.name}"`,
+                    timestamp: new Date().toISOString(),
+                    isRead: false,
+                    link: { page: 'library' }
+                }));
+                dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
+            }
         };
 
         const deleteResource = async (resourceId: string) => {

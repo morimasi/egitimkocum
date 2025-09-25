@@ -129,7 +129,7 @@ export interface AssignmentTemplate {
 export interface Resource {
   id: string;
   name: string;
-  type: 'pdf' | 'link' | 'video';
+  type: 'pdf' | 'link' | 'video' | 'image' | 'audio' | 'document' | 'spreadsheet';
   url: string;
   isPublic: boolean;
   uploaderId: string;
