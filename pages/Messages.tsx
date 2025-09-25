@@ -482,13 +482,31 @@ const Messages = () => {
                     {selectedConversation ? (
                         <>
                             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                <div className="flex items-center"><img src={getConversationDisplayInfo(selectedConversation).picture} alt={getConversationDisplayInfo(selectedConversation).name} className="w-10 h-10 rounded-full mr-3" /><div><p className="font-semibold">{getConversationDisplayInfo(selectedConversation).name}</p></div></div>
-                                {isCoach && selectedConversation.id !== 'conv-announcements' && (
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setIsAddToGroupModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Gruba Kişi Ekle"><UserPlusIcon className="w-5 h-5" /></button>
-                                        {selectedConversation.isGroup && <button onClick={() => setIsGroupInfoModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Grup Bilgisi"><UserGroupIcon className="w-5 h-5" /></button>}
+                                <div className="flex items-center">
+                                    <img src={getConversationDisplayInfo(selectedConversation).picture} alt={getConversationDisplayInfo(selectedConversation).name} className="w-10 h-10 rounded-full mr-3" />
+                                    <div>
+                                        <p className="font-semibold">{getConversationDisplayInfo(selectedConversation).name}</p>
                                     </div>
-                                )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {selectedConversation.id !== 'conv-announcements' && !selectedConversation.isGroup && (
+                                        <button onClick={() => {
+                                            const otherUserId = selectedConversation.participantIds.find(id => id !== currentUser.id);
+                                            const contact = users.find(u => u.id === otherUserId);
+                                            if (contact) startCall(contact);
+                                        }}
+                                            className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                                            title="Görüntülü Arama Başlat">
+                                            <VideoIcon className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {isCoach && selectedConversation.id !== 'conv-announcements' && (
+                                        <>
+                                            <button onClick={() => setIsAddToGroupModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Gruba Kişi Ekle"><UserPlusIcon className="w-5 h-5" /></button>
+                                            {selectedConversation.isGroup && <button onClick={() => setIsGroupInfoModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Grup Bilgisi"><UserGroupIcon className="w-5 h-5" /></button>}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                             <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 space-y-4 relative">
                                 {conversationMessages.map(msg => <MessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} conversation={selectedConversation} />)}
