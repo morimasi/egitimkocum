@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -85,7 +84,6 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
-                    {/* FIX: Typed the event object 'e' to React.ChangeEvent<HTMLSelectElement> to resolve the error on 'e.target.value'. */}
                     <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.target.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>

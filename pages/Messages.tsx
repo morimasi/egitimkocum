@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
-import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, PlusCircleIcon } from '../components/Icons';
+import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, PlusCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon, SearchIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -276,7 +275,7 @@ const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: 
     );
 };
 
-const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv: Conversation, isSelected: boolean, onSelect: (id: string) => void }) => {
+const ConversationListItem = React.memo(({ conv, isSelected, onSelect, isCollapsed }: { conv: Conversation, isSelected: boolean, onSelect: (id: string) => void, isCollapsed: boolean }) => {
     const { unreadCounts, lastMessagesMap, currentUser, users } = useDataContext();
     const unreadCount = unreadCounts.get(conv.id) || 0;
     const lastMessage = lastMessagesMap.get(conv.id);
@@ -311,14 +310,14 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv:
 
 
     return (
-        <div onClick={() => onSelect(conv.id)} className={`flex items-center p-3 cursor-pointer transition-colors ${isSelected ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-            <div className="relative">
+        <div onClick={() => onSelect(conv.id)} className={`flex items-center p-3 cursor-pointer transition-colors duration-200 overflow-hidden ${isSelected ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ${isCollapsed ? 'lg:justify-center' : ''}`}>
+            <div className="relative flex-shrink-0">
                 <img src={picture} alt={name} className="w-12 h-12 rounded-full" />
-                {unreadCount > 0 && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800"></span>}
+                {unreadCount > 0 && <span className={`absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 ${isSelected ? 'border-primary-500' : 'border-white dark:border-gray-800'}`}></span>}
             </div>
-            <div className="flex-1 ml-3 overflow-hidden">
+            <div className={`flex-1 ml-3 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:w-0 lg:opacity-0 lg:ml-0' : 'lg:w-auto lg:opacity-100'}`}>
                 <div className="flex justify-between items-center">
-                    <p className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{name}</p>
+                    <p className={`font-semibold text-sm whitespace-nowrap ${isSelected ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{name}</p>
                     {lastMessage && <p className={`text-xs flex-shrink-0 ${isSelected ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
                 </div>
                 <p className={`text-xs truncate ${isSelected ? 'text-primary-200' : 'text-gray-500'}`}>
@@ -419,13 +418,27 @@ const Messages = () => {
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isListCollapsed, setIsListCollapsed] = useState(false);
+    const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const attachmentMenuRef = useRef<HTMLDivElement>(null);
 
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
     
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(event.target as Node)) {
+                setShowAttachmentMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [attachmentMenuRef]);
+
     const userConversations = useMemo(() => {
         if (!currentUser) return [];
         return conversations
@@ -505,6 +518,9 @@ const Messages = () => {
         });
         setNewMessage('');
         setReplyingTo(null);
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
     };
     
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -578,7 +594,13 @@ const Messages = () => {
         }
         setIsNewMessageModalOpen(false);
     };
-
+    
+    const handleSelectConversation = (id: string) => {
+        setSelectedConversationId(id);
+        if (window.innerWidth >= 1024) { // lg breakpoint
+            setIsListCollapsed(true);
+        }
+    };
 
     const handleAddUsersToConversation = async (userIds: string[]) => {
         if (!selectedConversation) return;
@@ -596,27 +618,57 @@ const Messages = () => {
         }
     };
 
+    const handleNewMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setNewMessage(e.target.value);
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage(e as any);
+        }
+    };
+
     if (!currentUser) return null;
     
     return (
         <>
             <div className="flex h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                <div className={`w-full lg:w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ${selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
+                <div className={`w-full border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out ${selectedConversationId && 'hidden'} lg:flex ${isListCollapsed ? 'lg:w-24' : 'lg:w-1/3'}`}>
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                        <h2 className="text-lg font-semibold">Sohbetler</h2>
-                        <div className="flex items-center gap-1">
-                             <button onClick={() => setIsNewMessageModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Yeni Mesaj"><PlusCircleIcon className="w-5 h-5"/></button>
-                             {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
+                        <h2 className={`text-lg font-semibold transition-opacity duration-300 whitespace-nowrap overflow-hidden ${isListCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100'}`}>Sohbetler</h2>
+                         <div className="flex items-center gap-1">
+                            <div className={`flex items-center gap-1 transition-opacity duration-300 ${isListCollapsed ? 'lg:opacity-0 lg:w-0 lg:hidden' : 'opacity-100'}`}>
+                                <button onClick={() => setIsNewMessageModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Yeni Mesaj"><PlusCircleIcon className="w-5 h-5"/></button>
+                                {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
+                            </div>
+                            <button onClick={() => setIsListCollapsed(!isListCollapsed)} className="hidden lg:block p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title={isListCollapsed ? 'Genişlet' : 'Daralt'}>
+                                {isListCollapsed ? <ChevronDoubleRightIcon className="w-5 h-5" /> : <ChevronDoubleLeftIcon className="w-5 h-5" />}
+                            </button>
                         </div>
                     </div>
                      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                        <input 
-                            type="search" 
-                            value={conversationSearch} 
-                            onChange={e => setConversationSearch(e.target.value)} 
-                            placeholder="Sohbetlerde ara..."
-                            className="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                        />
+                        <div className={`relative transition-all duration-300 ${isListCollapsed ? 'lg:opacity-0 lg:hidden' : ''}`}>
+                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <SearchIcon className="w-5 h-5 text-gray-400"/>
+                            </div>
+                            <input 
+                                type="search" 
+                                value={conversationSearch} 
+                                onChange={e => setConversationSearch(e.target.value)} 
+                                placeholder="Sohbetlerde ara..."
+                                className="w-full p-2 pl-10 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                            />
+                        </div>
+                         <div className={`text-center ${isListCollapsed ? 'hidden lg:block' : 'hidden'}`}>
+                            <button className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                                <SearchIcon className="w-5 h-5"/>
+                            </button>
+                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         {filteredConversations.map(conv => (
@@ -624,13 +676,14 @@ const Messages = () => {
                                 key={conv.id}
                                 conv={conv}
                                 isSelected={selectedConversationId === conv.id}
-                                onSelect={(id) => setSelectedConversationId(id)}
+                                onSelect={handleSelectConversation}
+                                isCollapsed={isListCollapsed}
                             />
                         ))}
                     </div>
                 </div>
 
-                <div className={`w-full lg:w-2/3 flex flex-col transition-transform duration-300 ${selectedConversationId ? 'flex' : 'hidden lg:flex'}`}>
+                <div className={`w-full flex flex-col flex-1 ${selectedConversationId ? 'flex' : 'hidden lg:flex'}`}>
                     {selectedConversation ? (
                         <>
                             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -695,18 +748,43 @@ const Messages = () => {
                                             <VideoRecorder onSave={handleVideoSave} />
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                                        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                            <div className="relative" ref={attachmentMenuRef}>
+                                                <button type="button" onClick={() => setShowAttachmentMenu(s => !s)} className="p-3 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0 transition-transform transform hover:scale-110" title="Ek Ekle">
+                                                    <PlusCircleIcon className="w-6 h-6"/>
+                                                </button>
+                                                {showAttachmentMenu && (
+                                                    <div className="absolute bottom-full mb-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl p-2 flex flex-col gap-1 border dark:border-gray-600 animate-fade-in">
+                                                        <button type="button" onClick={() => { fileInputRef.current?.click(); setShowAttachmentMenu(false); }} className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left text-sm">
+                                                            <PaperclipIcon className="w-5 h-5 text-gray-500" /><span>Dosya</span>
+                                                        </button>
+                                                        <button type="button" onClick={() => { setShowVideoRecorder(true); setShowAttachmentMenu(false); }} className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left text-sm">
+                                                            <VideoIcon className="w-5 h-5 text-gray-500" /><span>Video Mesajı</span>
+                                                        </button>
+                                                        <button type="button" onClick={() => { setIsPollModalOpen(true); setShowAttachmentMenu(false); }} className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left text-sm">
+                                                            <PollIcon className="w-5 h-5 text-gray-500" /><span>Anket</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0" title="Dosya Ekle"><PaperclipIcon className="w-5 h-5" /></button>
-                                            <input type="text" value={newMessage} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e); }} placeholder="Mesajınızı yazın..." className="flex-1 px-4 py-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full"/>
-                                            {newMessage.trim() ? (
-                                                <button type="submit" className="p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600 shrink-0 transition-all" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
-                                            ) : (
-                                                <div className="flex items-center shrink-0">
-                                                    <button type="button" onClick={() => setShowAudioRecorder(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Sesli Mesaj"><MicIcon className="w-5 h-5" /></button>
-                                                    <button type="button" onClick={() => setShowVideoRecorder(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Video Mesaj"><VideoIcon className="w-5 h-5" /></button>
-                                                </div>
-                                            )}
+                                            <textarea
+                                                ref={textareaRef}
+                                                rows={1}
+                                                value={newMessage}
+                                                onChange={handleNewMessageChange}
+                                                onKeyDown={handleKeyDown}
+                                                placeholder="Mesajınızı yazın..."
+                                                className="flex-1 px-4 py-2.5 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 rounded-2xl resize-none max-h-32 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            />
+                                            <button 
+                                                type={newMessage.trim() ? 'submit' : 'button'}
+                                                onClick={!newMessage.trim() ? () => setShowAudioRecorder(true) : undefined}
+                                                className="p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600 shrink-0 transition-transform transform hover:scale-110"
+                                                aria-label={newMessage.trim() ? 'Gönder' : 'Sesli Mesaj Kaydet'}
+                                            >
+                                                {newMessage.trim() ? <SendIcon className="w-6 h-6" /> : <MicIcon className="w-6 h-6" />}
+                                            </button>
                                         </form>
                                     )
                                 ) : <p className="text-center text-sm text-gray-400">Duyurulara yanıt verilemez.</p>}
@@ -719,6 +797,23 @@ const Messages = () => {
             {isNewMessageModalOpen && <NewMessageModal onClose={() => setIsNewMessageModalOpen(false)} onSelectContact={handleStartNewConversation} />}
             {isGroupInfoModalOpen && <GroupInfoModal conversation={selectedConversation} onClose={() => setIsGroupInfoModalOpen(false)} />}
             {isAddToGroupModalOpen && selectedConversation && <AddToGroupModal conversation={selectedConversation} onClose={() => setIsAddToGroupModalOpen(false)} onAddUsers={handleAddUsersToConversation} />}
+             {isPollModalOpen && selectedConversationId && (
+                <PollCreationModal
+                    isOpen={isPollModalOpen}
+                    onClose={() => setIsPollModalOpen(false)}
+                    onSend={(poll) => {
+                        if (currentUser) {
+                            sendMessage({
+                                senderId: currentUser.id,
+                                conversationId: selectedConversationId,
+                                text: 'Anket: ' + poll.question,
+                                type: 'poll',
+                                poll: poll
+                            });
+                        }
+                    }}
+                />
+            )}
         </>
     );
 };
