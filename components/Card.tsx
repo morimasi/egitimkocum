@@ -1,10 +1,13 @@
+
 import React from 'react';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-    children: React.ReactNode;
+// FIX: Updated CardProps to make children optional and accept any other props to resolve TS errors.
+interface CardProps {
+    children?: React.ReactNode;
     className?: string;
     title?: string;
     action?: React.ReactNode;
+    [key: string]: any;
 }
 
 const Card = ({ children, className = '', title, action, ...props }: CardProps) => {

@@ -1,3 +1,6 @@
+// FIX: Changed from namespace import (`import * as firebase`) to a default import (`import firebase`).
+// The compat library's main functionality is exposed via the default export. Using a namespace
+// import would require accessing properties via `firebase.default`, but the default import is cleaner.
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";

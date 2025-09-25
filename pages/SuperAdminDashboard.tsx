@@ -5,8 +5,6 @@ import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { functions } from '../services/firebase';
-import SetupWizard from '../components/SetupWizard';
 
 const SuperAdminDashboard = () => {
     const { currentUser, users, updateUser, deleteUser } = useDataContext();
@@ -18,10 +16,6 @@ const SuperAdminDashboard = () => {
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [roleChanges, setRoleChanges] = useState<Record<string, UserRole>>({});
     const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
-
-
-    // If only one user exists (the admin), show the setup wizard.
-    const isSeeded = users.length > 1;
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
@@ -40,7 +34,7 @@ const SuperAdminDashboard = () => {
     const handleConfirmDelete = () => {
         if (userToDelete) {
             deleteUser(userToDelete.id);
-            addToast("Kullanıcı başarıyla silindi. (Not: Firebase Auth kaydını konsoldan silmeniz gerekir)", "success");
+            addToast("Kullanıcı başarıyla silindi.", "success");
         }
         setIsConfirmModalOpen(false);
         setUserToDelete(null);
@@ -56,15 +50,9 @@ const SuperAdminDashboard = () => {
 
         setSavingStates(prev => ({ ...prev, [user.id]: true }));
         try {
-            const setUserRole = functions.httpsCallable('setUserRole');
-            await setUserRole({ userId: user.id, role: newRole });
-            
-            // On success, update the local state in DataContext to reflect the change immediately
-            updateUser({ ...user, role: newRole });
-            
+            await updateUser({ ...user, role: newRole });
             addToast(`'${user.name}' kullanıcısının rolü '${newRole}' olarak güncellendi.`, "success");
             
-            // Clear the pending change for this user
             setRoleChanges(prev => {
                 const newChanges = { ...prev };
                 delete newChanges[user.id];
@@ -130,75 +118,71 @@ const SuperAdminDashboard = () => {
 
     return (
         <div className="space-y-6">
-            {!isSeeded ? <SetupWizard /> : (
-                <>
-                <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
-                <Card>
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <input
-                            type="text"
-                            placeholder="Kullanıcı ara (isim veya e-posta)..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
-                        />
-                         <p className="text-sm text-gray-500">
-                           Yeni kullanıcı eklemek için Firebase Authentication panelini kullanın.
-                        </p>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-700/50">
-                                <tr>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Kullanıcı</th>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">E-posta</th>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Rol</th>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-right">Eylemler</th>
+            <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
+            <Card>
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <input
+                        type="text"
+                        placeholder="Kullanıcı ara (isim veya e-posta)..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
+                    />
+                     <p className="text-sm text-gray-500">
+                       Yeni kullanıcı eklemek için Kayıt Ol sayfasını kullanın.
+                    </p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Kullanıcı</th>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">E-posta</th>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Rol</th>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-right">Eylemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredUsers.map(user => (
+                                <tr key={user.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="py-3 px-4">
+                                        <div className="flex items-center">
+                                            <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
+                                            <span className="font-medium">{user.name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
+                                    <td className="py-3 px-4 text-center">
+                                        <select 
+                                            value={roleChanges[user.id] || user.role} 
+                                            onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                                            className="p-1 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-xs"
+                                            disabled={savingStates[user.id] || currentUser?.id === user.id}
+                                        >
+                                            <option value={UserRole.Student}>Öğrenci</option>
+                                            <option value={UserRole.Coach}>Koç</option>
+                                            <option value={UserRole.SuperAdmin}>Süper Admin</option>
+                                        </select>
+                                    </td>
+                                    <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                                         <button 
+                                            onClick={() => handleSaveRole(user)}
+                                            className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400 disabled:no-underline"
+                                            disabled={!roleChanges[user.id] || savingStates[user.id]}
+                                        >
+                                            {savingStates[user.id] ? '...' : 'Kaydet'}
+                                        </button>
+                                        <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
+                                        {currentUser?.id !== user.id && (
+                                            <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
+                                        )}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map(user => (
-                                    <tr key={user.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center">
-                                                <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
-                                                <span className="font-medium">{user.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{user.email}</td>
-                                        <td className="py-3 px-4 text-center">
-                                            <select 
-                                                value={roleChanges[user.id] || user.role} 
-                                                onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                                                className="p-1 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-xs"
-                                                disabled={savingStates[user.id] || currentUser?.id === user.id}
-                                            >
-                                                <option value={UserRole.Student}>Öğrenci</option>
-                                                <option value={UserRole.Coach}>Koç</option>
-                                                <option value={UserRole.SuperAdmin}>Süper Admin</option>
-                                            </select>
-                                        </td>
-                                        <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
-                                             <button 
-                                                onClick={() => handleSaveRole(user)}
-                                                className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400 disabled:no-underline"
-                                                disabled={!roleChanges[user.id] || savingStates[user.id]}
-                                            >
-                                                {savingStates[user.id] ? '...' : 'Kaydet'}
-                                            </button>
-                                            <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
-                                            {currentUser?.id !== user.id && (
-                                                <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-                </>
-            )}
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
 
             {isEditModalOpen && <UserEditModal user={editingUser} onClose={() => setIsEditModalOpen(false)} />}
             {isConfirmModalOpen && userToDelete && (

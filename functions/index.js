@@ -11,42 +11,63 @@ admin.initializeApp();
  */
 exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
   const { uid, email, displayName } = user;
-  const usersRef = admin.firestore().collection("users");
+  const db = admin.firestore();
+  const usersRef = db.collection("users");
+  const typingStatusRef = db.collection("typingStatus");
 
   try {
-    // Check if any other user documents exist by querying for just one document.
     const querySnapshot = await usersRef.limit(1).get();
+    let role = "student";
 
-    let role = "student"; // Default role for new users.
-
-    // If the 'users' collection is empty, this is the first user.
     if (querySnapshot.empty) {
       role = "superadmin";
-      // Set the custom claim on the Auth token for server-side validation.
       await admin.auth().setCustomUserClaims(uid, { role: "superadmin" });
       console.log(`Custom claim 'superadmin' set for the first user: ${uid}`);
+    } else {
+       await admin.auth().setCustomUserClaims(uid, { role: "student" });
     }
 
-    // Create the user document in Firestore.
     const newUserDoc = {
       id: uid,
-      name: displayName || email, // Fallback to email if displayName isn't available yet.
+      name: displayName || email,
       email: email,
       role: role,
       profilePicture: `https://i.pravatar.cc/150?u=${email}`,
     };
 
-    await usersRef.doc(uid).set(newUserDoc);
-    console.log(`User document created for ${uid} with role '${role}'.`);
+    // Use a batch to write to multiple collections atomically
+    const batch = db.batch();
+    batch.set(usersRef.doc(uid), newUserDoc);
+    batch.set(typingStatusRef.doc(uid), { isTyping: false }); // Initialize typing status
+    
+    await batch.commit();
+
+    console.log(`User document and typing status created for ${uid} with role '${role}'.`);
     
     return null;
   } catch (error) {
     console.error("Error in onUserCreate function:", error);
-    // Optional: To prevent inconsistent states, you could delete the Auth user
-    // if Firestore document creation fails. For now, we just log the error.
-    // await admin.auth().deleteUser(uid);
     return null;
   }
+});
+
+/**
+ * Triggered when a user document is deleted from Firestore.
+ * This function deletes the corresponding user from Firebase Authentication.
+ */
+exports.onUserDelete = functions.firestore.document('users/{userId}').onDelete(async (snap, context) => {
+    const { userId } = context.params;
+    console.log(`Attempting to delete auth user: ${userId}`);
+    try {
+        await admin.auth().deleteUser(userId);
+        console.log(`Successfully deleted auth user: ${userId}`);
+        // Optionally, clean up other user-related data (e.g., in typingStatus)
+        await admin.firestore().collection('typingStatus').doc(userId).delete();
+        return null;
+    } catch (error) {
+        console.error(`Error deleting auth user ${userId}:`, error);
+        return null;
+    }
 });
 
 

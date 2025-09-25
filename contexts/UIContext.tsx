@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Page, ToastMessage, ToastType, User } from '../types';
 
@@ -34,7 +35,7 @@ interface UIContextType {
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
-export const UIProvider = ({ children }: { children: ReactNode }) => {
+export const UIProvider = ({ children }: { children?: ReactNode }) => {
     const [theme, setTheme] = useState<Theme>(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme') as Theme | null;
@@ -70,7 +71,7 @@ export const UIProvider = ({ children }: { children: ReactNode }) => {
         const hasCompletedTour = localStorage.getItem('tourCompleted');
         if (!hasCompletedTour) {
             // Delay tour start slightly to allow app to render
-            // setTimeout(() => startTour(), 1000);
+            setTimeout(() => startTour(), 1000);
         }
     }, []);
     

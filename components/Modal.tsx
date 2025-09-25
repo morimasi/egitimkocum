@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef } from 'react';
 import { XIcon } from './Icons';
 
@@ -6,7 +7,7 @@ interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
-    children: React.ReactNode;
+    children?: React.ReactNode;
     footer?: React.ReactNode;
     size?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -21,7 +22,8 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
             const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
                 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
             );
-            focusableElements?.[0]?.focus();
+            // FIX: Cast to HTMLElement to access focus method
+            (focusableElements?.[0] as HTMLElement)?.focus();
         }
 
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -37,12 +39,14 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
 
                 if (event.shiftKey) { // Shift + Tab
                     if (document.activeElement === firstElement) {
-                        lastElement.focus();
+                        // FIX: Cast to HTMLElement to access focus method
+                        (lastElement as HTMLElement).focus();
                         event.preventDefault();
                     }
                 } else { // Tab
                     if (document.activeElement === lastElement) {
-                        firstElement.focus();
+                        // FIX: Cast to HTMLElement to access focus method
+                        (firstElement as HTMLElement).focus();
                         event.preventDefault();
                     }
                 }

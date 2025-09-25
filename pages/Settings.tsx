@@ -2,10 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole } from '../types';
 import Card from '../components/Card';
-import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import ConfirmationModal from '../components/ConfirmationModal';
-import SetupWizard from '../components/SetupWizard';
 
 const StudentSettings = () => {
     const { currentUser, updateUser, uploadFile } = useDataContext();
@@ -110,17 +107,6 @@ const CoachSettings = () => {
 
 const AdminSettings = () => {
     const { startTour } = useUI();
-    const [isWizardOpen, setIsWizardOpen] = useState(false);
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-
-    const handleSeedRequest = () => {
-        setIsConfirmOpen(true);
-    };
-
-    const handleConfirmSeed = () => {
-        setIsConfirmOpen(false); // Close confirmation modal
-        setIsWizardOpen(true); // Open wizard modal
-    };
     
     return (
         <div className="space-y-6">
@@ -131,34 +117,12 @@ const AdminSettings = () => {
                 </div>
             </Card>
 
-            <Card title="Veritabanı Yönetimi" className="border-orange-500 border">
-                 <div className="flex justify-between items-center">
-                    <div>
-                        <h4 className="font-semibold">Demo Verilerini Yükle</h4>
-                        <p className="text-sm text-gray-500">Bu işlem mevcut tüm kullanıcıları (sizin dışınızda), ödevleri ve mesajları sıfırlayıp demo verilerini yükler. Bu işlem geri alınamaz.</p>
-                    </div>
-                    <button onClick={handleSeedRequest} className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 whitespace-nowrap">
-                        Veritabanını Doldur
-                    </button>
+            <Card title="Uygulama Bilgisi">
+                 <div className="text-center">
+                    <h4 className="font-semibold">Uygulama Yerel Modda Çalışıyor</h4>
+                    <p className="text-sm text-gray-500 mt-2">Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. Veritabanı bağlantısı yoktur ve yaptığınız değişiklikler sayfa yenilendiğinde sıfırlanacaktır.</p>
                 </div>
             </Card>
-
-            {isConfirmOpen && (
-                <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmSeed}
-                    title="Veritabanını Doldur"
-                    message="Demo verilerini yüklemek istediğinizden emin misiniz? Mevcut tüm veriler (admin hariç) silinecek ve yerine demo verileri yüklenecektir. Bu işlem geri alınamaz."
-                    confirmText="Evet, Doldur"
-                />
-            )}
-
-            {isWizardOpen && (
-                <Modal isOpen={isWizardOpen} onClose={() => setIsWizardOpen(false)} title="🚀 Platform Kurulum Sihirbazı" size="lg">
-                    <SetupWizard onFinished={() => setIsWizardOpen(false)} />
-                </Modal>
-            )}
         </div>
     );
 };

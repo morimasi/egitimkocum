@@ -223,7 +223,7 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg
 
 
 const Messages = () => {
-    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus, addReaction, uploadFile } = useDataContext();
+    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus, addReaction, uploadFile, unreadCounts, lastMessagesMap } = useDataContext();
     const { addToast, startCall, initialFilters, setInitialFilters } = useUI();
     
     const [selectedContactId, setSelectedContactId] = useState<string | null>(initialFilters.contactId || null);
@@ -249,7 +249,7 @@ const Messages = () => {
     const isCoach = currentUser?.role === UserRole.Coach;
     const contacts = isCoach ? students : (coach ? [coach] : []);
     
-    const studentContacts = !isCoach ? [{ id: 'announcements', name: 'Duyurular', profilePicture: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png' }, ...contacts] : contacts;
+    const studentContacts = isCoach ? contacts : [{ id: 'announcements', name: 'Duyurular', profilePicture: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png' }, ...contacts];
 
     const selectedContact = studentContacts.find(c => c.id === selectedContactId) || null;
 
@@ -298,9 +298,9 @@ const Messages = () => {
         });
         setNewMessage('');
         setReplyingTo(null);
-        if (currentUser && typingTimeoutRef.current) {
+        if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
-            updateTypingStatus(currentUser.id, false);
+            updateTypingStatus(false);
         }
     };
     
@@ -357,63 +357,17 @@ const Messages = () => {
 
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         setNewMessage(e.target.value);
-        if (!currentUser) return;
-        
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        else updateTypingStatus(currentUser.id, true);
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        } else {
+            updateTypingStatus(true);
+        }
 
         typingTimeoutRef.current = window.setTimeout(() => {
-            updateTypingStatus(currentUser.id, false);
+            updateTypingStatus(false);
             typingTimeoutRef.current = null;
         }, 2000);
     };
-    
-    const unreadCounts = useMemo(() => {
-        if (!currentUser) return new Map<string, number>();
-        const counts = new Map<string, number>();
-        messages.forEach(msg => {
-            if (msg.receiverId === currentUser.id && !msg.readBy.includes(currentUser.id)) {
-                const currentCount = counts.get(msg.senderId) || 0;
-                counts.set(msg.senderId, currentCount + 1);
-            }
-        });
-        return counts;
-    }, [messages, currentUser]);
-
-    const lastMessagesMap = useMemo(() => {
-        if (!currentUser) return new Map<string, Message>();
-        
-        const messageGroups = new Map<string, Message[]>();
-        messages.forEach(msg => {
-            let contactId: string | null = null;
-            if (msg.type === 'announcement') {
-                contactId = 'announcements';
-            } else if (msg.senderId === currentUser.id) {
-                contactId = msg.receiverId;
-            } else {
-                contactId = msg.senderId;
-            }
-
-            if (contactId) {
-                if (!messageGroups.has(contactId)) {
-                    messageGroups.set(contactId, []);
-                }
-                messageGroups.get(contactId)!.push(msg);
-            }
-        });
-
-        const map = new Map<string, Message>();
-        studentContacts.forEach(contact => {
-            const userMessages = messageGroups.get(contact.id);
-            if (userMessages && userMessages.length > 0) {
-                const lastMsg = userMessages.reduce((latest, current) => 
-                    new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
-                );
-                map.set(contact.id, lastMsg);
-            }
-        });
-        return map;
-    }, [messages, currentUser, studentContacts]);
     
     if (!currentUser) return null;
 

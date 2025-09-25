@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -133,7 +135,8 @@ const Library = () => {
                      <h2 className="text-2xl font-bold mb-4">Ödev Şablonları</h2>
                      {templates.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {templates.map(template => <TemplateCard key={template.id} template={template} />)}
+                            {/* FIX: Pass template as a prop directly to avoid key prop error. */}
+                            {templates.map(({ ...template }) => <TemplateCard key={template.id} template={template} />)}
                         </div>
                      ) : (
                         <Card>
@@ -150,7 +153,8 @@ const Library = () => {
                     <h2 className="text-2xl font-bold mb-4">Tüm Kaynaklar</h2>
                     {resources.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {resources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
+                            {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
+                            {resources.map(({ ...resource }) => <ResourceCard key={resource.id} resource={resource} />)}
                         </div>
                     ) : (
                          <Card>
@@ -167,7 +171,8 @@ const Library = () => {
                     <h2 className="text-2xl font-bold mb-4">Bana Önerilenler</h2>
                     {recommendedResources.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {recommendedResources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
+                            {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
+                            {recommendedResources.map(({ ...resource }) => <ResourceCard key={resource.id} resource={resource} />)}
                         </div>
                     ) : (
                          <Card>

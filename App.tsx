@@ -1,3 +1,5 @@
+
+
 import React, { Suspense } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -34,6 +36,7 @@ const AppSkeleton = () => (
                  <SkeletonText className="w-2/3" />
             </div>
             <div className="space-y-2 pt-4">
+                {/* FIX: Removed key prop from being passed to SkeletonText to resolve type error */}
                 {[...Array(6)].map((_, i) => <SkeletonText key={i} className="w-full h-10" />)}
             </div>
         </div>
@@ -148,6 +151,7 @@ const AppContent = () => {
 
 const App = () => {
     return (
+        // FIX: Explicitly pass children to satisfy strict type checking.
         <DataProvider>
             <UIProvider>
                 <ErrorBoundary>

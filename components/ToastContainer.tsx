@@ -1,9 +1,17 @@
+
+
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { ToastMessage } from '../types';
 import { CheckCircleIcon, AlertCircleIcon, InfoIcon, XIcon } from './Icons';
 
-const Toast = ({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: number) => void }) => {
+// FIX: Define a props interface for the Toast component to resolve key prop error.
+interface ToastProps {
+    toast: ToastMessage;
+    onDismiss: (id: number) => void;
+}
+
+const Toast = ({ toast, onDismiss }: ToastProps) => {
     const { type, message, id } = toast;
 
     React.useEffect(() => {
@@ -55,9 +63,10 @@ const ToastContainer = () => {
             role="alert"
             aria-live="assertive"
         >
-            {toasts.map(toast => (
-                <Toast key={toast.id} toast={toast} onDismiss={removeToast} />
-            ))}
+            {toasts.map(toast => {
+                const { id, ...rest } = toast;
+                return <Toast key={id} toast={toast} onDismiss={removeToast} />;
+            })}
         </div>
     );
 };
