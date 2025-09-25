@@ -25,38 +25,39 @@ const getStatusChip = (status: AssignmentStatus) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{text[status]}</span>;
 };
 
-
-const AssignmentRow = React.memo(({ assignment, onSelect, studentName }: { assignment: Assignment, onSelect: (assignment: Assignment) => void, studentName: string }) => {
-    const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
-    
-    return (
-        <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => onSelect(assignment)}>
-            <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{assignment.title}</td>
-            <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{studentName}</td>
-            <td className={`py-3 px-4 text-sm ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}>{new Date(assignment.dueDate).toLocaleDateString('tr-TR')}</td>
-            <td className="py-3 px-4 text-center">{getStatusChip(assignment.status)}</td>
-            <td className="py-3 px-4 text-sm font-semibold text-center hidden md:table-cell">{assignment.grade ?? '-'}</td>
-        </tr>
-    );
-});
-
-const AssignmentCard = React.memo(({ assignment, onSelect, studentName }: { assignment: Assignment, onSelect: (assignment: Assignment) => void, studentName: string }) => {
+const AssignmentCard = React.memo(({ assignment, onSelect, studentName, isCoach }: { assignment: Assignment; onSelect: (assignment: Assignment) => void; studentName: string; isCoach: boolean; }) => {
     const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3" onClick={() => onSelect(assignment)}>
-            <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-900 dark:text-white pr-2">{assignment.title}</h3>
-                {getStatusChip(assignment.status)}
+        <div
+            onClick={() => onSelect(assignment)}
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} p-4`}
+        >
+            <div>
+                <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-gray-900 dark:text-white pr-2 leading-tight flex-1">{assignment.title}</h3>
+                    {getStatusChip(assignment.status)}
+                </div>
+
+                {isCoach && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{studentName}</p>}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                <p><span className="font-semibold">Öğrenci:</span> {studentName}</p>
-                <p><span className="font-semibold">Teslim Tarihi:</span> <span className={isOverdue ? 'text-red-500 font-bold' : ''}>{new Date(assignment.dueDate).toLocaleDateString('tr-TR')}</span></p>
-                <p><span className="font-semibold">Not:</span> {assignment.grade ?? '-'}</p>
+            
+            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                <div>
+                    <span className="font-semibold">Teslim: </span>
+                    <span className={isOverdue ? 'text-red-500 font-bold' : ''}>
+                        {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
+                    </span>
+                </div>
+                <div>
+                    <span className="font-semibold">Not: </span>
+                    <span className="font-bold text-gray-700 dark:text-gray-200">{assignment.grade ?? '-'}</span>
+                </div>
             </div>
         </div>
     );
 });
+
 
 const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
@@ -594,10 +595,21 @@ const Assignments = () => {
     }, [currentUser, assignments, students, getAssignmentsForStudent]);
 
     const filteredAssignments = useMemo(() => {
-        return displayedAssignments
+        const filtered = displayedAssignments
             .filter(a => filterStatus === 'all' || a.status === filterStatus)
             .filter(a => filterStudent === 'all' || a.studentId === filterStudent)
             .filter(a => a.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+
+        return filtered.sort((a, b) => {
+            const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+            const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+            
+            if (timeB !== timeA) {
+                return timeB - timeA;
+            }
+            
+            return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        });
     }, [displayedAssignments, filterStatus, filterStudent, debouncedSearchTerm]);
 
     const getUserName = useCallback((id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor', [users]);
@@ -628,8 +640,6 @@ const Assignments = () => {
             addToast("Tüm ödevler değerlendirildi!", "success");
         }
     };
-    
-    const allStudents = useMemo(() => users.filter(u => u.role === UserRole.Student), [users]);
 
     return (
         <>
@@ -658,34 +668,19 @@ const Assignments = () => {
                     )}
                 </div>
                 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
-                    {filteredAssignments.map(a => (
-                        <AssignmentCard key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
-                    ))}
-                </div>
-                
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
-                                {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredAssignments.map(a => (
-                                <AssignmentRow key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                 {filteredAssignments.length === 0 && (
+                {filteredAssignments.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredAssignments.map(a => (
+                            <AssignmentCard 
+                                key={a.id} 
+                                assignment={a} 
+                                onSelect={setSelectedAssignment} 
+                                studentName={getUserName(a.studentId)}
+                                isCoach={isCoach}
+                            />
+                        ))}
+                    </div>
+                ) : (
                      <EmptyState
                         icon={<NoAssignmentsIcon className="w-8 h-8"/>}
                         title={isCoach ? "Filtreye Uygun Ödev Yok" : "Harika! Henüz bir ödevin yok."}
