@@ -1,6 +1,5 @@
 
-
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
 import Sidebar from './components/Sidebar';
@@ -14,6 +13,7 @@ import VideoCallModal from './components/VideoCallModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
+import CommandPalette from './components/CommandPalette';
 
 // Lazy load pages for better initial performance
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -36,7 +36,7 @@ const AppSkeleton = () => (
                  <SkeletonText className="w-2/3" />
             </div>
             <div className="space-y-2 pt-4">
-                {/* FIX: Removed key prop from being passed to SkeletonText to resolve type error */}
+                {/* FIX: Use key prop directly in map, which React handles, without passing it to SkeletonText props. */}
                 {[...Array(6)].map((_, i) => <SkeletonText key={i} className="w-full h-10" />)}
             </div>
         </div>
@@ -66,8 +66,9 @@ const AppContent = () => {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
+    const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (currentUser && currentUser.role === UserRole.Student) {
             const lastReportDate = localStorage.getItem(`weeklyReport_${currentUser.id}`);
             const now = new Date();
@@ -78,6 +79,17 @@ const AppContent = () => {
             }
         }
     }, [currentUser]);
+
+     useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+                event.preventDefault();
+                setCommandPaletteOpen(k => !k);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
     
     const handleCloseReport = () => {
         setShowWeeklyReport(false);
@@ -132,7 +144,7 @@ const AppContent = () => {
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Header setSidebarOpen={setSidebarOpen} />
+                <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8 animate-fade-in">
                     <div className="max-w-7xl mx-auto">
                         <Suspense fallback={<PageSkeleton />}>
@@ -145,13 +157,13 @@ const AppContent = () => {
             <Tour />
             <VideoCallModal />
             {showWeeklyReport && <WeeklyReportModal onClose={handleCloseReport} />}
+            <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
         </div>
     );
 };
 
 const App = () => {
     return (
-        // FIX: Explicitly pass children to satisfy strict type checking.
         <DataProvider>
             <UIProvider>
                 <ErrorBoundary>

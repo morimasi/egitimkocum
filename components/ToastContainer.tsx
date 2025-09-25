@@ -63,10 +63,10 @@ const ToastContainer = () => {
             role="alert"
             aria-live="assertive"
         >
-            {toasts.map(toast => {
-                const { id, ...rest } = toast;
-                return <Toast key={id} toast={toast} onDismiss={removeToast} />;
-            })}
+            {/* FIX: Simplified map to pass props directly, removing unused destructuring. */}
+            {toasts.map(toast => (
+                <Toast key={toast.id} toast={toast} onDismiss={removeToast} />
+            ))}
         </div>
     );
 };

@@ -10,6 +10,8 @@ export interface User {
   email: string;
   role: UserRole;
   profilePicture: string;
+  notes?: string; // Coach's private notes about a student
+  assignedCoachId?: string | null; // ID of the assigned coach for a student
 }
 
 export enum AssignmentStatus {
@@ -96,7 +98,7 @@ export interface ChartData {
 }
 
 export interface AppNotification {
-  id: string;
+  id:string;
   userId: string;
   message: string;
   timestamp: string;

@@ -20,14 +20,18 @@ const STATUS_NAMES = {
 const CoachAnalytics = () => {
     const { assignments, students } = useDataContext();
 
+    // Filter assignments to only include those of the coach's students
+    const studentIds = students.map(s => s.id);
+    const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
+
     const statusData = [
-        { name: STATUS_NAMES[AssignmentStatus.Pending], value: assignments.filter(a => a.status === AssignmentStatus.Pending).length },
-        { name: STATUS_NAMES[AssignmentStatus.Submitted], value: assignments.filter(a => a.status === AssignmentStatus.Submitted).length },
-        { name: STATUS_NAMES[AssignmentStatus.Graded], value: assignments.filter(a => a.status === AssignmentStatus.Graded).length },
+        { name: STATUS_NAMES[AssignmentStatus.Pending], value: coachAssignments.filter(a => a.status === AssignmentStatus.Pending).length },
+        { name: STATUS_NAMES[AssignmentStatus.Submitted], value: coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length },
+        { name: STATUS_NAMES[AssignmentStatus.Graded], value: coachAssignments.filter(a => a.status === AssignmentStatus.Graded).length },
     ];
     
     const radarData = students.map(student => {
-        const studentAssignments = assignments.filter(a => a.studentId === student.id);
+        const studentAssignments = coachAssignments.filter(a => a.studentId === student.id);
         const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
         const averageGrade = graded.length > 0 ? graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length : 0;
         const completionRate = studentAssignments.length > 0 ? (studentAssignments.filter(a => a.status !== AssignmentStatus.Pending).length / studentAssignments.length) * 100 : 0;

@@ -1,9 +1,15 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { MenuIcon, BellIcon, CheckCircleIcon } from './Icons';
 import { AppNotification } from '../types';
+
+const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+);
+
 
 const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onOpen: () => void }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -77,7 +83,7 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
     );
 };
 
-const Header = ({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void; }) => {
+const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (open: boolean) => void; onOpenCommandPalette: () => void; }) => {
     const { activePage } = useUI();
     const { currentUser, notifications, markNotificationsAsRead } = useDataContext();
 
@@ -106,11 +112,14 @@ const Header = ({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void; }
                     </button>
                     <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                   <button onClick={onOpenCommandPalette} aria-label="Hızlı Erişim" className="flex items-center gap-2 p-2 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                       <SearchIcon className="h-5 w-5" />
+                       <span className="hidden md:inline text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">Ctrl+K</span>
+                   </button>
                    {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={markNotificationsAsRead} />}
                     <div className="hidden sm:flex items-center">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-3">{currentUser?.name}</span>
-                        <img className="h-9 w-9 rounded-full" src={currentUser?.profilePicture} alt="User avatar" />
+                        <img className="h-9 w-9 rounded-full" src={currentUser?.profilePicture} alt={`${currentUser?.name} avatarı`} />
                     </div>
                 </div>
             </div>

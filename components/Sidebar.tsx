@@ -99,7 +99,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             <div className="flex-1 p-4 space-y-2 overflow-y-auto" id="tour-step-1">
                 <nav>
                     {/* FIX: Destructure item props to avoid spreading a key prop error */}
-                    {navItems.map(({ page, label, icon }) => <NavItem key={page} page={page} label={label} icon={icon} />)}
+                    {navItems.map(item => <NavItem key={item.page} page={item.page} label={item.label} icon={item.icon} />)}
                 </nav>
             </div>
 

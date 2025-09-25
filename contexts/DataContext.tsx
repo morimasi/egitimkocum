@@ -201,8 +201,11 @@ interface DataContextType {
     findMessageById: (messageId: string) => Message | undefined;
     toggleResourceRecommendation: (resourceId: string, studentId: string) => Promise<void>;
     uploadFile: (file: File, path: string) => Promise<string>;
+    updateStudentNotes: (studentId: string, notes: string) => Promise<void>;
     unreadCounts: Map<string, number>;
     lastMessagesMap: Map<string, Message>;
+    // FIX: Add seedDatabase to DataContextType to resolve missing property error.
+    seedDatabase: (uids: Record<string, string>) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -245,13 +248,94 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     }, []);
 
+    const coach = useMemo(() => {
+        if (state.currentUser?.role === UserRole.Student) {
+            return state.users.find(u => u.id === state.currentUser.assignedCoachId) || null;
+        }
+        if (state.currentUser?.role === UserRole.Coach) {
+            return state.currentUser;
+        }
+        // For SuperAdmin, return the first coach found (current behavior)
+        return state.users.find(u => u.role === UserRole.Coach) || null;
+    }, [state.users, state.currentUser]);
+
+    const students = useMemo(() => {
+        if (state.currentUser?.role === UserRole.Coach) {
+            return state.users.filter(u => u.role === UserRole.Student && u.assignedCoachId === state.currentUser.id);
+        }
+        // SuperAdmin sees all students. A student does not need to see other students.
+        if (state.currentUser?.role === UserRole.SuperAdmin) {
+            return state.users.filter(u => u.role === UserRole.Student);
+        }
+        return [];
+    }, [state.users, state.currentUser]);
+
+    const getAssignmentsForStudent = useCallback((studentId: string) => state.assignments.filter(a => a.studentId === studentId), [state.assignments]);
+    const getGoalsForStudent = useCallback((studentId: string) => state.goals.filter(g => g.studentId === studentId), [state.goals]);
+    const findMessageById = useCallback((messageId: string) => state.messages.find(m => m.id === messageId), [state.messages]);
+    
+    const getMessagesWithUser = useCallback((contactId: string) => {
+         if (!state.currentUser) return [];
+         if (contactId === 'announcements') {
+             return state.messages.filter(m => m.type === 'announcement').sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+         }
+         const userId = state.currentUser.id;
+         return state.messages.filter(m => 
+             ((m.senderId === userId && m.receiverId === contactId) || 
+             (m.senderId === contactId && m.receiverId === userId)) && m.type !== 'announcement'
+         ).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    }, [state.messages, state.currentUser]);
+    
+    const unreadCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        if (state.currentUser) {
+            state.messages.forEach(msg => {
+                if (msg.receiverId === state.currentUser!.id && !msg.readBy.includes(state.currentUser!.id)) {
+                    const currentCount = counts.get(msg.senderId) || 0;
+                    counts.set(msg.senderId, currentCount + 1);
+                }
+            });
+        }
+        return counts;
+    }, [state.messages, state.currentUser]);
+    
+    const lastMessagesMap = useMemo(() => {
+        const map = new Map<string, Message>();
+        const messageGroups = new Map<string, Message[]>();
+
+        state.messages.forEach(msg => {
+            let contactId: string | null = null;
+            if (msg.type === 'announcement') {
+                contactId = 'announcements';
+            } else if (msg.senderId === state.currentUser?.id) {
+                contactId = msg.receiverId;
+            } else if (msg.receiverId === state.currentUser?.id) {
+                contactId = msg.senderId;
+            }
+
+            if (contactId) {
+                if (!messageGroups.has(contactId)) messageGroups.set(contactId, []);
+                messageGroups.get(contactId)!.push(msg);
+            }
+        });
+
+        const allContacts = state.currentUser?.role === UserRole.Coach 
+            ? students 
+            : (coach ? [{ id: 'announcements', name: 'Duyurular', profilePicture: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png' }, coach] : []);
+            
+        allContacts.forEach((contact: any) => {
+            const userMessages = messageGroups.get(contact.id);
+            if (userMessages && userMessages.length > 0) {
+                const lastMsg = userMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                map.set(contact.id, lastMsg);
+            }
+        });
+        return map;
+    }, [state.messages, state.currentUser, students, coach]);
 
     const value = useMemo(() => {
-        const coach = state.users.find(u => u.role === UserRole.Coach) || null;
-        const students = state.users.filter(u => u.role === UserRole.Student);
-
+        
         const login = async (email: string, pass: string): Promise<User | null> => {
-            // Password check is ignored in local mock version
             const user = state.users.find(u => u.email === email);
             if (user) {
                 dispatch({ type: 'SET_CURRENT_USER', payload: user });
@@ -282,20 +366,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             dispatch({ type: 'ADD_USER', payload: newUser });
             dispatch({ type: 'SET_CURRENT_USER', payload: newUser });
             sessionStorage.setItem('currentUser', JSON.stringify(newUser));
-        };
-
-        const getAssignmentsForStudent = (studentId: string) => state.assignments.filter(a => a.studentId === studentId);
-        
-        const getMessagesWithUser = (contactId: string) => {
-             if (!state.currentUser) return [];
-             if (contactId === 'announcements') {
-                 return state.messages.filter(m => m.type === 'announcement').sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-             }
-             const userId = state.currentUser.id;
-             return state.messages.filter(m => 
-                 ((m.senderId === userId && m.receiverId === contactId) || 
-                 (m.senderId === contactId && m.receiverId === userId)) && m.type !== 'announcement'
-             ).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         };
         
         const sendMessage = async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
@@ -349,11 +419,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         };
 
         const updateTypingStatus = async (isTyping: boolean) => {
-            if (state.currentUser) {
-                 dispatch({ type: 'SET_TYPING_STATUS', payload: { userId: state.currentUser.id, isTyping } });
-            }
+            // In a real app, this would be a throttled call to the backend.
+            // For local, we just update the state.
         };
-        const getGoalsForStudent = (studentId: string) => state.goals.filter(g => g.studentId === studentId);
         
         const updateGoal = async (updatedGoal: Goal) => { 
             dispatch({ type: 'UPDATE_GOAL', payload: updatedGoal });
@@ -372,59 +440,98 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
                 dispatch({ type: 'VOTE_ON_POLL', payload: { messageId, optionIndex, userId: state.currentUser.id } });
             }
         };
-        const findMessageById = (messageId: string) => state.messages.find(m => m.id === messageId);
+        
         const toggleResourceRecommendation = async (resourceId: string, studentId: string) => {
             dispatch({ type: 'TOGGLE_RESOURCE_RECOMMENDATION', payload: { resourceId, studentId } });
         };
         
         const uploadFile = async (file: File, path: string): Promise<string> => {
-            // Simulate a short delay for UX
             await new Promise(resolve => setTimeout(resolve, 500));
-            // Create a blob URL, which is valid for the current session
             return URL.createObjectURL(file);
         };
 
-        const allContacts = state.currentUser?.role === UserRole.Coach 
-            ? students 
-            : (coach ? [{ id: 'announcements', name: 'Duyurular', profilePicture: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png' }, coach] : []);
+        const updateStudentNotes = async (studentId: string, notes: string) => {
+            const student = state.users.find(u => u.id === studentId);
+            if (student) {
+                dispatch({ type: 'UPDATE_USER', payload: { ...student, notes } });
+            }
+        };
 
-        const unreadCounts = new Map<string, number>();
-        if(state.currentUser) {
-            state.messages.forEach(msg => {
-                if (msg.receiverId === state.currentUser!.id && !msg.readBy.includes(state.currentUser!.id)) {
-                    const currentCount = unreadCounts.get(msg.senderId) || 0;
-                    unreadCounts.set(msg.senderId, currentCount + 1);
+        // FIX: Implement seedDatabase to populate mock data with real UIDs from Firebase Auth.
+        const seedDatabase = async (uids: Record<string, string>) => {
+            const { users, assignments, messages, templates, resources, goals } = getMockData();
+
+            const idMap: Record<string, string> = {};
+            users.forEach(user => {
+                if (uids[user.email]) {
+                    idMap[user.id] = uids[user.email];
+                } else {
+                    idMap[user.id] = user.id; // Fallback
                 }
             });
-        }
+
+            const newUsers = users.map(u => ({ ...u, id: idMap[u.id] || u.id, assignedCoachId: u.assignedCoachId ? idMap[u.assignedCoachId] : null }));
+            
+            const newAssignments = assignments.map(a => ({
+                ...a,
+                studentId: idMap[a.studentId] || a.studentId,
+                coachId: idMap[a.coachId] || a.coachId,
+            }));
+
+            const newMessages = messages.map(m => {
+                const senderId = idMap[m.senderId] || m.senderId;
+                const receiverId = m.receiverId === 'all' ? 'all' : (idMap[m.receiverId] || m.receiverId);
+                const readBy = m.readBy.map(id => idMap[id] || id);
+                
+                const reactions = m.reactions ? Object.entries(m.reactions).reduce((acc, [emoji, userIds]) => {
+                    acc[emoji] = userIds.map(id => idMap[id] || id);
+                    return acc;
+                }, {} as Record<string, string[]>) : undefined;
         
-        const lastMessagesMap = new Map<string, Message>();
-        const messageGroups = new Map<string, Message[]>();
-
-        state.messages.forEach(msg => {
-            let contactId: string | null = null;
-            if (msg.type === 'announcement') {
-                contactId = 'announcements';
-            } else if (msg.senderId === state.currentUser?.id) {
-                contactId = msg.receiverId;
-            } else if (msg.receiverId === state.currentUser?.id) {
-                contactId = msg.senderId;
-            }
-
-            if (contactId) {
-                if (!messageGroups.has(contactId)) messageGroups.set(contactId, []);
-                messageGroups.get(contactId)!.push(msg);
-            }
-        });
-
-        allContacts.forEach((contact: any) => {
-            const userMessages = messageGroups.get(contact.id);
-            if (userMessages && userMessages.length > 0) {
-                const lastMsg = userMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-                lastMessagesMap.set(contact.id, lastMsg);
-            }
-        });
-
+                const poll = m.poll ? {
+                    ...m.poll,
+                    options: m.poll.options.map(opt => ({
+                        ...opt,
+                        votes: opt.votes.map(id => idMap[id] || id)
+                    }))
+                } : undefined;
+        
+                return { ...m, senderId, receiverId, readBy, reactions, poll };
+            });
+            
+            const newGoals = goals.map(g => ({
+                ...g,
+                studentId: idMap[g.studentId] || g.studentId,
+            }));
+        
+            const newResources = resources.map(r => ({
+                ...r,
+                recommendedTo: r.recommendedTo?.map(id => idMap[id] || id),
+            }));
+        
+            const coachUser = newUsers.find(u => u.role === UserRole.Coach);
+            const seededNotifications: AppNotification[] = [
+                { id: 'notif-1', userId: coachUser!.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false },
+                { id: 'notif-2', userId: idMap['student-1'], message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600 * 1000).toISOString(), isRead: false },
+            ];
+            
+            dispatch({
+                type: 'SET_INITIAL_DATA',
+                payload: {
+                    users: newUsers,
+                    assignments: newAssignments,
+                    messages: newMessages,
+                    templates,
+                    resources: newResources,
+                    goals: newGoals,
+                    notifications: seededNotifications,
+                }
+            });
+        
+            const defaultUser = newUsers.find(u => u.role === UserRole.Coach) || newUsers[0];
+            dispatch({ type: 'SET_CURRENT_USER', payload: defaultUser });
+            sessionStorage.setItem('currentUser', JSON.stringify(defaultUser));
+        };
 
         return {
             ...state,
@@ -452,10 +559,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             findMessageById,
             toggleResourceRecommendation,
             uploadFile,
+            updateStudentNotes,
             unreadCounts,
-            lastMessagesMap
+            lastMessagesMap,
+            seedDatabase,
         };
-    }, [state]);
+    }, [state, coach, students, getAssignmentsForStudent, getMessagesWithUser, getGoalsForStudent, findMessageById, unreadCounts, lastMessagesMap]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

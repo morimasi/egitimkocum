@@ -1,14 +1,15 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
+import FileUpload from '../components/FileUpload';
+import EmptyState from '../components/EmptyState';
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -183,7 +184,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    {/* FIX: Cast e.target to HTMLSelectElement to access value property */}
+                    {/* FIX: Correctly access the value of the event target. */}
                     <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
@@ -248,8 +249,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 break;
             case 'completed':
                 break;
-             default: // file
-                addToast("Lütfen bir dosya seçin ve yükle butonuna basın.", "info");
+            default:
+                addToast("Lütfen dosya yükleme alanını kullanın.", "error");
                 return;
         }
 
@@ -258,27 +259,25 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         onClose();
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.files && e.target.files.length > 0 && currentUser) {
-            const file = e.target.files[0];
-            setIsUploading(true);
-            try {
-                const fileUrl = await uploadFile(file, `submissions/${currentUser.id}`);
-                await updateAssignment({ 
-                    ...assignment, 
-                    status: AssignmentStatus.Submitted, 
-                    fileUrl: fileUrl, 
-                    fileName: file.name,
-                    submittedAt: new Date().toISOString() 
-                });
-                addToast("Ödev dosyası başarıyla yüklendi.", "success");
-                onClose();
-            } catch (error) {
-                console.error("File upload error:", error);
-                addToast("Dosya yüklenirken bir hata oluştu.", "error");
-            } finally {
-                setIsUploading(false);
-            }
+    const handleFileUpload = async (file: File) => {
+        if (!currentUser) return;
+        setIsUploading(true);
+        try {
+            const fileUrl = await uploadFile(file, `submissions/${currentUser.id}`);
+            await updateAssignment({ 
+                ...assignment, 
+                status: AssignmentStatus.Submitted, 
+                fileUrl: fileUrl, 
+                fileName: file.name,
+                submittedAt: new Date().toISOString() 
+            });
+            addToast("Ödev dosyası başarıyla yüklendi.", "success");
+            onClose();
+        } catch (error) {
+            console.error("File upload error:", error);
+            addToast("Dosya yüklenirken bir hata oluştu.", "error");
+        } finally {
+            setIsUploading(false);
         }
     };
     
@@ -320,7 +319,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             if (result) {
                 setGrade(result.suggestedGrade.toString());
                 setGradeRationale(result.rationale);
-                addToast("Not önerisi başarıyla alındıı.", "success");
+                addToast("Not önerisi başarıyla alındı.", "success");
             } else {
                 throw new Error("API'den geçerli bir sonuç alınamadı.");
             }
@@ -430,12 +429,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                     <div className="border-t dark:border-gray-600 pt-4">
                         <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
                          {assignment.submissionType === 'file' && (
-                            <div>
-                                <label className={`w-full text-center cursor-pointer bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 block ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                    {isUploading ? 'Yükleniyor...' : 'Dosya Yükle'}
-                                    <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading}/>
-                                </label>
-                            </div>
+                            <FileUpload onUpload={handleFileUpload} isUploading={isUploading} />
                         )}
                          {assignment.submissionType === 'text' && (
                              <div>
@@ -462,8 +456,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                          {!assignment.feedbackReaction && (
                             <div className="mt-4 pt-3 border-t dark:border-gray-600 flex items-center gap-2">
                                 <p className="text-sm font-medium">Geri bildirim faydalı oldu mu?</p>
-                                <button onClick={() => handleFeedbackReaction('👍')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">👍</button>
-                                <button onClick={() => handleFeedbackReaction('🤔')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">🤔</button>
+                                <button onClick={() => handleFeedbackReaction('👍')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Beğendim">👍</button>
+                                <button onClick={() => handleFeedbackReaction('🤔')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Anlamadım">🤔</button>
                             </div>
                         )}
                     </div>
@@ -549,9 +543,22 @@ const Assignments = () => {
     }, [initialFilters, setInitialFilters]);
     
     const isCoach = currentUser?.role === UserRole.Coach;
-    const displayedAssignments = isCoach
-        ? assignments
-        : (currentUser ? getAssignmentsForStudent(currentUser.id) : []);
+
+    const displayedAssignments = useMemo(() => {
+        if (!currentUser) return [];
+    
+        switch (currentUser.role) {
+            case UserRole.Student:
+                return getAssignmentsForStudent(currentUser.id);
+            case UserRole.Coach:
+                const studentIds = students.map(s => s.id); // `students` is pre-filtered by context
+                return assignments.filter(a => studentIds.includes(a.studentId));
+            case UserRole.SuperAdmin:
+                return assignments;
+            default:
+                return [];
+        }
+    }, [currentUser, assignments, students, getAssignmentsForStudent]);
 
     const filteredAssignments = useMemo(() => {
         return displayedAssignments
@@ -595,7 +602,7 @@ const Assignments = () => {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <div className="flex flex-wrap gap-2">
                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
-                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekliyor</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
@@ -616,30 +623,31 @@ const Assignments = () => {
                     )}
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
-                                {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
-                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredAssignments.length > 0 ? (
-                                filteredAssignments.map(a => (
-                                    <AssignmentRow key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
-                                ))
-                            ) : (
+                    {filteredAssignments.length > 0 ? (
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 dark:bg-gray-700/50">
                                 <tr>
-                                    <td colSpan={isCoach ? 5 : 4} className="text-center py-10 text-gray-500">
-                                        {isCoach ? "Filtre kriterlerine uygun ödev bulunamadı." : "Harika! Henüz bir ödeviniz yok."}
-                                    </td>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
+                                    {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
+                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredAssignments.map(a => (
+                                    <AssignmentRow key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                         <EmptyState
+                            icon={<NoAssignmentsIcon className="w-8 h-8"/>}
+                            title={isCoach ? "Filtreye Uygun Ödev Yok" : "Harika! Henüz bir ödevin yok."}
+                            description={isCoach ? "Farklı bir filtre deneyin veya yeni bir ödev oluşturun." : "Koçun yeni bir ödev atadığında burada görünecek."}
+                            action={isCoach ? { label: "Yeni Ödev Oluştur", onClick: () => setIsNewAssignmentModalOpen(true) } : undefined}
+                         />
+                    )}
                 </div>
             </Card>
             {isNewAssignmentModalOpen && <NewAssignmentModal isOpen={isNewAssignmentModalOpen} onClose={() => setIsNewAssignmentModalOpen(false)} />}

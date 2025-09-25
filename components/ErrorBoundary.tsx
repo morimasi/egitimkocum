@@ -43,9 +43,8 @@ class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-
-    const { children } = this.props;
-    return children;
+    // FIX: Directly return this.props.children to resolve issue with props not being found on the type.
+    return this.props.children;
   }
 }
 

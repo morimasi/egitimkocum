@@ -3,10 +3,10 @@ import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal
 export const getMockData = () => {
     const users: User[] = [
       { id: 'coach-1', name: 'Ayşe Yılmaz', email: 'ayse.yilmaz@koc.com', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=coach-1' },
-      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1' },
-      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2' },
-      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3' },
-      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4' },
+      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1', assignedCoachId: 'coach-1' },
+      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1' },
+      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1' },
+      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1' },
       { id: 'superadmin-1', name: 'Admin User', email: 'admin@platform.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
     ];
     
@@ -31,13 +31,20 @@ export const getMockData = () => {
         { id: 'msg-3', senderId: 'student-1', receiverId: 'coach-1', type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
         { id: 'msg-4', senderId: 'coach-1', receiverId: 'student-2', text: 'Zeynep, kompozisyon ödevin gelmiş, en kısa zamanda değerlendireceğim.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-2', 'coach-1'] },
         { id: 'msg-5', senderId: 'student-2', receiverId: 'coach-1', text: 'Teşekkürler hocam, bekliyorum 😊', timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-2'] },
-        { id: 'msg-6', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: ['coach-1'] },
+        { id: 'msg-6', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4'] },
+        { id: 'msg-8', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Önemli: Gelecek hafta yapılacak olan deneme sınavı için konu dağılımları kütüphane bölümüne eklenmiştir. Göz atmayı unutmayın!', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
         { id: 'msg-7', senderId: 'coach-1', receiverId: 'student-3', type: 'poll', text: 'Anket: Gelecek haftaki deneme sınavı', poll: { question: 'Gelecek haftaki deneme sınavı hangi gün olsun?', options: [{text: 'Cumartesi', votes: ['student-3']}, {text: 'Pazar', votes: []}] }, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), readBy: ['student-3', 'coach-1'] }
     ];
 
     const templates: AssignmentTemplate[] = [
-      { id: 'temp-task-1', title: 'Soru Çözümü', description: 'Belirtilen konularda veya kaynaklardan belirli sayıda soru çözülecektir. Çözüm adımlarınızı göstermeniz ve anlamadığınız noktaları belirtmeniz beklenmektedir.', checklist: [{text: 'Belirtilen sayıda soruyu çöz'}, {text: 'Yanlışlarını ve boşlarını kontrol et'}, {text: 'Anlamadığın soruları not al'}] },
+      { id: 'temp-task-1', title: 'Genel Soru Çözümü', description: 'Belirtilen konularda veya kaynaklardan belirli sayıda soru çözülecektir. Çözüm adımlarınızı göstermeniz ve anlamadığınız noktaları belirtmeniz beklenmektedir.', checklist: [{text: 'Belirtilen sayıda soruyu çöz'}, {text: 'Yanlışlarını ve boşlarını kontrol et'}, {text: 'Anlamadığın soruları not al'}] },
       { id: 'temp-task-2', title: 'Makale/Kompozisyon Yazımı', description: 'Verilen konu hakkında araştırma yaparak, giriş-gelişme-sonuç bölümlerinden oluşan bir yazı hazırlanacaktır.', checklist: [{text: 'Konu hakkında araştırma yap'}, {text: 'Yazı taslağını oluştur'}, {text: 'Yazıyı yaz ve dilbilgisi kontrolü yap'}] },
+      { id: 'temp-math-1', title: 'Matematik Soru Çözümü', description: 'Belirtilen matematik konusundan 50 soru çözülecek. Çözülemeyen sorular işaretlenip derste sorulacak.', checklist: [{text: 'Konu tekrarı yap'}, {text: '50 soruyu çöz'}, {text: 'Yanlışlarını kontrol et'}, {text: 'Anlamadıklarını not al'}] },
+      { id: 'temp-turkish-1', title: 'Türkçe Paragraf Analizi', description: 'Verilen paragraf setinden 20 soru çözülecek. Her sorunun analizi yapılacak.', checklist: [{text: 'Soruları süre tutarak çöz'}, {text: 'Yanlışların nedenlerini analiz et'}, {text: 'Bilmediğin kelimeleri not al'}] },
+      { id: 'temp-physics-1', title: 'Fizik Konu Tekrarı', description: 'Bu haftanın fizik konusunu tekrar et ve özet çıkar.', checklist: [{text: 'Konu anlatım videosunu izle'}, {text: 'Ders notlarını tekrar et'}, {text: 'Konuyla ilgili 30 soru çöz'}] },
+      { id: 'temp-exam-1', title: 'Deneme Sınavı Analizi', description: 'Son girdiğin deneme sınavının detaylı analizini yap. Yanlış ve boş bıraktığın soruların konularını belirle.', checklist: [{text: 'Sınav sonucunu sisteme gir'}, {text: 'Tüm yanlışları tek tek incele'}, {text: 'Yanlış yapılan konuların listesini çıkar'}, {text: 'Haftalık çalışma programına ekle'}] },
+      { id: 'temp-reading-1', title: 'Kitap Okuma Raporu', description: 'Haftalık belirlenen kitabı oku ve 1 sayfalık özet ve yorum raporu hazırla.', checklist: [{text: 'Kitabı bitir'}, {text: 'Ana karakterleri ve olayı not al'}, {text: 'Kitap hakkındaki düşüncelerini yaz'}, {text: 'Raporu sisteme yükle'}] },
+      { id: 'temp-mistake-1', title: 'Yanlış Soru Defteri', description: 'Hafta boyunca çözdüğün testlerdeki tüm yanlış soruları kesip yanlış defterine yapıştır ve doğru çözümünü öğren.', checklist: [{text: 'Tüm derslerdeki yanlışları belirle'}, {text: 'Soruları deftere yapıştır'}, {text: 'Doğru çözümü altına yaz'}, {text: 'Hafta sonu bu soruları tekrar çöz'}] },
     ];
     
     const resources: Resource[] = [

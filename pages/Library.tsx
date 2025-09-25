@@ -136,7 +136,7 @@ const Library = () => {
                      {templates.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* FIX: Pass template as a prop directly to avoid key prop error. */}
-                            {templates.map(({ ...template }) => <TemplateCard key={template.id} template={template} />)}
+                            {templates.map((template) => <TemplateCard key={template.id} template={template} />)}
                         </div>
                      ) : (
                         <Card>
@@ -154,7 +154,7 @@ const Library = () => {
                     {resources.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
-                            {resources.map(({ ...resource }) => <ResourceCard key={resource.id} resource={resource} />)}
+                            {resources.map((resource) => <ResourceCard key={resource.id} resource={resource} />)}
                         </div>
                     ) : (
                          <Card>
@@ -172,7 +172,7 @@ const Library = () => {
                     {recommendedResources.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
-                            {recommendedResources.map(({ ...resource }) => <ResourceCard key={resource.id} resource={resource} />)}
+                            {recommendedResources.map((resource) => <ResourceCard key={resource.id} resource={resource} />)}
                         </div>
                     ) : (
                          <Card>

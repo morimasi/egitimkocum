@@ -300,7 +300,6 @@ const Messages = () => {
         setReplyingTo(null);
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
-            updateTypingStatus(false);
         }
     };
     
@@ -357,16 +356,6 @@ const Messages = () => {
 
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         setNewMessage(e.target.value);
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        } else {
-            updateTypingStatus(true);
-        }
-
-        typingTimeoutRef.current = window.setTimeout(() => {
-            updateTypingStatus(false);
-            typingTimeoutRef.current = null;
-        }, 2000);
     };
     
     if (!currentUser) return null;

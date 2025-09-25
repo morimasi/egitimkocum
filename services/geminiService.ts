@@ -146,44 +146,54 @@ export const generateStudentFocusSuggestion = async (studentName: string, assign
     }
 };
 
-export const generateCoachWeeklyInsights = async (students: User[], assignments: Assignment[]): Promise<string> => {
+export const generatePersonalCoachSummary = async (coachName: string, students: User[], assignments: Assignment[]): Promise<string> => {
     try {
         const now = new Date();
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         
         const submittedThisWeek = assignments.filter(a => a.submittedAt && new Date(a.submittedAt) > oneWeekAgo).length;
-        const highPerformers = students.filter(s => {
+        const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+
+        const highPerformersCount = students.filter(s => {
             const studentAssignments = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Graded && a.grade !== null);
             if (studentAssignments.length === 0) return false;
             const avg = studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length;
             return avg >= 90;
-        }).map(s => s.name);
+        }).length;
 
-        const needsAttention = students.filter(s => {
+        const needsAttentionCount = students.filter(s => {
              const overdueCount = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Pending && new Date(a.dueDate) < now).length;
              return overdueCount > 1;
-        }).map(s => s.name);
+        }).length;
 
-        const prompt = `Sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen kısa bir analiz yaz.
-        Veriler:
-        - Bu hafta teslim edilen toplam ödev sayısı: ${submittedThisWeek}
-        - Yüksek performans gösteren öğrenciler (Not ortalaması 90+): ${highPerformers.join(', ') || 'Yok'}
-        - Desteğe ihtiyacı olabilecek öğrenciler (1'den fazla gecikmiş ödevi olan): ${needsAttention.join(', ') || 'Yok'}
+        const prompt = `Merhaba ${coachName}, sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen ve sana özel eyleme geçirilebilir tavsiyeler sunan kısa bir analiz yaz. Öğrenci isimlerini KESİNLİKLE kullanma. Genel trendlere ve sayılara odaklan.
+        
+        İşte bu haftanın verileri:
+        - Bu hafta teslim edilen toplam ödev: ${submittedThisWeek}
+        - Değerlendirilmeyi bekleyen ödev: ${toGradeCount}
+        - Gecikmiş ödevi olan öğrenci sayısı: ${needsAttentionCount}
+        - Yüksek performans gösteren (Not ort. 90+) öğrenci sayısı: ${highPerformersCount}
 
-        Genel bir değerlendirme yap, başarılı öğrencileri tebrik et ve yardıma ihtiyacı olabilecek öğrencilere nasıl yaklaşılacağına dair kısa bir öneride bulun.`;
+        Bu verilere dayanarak, şu konularda kısa ve yapıcı tavsiyeler ver:
+        1. Genel bir değerlendirme ve motivasyon cümlesi.
+        2. Bu hafta nelere odaklanman gerektiği (örn: "Değerlendirilmeyi bekleyen ödevlere öncelik verebilirsin.").
+        3. Öğrenci gruplarına yönelik genel stratejiler (örn: "Yüksek performans gösteren öğrencilere ek kaynaklar önerebilirsin." veya "Gecikmesi olan öğrencilerle birebir görüşmek faydalı olabilir.").
+        
+        Tonun profesyonel, destekleyici ve kişisel asistanın gibi olmalı.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
-            config: { temperature: 0.8 },
+            config: { temperature: 0.7 },
         });
 
         return response.text;
     } catch (error) {
-        console.error("Error generating coach weekly insights:", error);
-        return "Bu haftaki öğrenci performans verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci detaylarını manuel olarak kontrol edin.";
+        console.error("Error generating personal coach summary:", error);
+        return "Bu haftaki koçluk özetin analiz edilirken bir sorun oluştu. Lütfen öğrenci detaylarını manuel olarak kontrol edin.";
     }
 };
+
 
 export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
   try {

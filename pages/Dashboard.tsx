@@ -4,9 +4,42 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon, SparklesIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
-import { generateStudentFocusSuggestion, generateCoachWeeklyInsights } from '../services/geminiService';
+import { generateStudentFocusSuggestion, generatePersonalCoachSummary } from '../services/geminiService';
+
+const AnnouncementsCard = () => {
+    const { messages, coach } = useDataContext();
+    const { setActivePage } = useUI();
+    const announcements = messages
+        .filter(m => m.type === 'announcement')
+        .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 3);
+
+    if (announcements.length === 0) {
+        return null;
+    }
+
+    return (
+        <Card title="Son Duyurular" id="tour-announcements">
+             <ul className="space-y-3">
+                {announcements.map(msg => (
+                     <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-start space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'announcements'})}>
+                        <div className="flex-shrink-0 pt-1">
+                            <MegaphoneIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{msg.text}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {coach?.name} - {new Date(msg.timestamp).toLocaleString('tr-TR')}
+                            </p>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+};
 
 const KpiCard = React.memo(({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
     <Card className="flex items-center" id={id}>
@@ -106,6 +139,7 @@ const StudentDashboard = () => {
 
     return (
         <div className="space-y-6">
+            <AnnouncementsCard />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <KpiCard title="Bekleyen Ödevler" value={pendingAssignments.length} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3" />
                 <KpiCard title="Not Ortalaması" value={averageGrade} icon={<CheckCircleIcon className="w-6 h-6 text-green-800" />} color="bg-green-200" />
@@ -160,7 +194,7 @@ const StudentDashboard = () => {
     );
 };
 
-const WeeklyInsightsCard = () => {
+const CoachInsightsCard = ({ currentUser }: { currentUser: User }) => {
     const { students, assignments } = useDataContext();
     const [insights, setInsights] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -168,18 +202,18 @@ const WeeklyInsightsCard = () => {
     useEffect(() => {
         const fetchInsights = async () => {
             setIsLoading(true);
-            const result = await generateCoachWeeklyInsights(students, assignments);
+            const result = await generatePersonalCoachSummary(currentUser.name, students, assignments);
             setInsights(result);
             setIsLoading(false);
         };
         fetchInsights();
-    }, [students, assignments]);
+    }, [currentUser, students, assignments]);
 
     return (
         <Card>
             <h4 className="font-semibold flex items-center mb-2">
                 <SparklesIcon className="w-5 h-5 mr-2 text-primary-500" />
-                Haftalık Analiz
+                Haftalık Koçluk Özetin
             </h4>
             {isLoading ? <SkeletonText className="h-20 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{insights}</p>}
         </Card>
@@ -190,26 +224,30 @@ const WeeklyInsightsCard = () => {
 const CoachDashboard = () => {
     const { students, assignments, messages, currentUser } = useDataContext();
     const { setActivePage } = useUI();
+    
+    // A coach should only see data for their assigned students
+    const studentIds = students.map(s => s.id);
+    const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
 
-    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-    const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+    const pendingCount = coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+    const overdueCount = coachAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
     
     // Calculate overall grade average
-    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+    const gradedAssignments = coachAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
     const overallAverage = gradedAssignments.length > 0
         ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length)
         : 0;
 
     // Data for assignment status chart
     const statusData = [
-        { name: 'Bekliyor', value: assignments.filter(a => a.status === AssignmentStatus.Pending).length },
-        { name: 'Teslim Edildi', value: assignments.filter(a => a.status === AssignmentStatus.Submitted).length },
-        { name: 'Notlandırıldı', value: assignments.filter(a => a.status === AssignmentStatus.Graded).length },
+        { name: 'Bekliyor', value: coachAssignments.filter(a => a.status === AssignmentStatus.Pending).length },
+        { name: 'Teslim Edildi', value: coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length },
+        { name: 'Notlandırıldı', value: coachAssignments.filter(a => a.status === AssignmentStatus.Graded).length },
     ];
     const COLORS = ['#facc15', '#3b82f6', '#22c55e'];
     
     const studentsWithAlerts = students.map(s => {
-        const studentAssignments = assignments.filter(a => a.studentId === s.id);
+        const studentAssignments = coachAssignments.filter(a => a.studentId === s.id);
         const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
         const avg = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
         const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
@@ -228,9 +266,10 @@ const CoachDashboard = () => {
                 <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" />
                  <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<XIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
             </div>
+            <AnnouncementsCard />
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-3">
-                    <WeeklyInsightsCard />
+                    {currentUser && <CoachInsightsCard currentUser={currentUser} />}
                 </div>
                 <Card title="Dikkat Gerektiren Öğrenciler" className="lg:col-span-1">
                     {studentsWithAlerts.length > 0 ? (
