@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -110,7 +111,7 @@ const StudentSettings = () => {
             description: "3'ten fazla hedef tamamladın.",
             isUnlocked: completedGoals.length >= 3,
         }
-    ], [completedAssignments, avgGrade, completedGoals]);
+    ], [completedAssignments.length, avgGrade, completedGoals.length]);
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

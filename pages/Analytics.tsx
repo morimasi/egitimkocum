@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
@@ -9,6 +11,21 @@ import { generateStudentAnalyticsInsight, generateCoachAnalyticsInsight } from '
 import { SparklesIcon, TrendingUpIcon, CalendarIcon, TrophyIcon, TargetIcon, AlertTriangleIcon, StudentsIcon as StudentsIconType, AssignmentsIcon } from '../components/Icons';
 
 type TimeFilter = '7d' | '30d' | 'all';
+
+const StatCard = React.memo(({ title, value, icon, subtext }: { title: string, value: string | number, icon: React.ReactNode, subtext?: string }) => (
+    <Card>
+        <div className="flex justify-between items-start">
+            <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+                {subtext && <p className="text-xs text-gray-400 mt-1">{subtext}</p>}
+            </div>
+            <div className="p-3 bg-primary-100 dark:bg-primary-900/50 rounded-lg text-primary-500">
+                {icon}
+            </div>
+        </div>
+    </Card>
+));
 
 // --- Student Dashboard ---
 const ActivityHeatmap = ({ assignments }: { assignments: Assignment[] }) => {
@@ -310,20 +327,7 @@ const CoachPerformanceTable = ({ coaches, students, assignments }: { coaches: Us
 
 // --- Main Component & Dashboards ---
 
-const StatCard = React.memo(({ title, value, icon, subtext }: { title: string, value: string | number, icon: React.ReactNode, subtext?: string }) => (
-    <Card>
-        <div className="flex justify-between items-start">
-            <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
-                {subtext && <p className="text-xs text-gray-400 mt-1">{subtext}</p>}
-            </div>
-            <div className="p-3 bg-primary-100 dark:bg-primary-900/50 rounded-lg text-primary-500">
-                {icon}
-            </div>
-        </div>
-    </Card>
-));
+
 
 const TimeFilterComponent = ({ filter, setFilter }: { filter: TimeFilter, setFilter: (f: TimeFilter) => void }) => {
     const filters: {key: TimeFilter, label: string}[] = [{key: '7d', label: 'Son 7 Gün'}, {key: '30d', label: 'Son 30 Gün'}, {key: 'all', label: 'Tüm Zamanlar'}];
