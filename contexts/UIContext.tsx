@@ -1,8 +1,9 @@
 
 
 
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import { Page, ToastMessage, ToastType, User, AssignmentStatus } from '../types';
+import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } from '../types';
 
 type Theme = 'light' | 'dark';
 type CallState = 'idle' | 'calling' | 'in-call' | 'ended';
@@ -30,7 +31,8 @@ interface UIContextType {
     endTour: () => void;
     callState: CallState;
     callContact: User | null;
-    startCall: (contact: User) => void;
+    callConversation: Conversation | null;
+    startCall: (contactOrConversation: User | Conversation) => void;
     answerCall: () => void;
     endCall: () => void;
 }
@@ -56,6 +58,8 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     // Call state
     const [callState, setCallState] = useState<CallState>('idle');
     const [callContact, setCallContact] = useState<User | null>(null);
+    const [callConversation, setCallConversation] = useState<Conversation | null>(null);
+
 
     const setActivePage = useCallback((page: Page, filters: InitialFilters = {}) => {
         _setActivePage(page);
@@ -107,8 +111,14 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     }, []);
 
     // Call management
-    const startCall = useCallback((contact: User) => {
-        setCallContact(contact);
+    const startCall = useCallback((contactOrConversation: User | Conversation) => {
+         if ('participantIds' in contactOrConversation) { // Duck typing to check if it's a Conversation
+            setCallConversation(contactOrConversation);
+            setCallContact(null);
+        } else { // It's a User
+            setCallContact(contactOrConversation);
+            setCallConversation(null);
+        }
         setCallState('calling');
     }, []);
 
@@ -119,6 +129,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     const endCall = useCallback(() => {
         setCallState('idle');
         setCallContact(null);
+        setCallConversation(null);
     }, []);
 
     const value = useMemo(() => ({
@@ -138,11 +149,12 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         endTour,
         callState,
         callContact,
+        callConversation,
         startCall,
         answerCall,
         endCall,
     }), [
-        theme, activePage, toasts, initialFilters, isTourActive, tourStep, callState, callContact,
+        theme, activePage, toasts, initialFilters, isTourActive, tourStep, callState, callContact, callConversation,
         toggleTheme, setActivePage, addToast, removeToast, startTour, nextTourStep, endTour,
         startCall, answerCall, endCall
     ]);

@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
@@ -456,12 +458,17 @@ const Messages = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {selectedConversation.id !== 'conv-announcements' && !selectedConversation.isGroup && (
-                                        <button onClick={() => {
-                                            const otherUserId = selectedConversation.participantIds.find(id => id !== currentUser.id);
-                                            const contact = users.find(u => u.id === otherUserId);
-                                            if (contact) startCall(contact);
-                                        }}
+                                    {selectedConversation.id !== 'conv-announcements' && (
+                                        <button 
+                                            onClick={() => {
+                                                if (selectedConversation.isGroup) {
+                                                    startCall(selectedConversation);
+                                                } else {
+                                                    const otherUserId = selectedConversation.participantIds.find(id => id !== currentUser.id);
+                                                    const contact = users.find(u => u.id === otherUserId);
+                                                    if (contact) startCall(contact);
+                                                }
+                                            }}
                                             className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                                             title="Görüntülü Arama Başlat">
                                             <VideoIcon className="w-5 h-5" />

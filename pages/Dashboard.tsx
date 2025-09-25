@@ -298,6 +298,7 @@ const CoachDashboard = () => {
     return (
         <div className="space-y-8">
             <CoachWelcomeHeader />
+            <QuickActionsCard onAnnounceClick={() => setAnnouncementModalOpen(true)} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('students')} />
                 <StatCard title="Değerlendirilecek" value={stats.pendingCount} icon={<AssignmentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Submitted })} />
@@ -345,7 +346,6 @@ const CoachDashboard = () => {
                     </Card>
                  </div>
                  <div className="lg:col-span-1 space-y-8">
-                    <QuickActionsCard onAnnounceClick={() => setAnnouncementModalOpen(true)} />
                     <AnnouncementsCard />
                  </div>
             </div>

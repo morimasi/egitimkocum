@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -61,6 +62,7 @@ const TabBar = () => {
         tabItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-6 h-6" /> },
             { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-6 h-6" /> },
+            { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
             { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
         );
