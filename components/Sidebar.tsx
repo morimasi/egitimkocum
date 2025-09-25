@@ -1,6 +1,6 @@
 
 
-import React, { Fragment } from 'react';
+import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
@@ -13,9 +13,10 @@ interface NavItemProps {
     page: Page;
     label: string;
     icon: React.ReactNode;
+    badge?: number;
 }
 
-const NavItem = React.memo(({ page, label, icon }: NavItemProps) => {
+const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
     const { activePage, setActivePage } = useUI();
     const isActive = activePage === page;
 
@@ -27,14 +28,21 @@ const NavItem = React.memo(({ page, label, icon }: NavItemProps) => {
                 setActivePage(page);
             }}
             id={`nav-${page}`}
-            className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
+            className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
                 isActive
                     ? 'bg-primary-500 text-white shadow-lg'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
         >
-            {icon}
-            <span className="ml-3">{label}</span>
+            <div className="flex items-center">
+                {icon}
+                <span className="ml-3">{label}</span>
+            </div>
+            {badge && badge > 0 && (
+                <span className={`ml-2 text-xs font-bold rounded-full px-2 py-0.5 ${isActive ? 'bg-white text-primary-600' : 'bg-primary-100 text-primary-600 dark:bg-primary-700 dark:text-primary-100'}`}>
+                    {badge}
+                </span>
+            )}
         </a>
     );
 });
@@ -47,36 +55,53 @@ interface SidebarProps {
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const { theme, toggleTheme } = useUI();
-    const { currentUser, students, logout } = useDataContext();
+    const { currentUser, students, logout, unreadCounts } = useDataContext();
 
-    // Refactored navItems creation to a simple imperative approach for type safety.
-    const navItems: NavItemProps[] = [];
-    if (currentUser?.role === UserRole.SuperAdmin) {
-        navItems.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
-    } else {
-        navItems.push(
-            { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
-            { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> }
-        );
-        if (currentUser?.role === UserRole.Coach) {
-            navItems.push(
-              { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
-              { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> }
+    const totalUnreadMessages = useMemo(() => 
+        Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0),
+        [unreadCounts]
+    );
+
+    const navItems: NavItemProps[] = useMemo(() => {
+        const items: NavItemProps[] = [];
+        if (!currentUser) return [];
+
+        // Base items for both Coach and Student (and now SuperAdmin)
+        if (currentUser.role === UserRole.Student) {
+            items.push(
+                { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
+                { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
+                { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
+                { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
+            );
+        } else { // Coach and SuperAdmin share these
+             items.push(
+                { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
+                { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
+                { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+                { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
+                { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
+                { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
             );
         }
-        navItems.push(
-            { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" /> },
-            { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
-        );
-    }
-    navItems.push({ page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> });
+        
+        // Add SuperAdmin specific link
+        if (currentUser.role === UserRole.SuperAdmin) {
+            items.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
+        }
+        
+        // Settings is for everyone
+        items.push({ page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> });
+
+        return items;
+
+    }, [currentUser, totalUnreadMessages]);
     
     // Switch between student and coach view for demo
     const { login, users } = useDataContext();
     const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedUser = users.find(u => u.id === e.target.value);
         if (selectedUser) {
-            // FIX: Added the demo password to the login function call.
             await login(selectedUser.email, 'password123');
         }
     };
@@ -98,8 +123,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
             <div className="flex-1 p-4 space-y-2 overflow-y-auto" id="tour-step-1">
                 <nav>
-                    {/* FIX: Destructure item props to avoid spreading a key prop error */}
-                    {navItems.map(item => <NavItem key={item.page} page={item.page} label={item.label} icon={item.icon} />)}
+                    {navItems.map(item => <NavItem key={item.page} page={item.page} label={item.label} icon={item.icon} badge={item.badge} />)}
                 </nav>
             </div>
 

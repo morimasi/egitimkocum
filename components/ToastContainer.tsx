@@ -5,13 +5,13 @@ import { useUI } from '../contexts/UIContext';
 import { ToastMessage } from '../types';
 import { CheckCircleIcon, AlertCircleIcon, InfoIcon, XIcon } from './Icons';
 
-// FIX: Define a props interface for the Toast component to resolve key prop error.
 interface ToastProps {
     toast: ToastMessage;
     onDismiss: (id: number) => void;
+    [key: string]: any;
 }
 
-const Toast = ({ toast, onDismiss }: ToastProps) => {
+const Toast = ({ toast, onDismiss, ...props }: ToastProps) => {
     const { type, message, id } = toast;
 
     React.useEffect(() => {
@@ -35,6 +35,7 @@ const Toast = ({ toast, onDismiss }: ToastProps) => {
 
     return (
         <div
+            {...props}
             className={`flex items-start p-4 mb-4 rounded-lg shadow-lg border-l-4 ${BG_COLORS[type]} w-full max-w-sm animate-fade-in-right`}
         >
             <div className="flex-shrink-0">{ICONS[type]}</div>
@@ -63,7 +64,6 @@ const ToastContainer = () => {
             role="alert"
             aria-live="assertive"
         >
-            {/* FIX: Simplified map to pass props directly, removing unused destructuring. */}
             {toasts.map(toast => (
                 <Toast key={toast.id} toast={toast} onDismiss={removeToast} />
             ))}

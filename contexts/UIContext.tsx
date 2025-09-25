@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Page, ToastMessage, ToastType, User } from '../types';
+import { Page, ToastMessage, ToastType, User, AssignmentStatus } from '../types';
 
 type Theme = 'light' | 'dark';
 type CallState = 'idle' | 'calling' | 'in-call' | 'ended';
@@ -9,6 +9,7 @@ type CallState = 'idle' | 'calling' | 'in-call' | 'ended';
 interface InitialFilters {
     studentId?: string;
     contactId?: string;
+    status?: AssignmentStatus;
 }
 
 interface UIContextType {

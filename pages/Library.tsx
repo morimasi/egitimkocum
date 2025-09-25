@@ -97,7 +97,6 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                                     className="sr-only" 
                                     onChange={e => setFile(e.target.files ? e.target.files[0] : null)} 
                                     accept={type === 'pdf' ? '.pdf' : 'video/*'} 
-                                    // FIX: Replaced `required={type !== 'link'}` with just `required`. Inside this code block, `type` can never be 'link', so the condition was always true and was flagged by the linter as an unintentional comparison. The `required` attribute without a value is treated as true.
                                     required
                                 />
                             </label>
@@ -157,8 +156,15 @@ const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClos
     );
 };
 
+interface ResourceCardProps {
+    resource: Resource;
+    isCoachOrAdmin: boolean;
+    onAssign: (res: Resource) => void;
+    onDelete: (res: Resource) => void;
+    [key: string]: any;
+}
 
-const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete }: { resource: Resource; isCoachOrAdmin: boolean; onAssign: (res: Resource) => void; onDelete: (res: Resource) => void; }) => {
+const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete, ...props }: ResourceCardProps) => {
     const typeIcons = {
         pdf: <DocumentIcon className="w-8 h-8 text-red-500" />,
         link: <LinkIcon className="w-8 h-8 text-blue-500" />,
@@ -166,7 +172,7 @@ const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete }: { resour
     };
     
     return (
-        <Card>
+        <Card {...props}>
             <div className="flex flex-col h-full">
                 <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4 group flex-grow">
                     <div className="flex-shrink-0">{typeIcons[resource.type]}</div>

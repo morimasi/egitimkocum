@@ -1,8 +1,8 @@
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation } from '../types';
 import { getMockData } from '../hooks/useMockData';
 
-// FIX: Export getInitialDataForSeeding to be used in SetupWizard.
 export const getInitialDataForSeeding = () => {
     const { users } = getMockData();
     return { initialUsers: users };
@@ -273,7 +273,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (state.currentUser?.role === UserRole.Student) {
             return state.users.find(u => u.id === state.currentUser.assignedCoachId) || null;
         }
-        if (state.currentUser?.role === UserRole.Coach) {
+        if (state.currentUser?.role === UserRole.Coach || state.currentUser?.role === UserRole.SuperAdmin) {
             return state.currentUser;
         }
         return state.users.find(u => u.role === UserRole.Coach) || null;

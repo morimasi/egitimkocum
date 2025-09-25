@@ -22,7 +22,6 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
             const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
                 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
             );
-            // FIX: Cast to HTMLElement to access focus method
             (focusableElements?.[0] as HTMLElement)?.focus();
         }
 
@@ -39,13 +38,11 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
 
                 if (event.shiftKey) { // Shift + Tab
                     if (document.activeElement === firstElement) {
-                        // FIX: Cast to HTMLElement to access focus method
                         (lastElement as HTMLElement).focus();
                         event.preventDefault();
                     }
                 } else { // Tab
                     if (document.activeElement === lastElement) {
-                        // FIX: Cast to HTMLElement to access focus method
                         (firstElement as HTMLElement).focus();
                         event.preventDefault();
                     }

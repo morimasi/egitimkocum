@@ -36,7 +36,6 @@ const AppSkeleton = () => (
                  <SkeletonText className="w-2/3" />
             </div>
             <div className="space-y-2 pt-4">
-                {/* FIX: Use key prop directly in map, which React handles, without passing it to SkeletonText props. */}
                 {[...Array(6)].map((_, i) => <SkeletonText key={i} className="w-full h-10" />)}
             </div>
         </div>
@@ -99,10 +98,6 @@ const AppContent = () => {
     };
 
     const renderPage = () => {
-        if (currentUser?.role === UserRole.SuperAdmin) {
-            return <SuperAdminDashboard />;
-        }
-        
         switch (activePage) {
             case 'dashboard':
                 return <Dashboard />;
@@ -119,7 +114,11 @@ const AppContent = () => {
             case 'settings':
                 return <Settings />;
             case 'superadmin':
-                return <SuperAdminDashboard />;
+                 // Ensure only superadmins can see this page
+                if (currentUser?.role === UserRole.SuperAdmin) {
+                    return <SuperAdminDashboard />;
+                }
+                return <Dashboard />; // Fallback for non-superadmins
             default:
                 return <Dashboard />;
         }

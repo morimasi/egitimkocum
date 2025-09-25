@@ -4,14 +4,15 @@ import React from 'react';
 interface SkeletonProps {
     className?: string;
     children?: React.ReactNode;
+    [key: string]: any;
 }
 
-export const SkeletonText = ({ className = '' }: SkeletonProps) => (
-    <div className={`bg-gray-200 dark:bg-gray-700 rounded animate-pulse ${className}`}></div>
+export const SkeletonText = ({ className = '', ...props }: SkeletonProps) => (
+    <div {...props} className={`bg-gray-200 dark:bg-gray-700 rounded animate-pulse ${className}`}></div>
 );
 
-export const SkeletonCard = ({ className = '', children }: SkeletonProps) => (
-    <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md animate-pulse ${className}`}>
+export const SkeletonCard = ({ className = '', children, ...props }: SkeletonProps) => (
+    <div {...props} className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md animate-pulse ${className}`}>
         {children ?? (
             <div className="space-y-4">
                 <SkeletonText className="h-4 w-1/4" />

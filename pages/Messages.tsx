@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
@@ -222,7 +223,6 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, convers
                         </div>
                     )}
                 </div>
-                 {/* FIX: Removed redundant `msg.type !== 'system'` check. The component returns early for system messages, so this check is not needed. */}
                  {showToolbar && msg.type !== 'announcement' && (
                     <div className={`absolute top-1/2 -translate-y-1/2 flex items-center bg-gray-100 dark:bg-gray-900 rounded-full shadow-md transition-opacity duration-200 ${isOwnMessage ? '-left-20' : '-right-20'} ${showToolbar ? 'opacity-100' : 'opacity-0'}`}>
                         {showReactionPicker && <ReactionPicker onSelect={handleReactionSelect} onClose={() => setShowReactionPicker(false)} />}
@@ -357,7 +357,7 @@ const Messages = () => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const isCoach = currentUser?.role === UserRole.Coach;
+    const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
     
     const userConversations = useMemo(() => {
         if (!currentUser) return [];

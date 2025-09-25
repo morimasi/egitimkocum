@@ -63,6 +63,7 @@ export const generateAssignmentChecklist = async (title: string, description: st
                 description: 'Kontrol listesi maddesinin metni.',
               },
             },
+            propertyOrdering: ["text"],
             required: ['text'],
           },
         },
@@ -237,4 +238,71 @@ export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedG
     console.error("Error suggesting grade:", error);
     return null;
   }
+};
+
+export const generateStudentAnalyticsInsight = async (studentName: string, data: { avgGrade: number | string; completionRate: number; topSubject: string; lowSubject: string }): Promise<string> => {
+    try {
+        const prompt = `Sen bir motive edici ve eğlenceli bir oyun koçusun. Öğrencin ${studentName} için aşağıdaki performans verilerini analiz et ve ona özel, oyunlaştırılmış bir dille kısa bir analiz ve teşvik mesajı yaz.
+
+        Veriler:
+        - Genel Not Ortalaması: ${data.avgGrade}/100
+        - Ödev Tamamlama Oranı: %${data.completionRate.toFixed(0)}
+        - En Güçlü Olduğu Ders: ${data.topSubject || 'Henüz Belirlenmedi'}
+        - Geliştirebileceği Ders: ${data.lowSubject || 'Henüz Belirlenmedi'}
+
+        Mesajın şu formatta olsun:
+        1.  Coşkulu bir selamlama ve genel performansına "level" veya "puan" gibi oyun terimleriyle değin.
+        2.  En güçlü olduğu dersteki başarısını öv ("${data.topSubject} alanında tam bir ustasın!").
+        3.  Geliştirebileceği derse yönelik nazik bir "yeni görev" veya "meydan okuma" önerisinde bulun.
+        4.  Gelecek hafta için motive edici bir "bonus görev" vererek bitir.
+
+        Tonun pozitif, enerjik ve cesaretlendirici olsun. Sadece metni döndür.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { temperature: 0.8 },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error generating student analytics insight:", error);
+        return "Bu hafta harika bir ilerleme kaydettin! Potansiyelini en üst seviyeye çıkarmak için sıkı çalışmaya devam et!";
+    }
+};
+
+
+export const generateCoachAnalyticsInsight = async (studentsData: { name: string, avgGrade: number, completionRate: number, overdue: number }[]): Promise<string> => {
+    try {
+        const classAvgGrade = studentsData.reduce((sum, s) => sum + s.avgGrade, 0) / (studentsData.length || 1);
+        const highPerformers = studentsData.filter(s => s.avgGrade >= 90).length;
+        const needsAttention = studentsData.filter(s => s.avgGrade < 70 || s.overdue > 1).length;
+        const totalStudents = studentsData.length;
+
+        const prompt = `Sen profesyonel bir eğitim analistisin. Bir koç için aşağıdaki sınıf verilerini analiz ederek kısa, net ve eyleme geçirilebilir bir stratejik özet raporu hazırla. Raporda öğrenci isimleri KESİNLİKLE KULLANILMAMALIDIR.
+
+        Sınıf Verileri:
+        - Toplam Öğrenci Sayısı: ${totalStudents}
+        - Sınıfın Genel Not Ortalaması: ${classAvgGrade.toFixed(1)}/100
+        - Yüksek Performanslı (Ort. > 90) Öğrenci Sayısı: ${highPerformers}
+        - Yakından İlgilenilmesi Gereken (Ort. < 70 veya Gecikmiş ödevi olan) Öğrenci Sayısı: ${needsAttention}
+
+        Rapor şu 3 bölümden oluşsun:
+        1.  **Genel Durum:** Sınıfın genel performansına dair bir cümlelik bir özet.
+        2.  **Öne Çıkan Noktalar:** Verilerdeki pozitif ve dikkat edilmesi gereken trendleri (örneğin, "Sınıfın %${((highPerformers / totalStudents) * 100).toFixed(0)}'ı yüksek performans gösteriyor, bu harika bir başarı.") bir veya iki madde halinde belirt.
+        3.  **Stratejik Öneriler:** Koçun bu hafta odaklanabileceği 1-2 somut eylem önerisi sun. (Örn: "Düşük ortalamalı öğrenci grubuyla birebir görüşmeler planlayarak temel eksiklikleri tespit edebilirsin." veya "Yüksek performanslı gruba ek kaynaklar sunarak onları daha da ileri taşıyabilirsin.")
+
+        Tonun profesyonel, veri odaklı ve destekleyici olsun. Sadece rapor metnini döndür.`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { temperature: 0.6 },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error generating coach analytics insight:", error);
+        return "Sınıf verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci performansını manuel olarak gözden geçirin ve ihtiyaç duyan öğrencilerle iletişime geçin.";
+    }
 };

@@ -185,8 +185,7 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    {/* FIX: Correctly access the value of the event target. */}
-                    <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <select value={submissionType} onChange={(e) => setSubmissionType((e.target as HTMLSelectElement).value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
                         <option value="completed">Sadece Tamamlandı İşareti</option>
@@ -235,7 +234,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
 
     if (!currentUser || !assignment) return null;
     
-    const isCoach = currentUser.role === UserRole.Coach;
+    const isCoach = currentUser.role === UserRole.Coach || currentUser.role === UserRole.SuperAdmin;
 
     const handleSubmission = async () => {
         let updatedAssignment: Assignment = { ...assignment, status: AssignmentStatus.Submitted, submittedAt: new Date().toISOString() };
@@ -533,13 +532,19 @@ const Assignments = () => {
     
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
     const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>('all');
-    const [filterStudent, setFilterStudent] = useState<string>(initialFilters.studentId || 'all');
+    const [filterStudent, setFilterStudent] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(false);
     
     useEffect(() => {
         if (initialFilters.studentId) {
+            setFilterStudent(initialFilters.studentId);
+        }
+        if (initialFilters.status) {
+            setFilterStatus(initialFilters.status);
+        }
+        if (initialFilters.studentId || initialFilters.status) {
             setInitialFilters({});
         }
     }, [initialFilters, setInitialFilters]);
@@ -554,7 +559,7 @@ const Assignments = () => {
         };
     }, [searchTerm]);
     
-    const isCoach = currentUser?.role === UserRole.Coach;
+    const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
 
     const displayedAssignments = useMemo(() => {
@@ -617,14 +622,14 @@ const Assignments = () => {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <div className="flex flex-wrap gap-2">
                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
-                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={e => setFilterStatus((e.target as HTMLSelectElement).value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekliyor</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
                             <option value={AssignmentStatus.Graded}>Notlandırıldı</option>
                         </select>
                          {(isCoach || isSuperAdmin) && (
-                            <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <select value={filterStudent} onChange={e => setFilterStudent((e.target as HTMLSelectElement).value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
                                 {(isSuperAdmin ? allStudents : students).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>

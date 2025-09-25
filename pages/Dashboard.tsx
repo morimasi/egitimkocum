@@ -41,8 +41,8 @@ const AnnouncementsCard = React.memo(() => {
     );
 });
 
-const KpiCard = React.memo(({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
-    <Card className="flex items-center" id={id}>
+const KpiCard = React.memo(({ title, value, icon, color, id, onClick }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string, onClick?: () => void }) => (
+    <Card className="flex items-center" id={id} onClick={onClick}>
         <div className={`p-3 rounded-full mr-4 ${color}`}>
             {icon}
         </div>
@@ -132,7 +132,6 @@ const StudentDashboard = () => {
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
         .slice(0, 5);
 
-    // FIX: Correctly filter for unread messages using conversations instead of non-existent 'receiverId'.
     const myConversationIds = useMemo(() => {
         if (!currentUser) return [];
         return conversations.filter(c => c.participantIds.includes(currentUser.id)).map(c => c.id);
@@ -147,9 +146,28 @@ const StudentDashboard = () => {
         <div className="space-y-6">
             <AnnouncementsCard />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <KpiCard title="Bekleyen Ödevler" value={pendingAssignments.length} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3" />
-                <KpiCard title="Not Ortalaması" value={averageGrade} icon={<CheckCircleIcon className="w-6 h-6 text-green-800" />} color="bg-green-200" />
-                <KpiCard title="Koç" value={coach?.name || 'Atanmadı'} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
+                <KpiCard 
+                    title="Bekleyen Ödevler" 
+                    value={pendingAssignments.length} 
+                    icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} 
+                    color="bg-yellow-200" 
+                    id="tour-step-3"
+                    onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })}
+                />
+                <KpiCard 
+                    title="Not Ortalaması" 
+                    value={averageGrade} 
+                    icon={<CheckCircleIcon className="w-6 h-6 text-green-800" />} 
+                    color="bg-green-200"
+                    onClick={() => setActivePage('analytics')}
+                />
+                <KpiCard 
+                    title="Koç" 
+                    value={coach?.name || 'Atanmadı'} 
+                    icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} 
+                    color="bg-blue-200"
+                    onClick={() => coach && setActivePage('messages', { contactId: coach.id })}
+                />
             </div>
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card title="Yaklaşan Ödevler" className="lg:col-span-2">
@@ -262,19 +280,18 @@ const CoachDashboard = () => {
     }).filter(s => s.showAlert)
       .sort((a, b) => (b.overdue - a.overdue) || (a.avg - b.avg));
     
-    // FIX: Correctly calculate unread messages from the unreadCounts map instead of using non-existent 'receiverId'.
     const unreadMessagesCount = useMemo(() => 
-        Array.from(unreadCounts.values()).reduce((sum, count) => sum + count, 0),
+        Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0),
         [unreadCounts]
     );
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
-                <KpiCard title="Değerlendirilecek Ödev" value={pendingCount} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3"/>
-                <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" />
-                 <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<MessagesIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
+                <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" onClick={() => setActivePage('students')} />
+                <KpiCard title="Değerlendirilecek Ödev" value={pendingCount} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3" onClick={() => setActivePage('assignments', { status: AssignmentStatus.Submitted })} />
+                <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
+                 <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<MessagesIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" onClick={() => setActivePage('messages')} />
             </div>
             <AnnouncementsCard />
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
