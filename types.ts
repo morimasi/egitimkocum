@@ -131,7 +131,9 @@ export interface Resource {
   name: string;
   type: 'pdf' | 'link' | 'video';
   url: string;
-  recommendedTo?: string[]; // Array of student IDs
+  isPublic: boolean;
+  uploaderId: string;
+  assignedTo?: string[]; // Array of student IDs
 }
 
 export interface Goal {

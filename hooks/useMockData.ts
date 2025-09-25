@@ -59,9 +59,12 @@ export const getMockData = () => {
     ];
     
     const resources: Resource[] = [
-      { id: 'res-1', name: 'Türev Konu Anlatımı.pdf', type: 'pdf', url: '#', recommendedTo: ['student-1'] },
-      { id: 'res-2', name: 'Rehber Matematik - YouTube', type: 'link', url: 'https://www.youtube.com/@RehberMatematik', recommendedTo: ['student-1', 'student-3'] },
-      { id: 'res-3', name: 'Hücre Organelleri Videosu', type: 'video', url: '#', recommendedTo: ['student-2'] },
+      { id: 'res-1', name: 'Türev Konu Anlatımı.pdf', type: 'pdf', url: '#', isPublic: false, uploaderId: 'coach-1', assignedTo: ['student-1'] },
+      { id: 'res-2', name: 'Rehber Matematik - YouTube Kanalı', type: 'link', url: 'https://www.youtube.com/@RehberMatematik', isPublic: true, uploaderId: 'coach-1', assignedTo: [] },
+      { id: 'res-3', name: 'Hücre Organelleri Videosu', type: 'video', url: '#', isPublic: false, uploaderId: 'coach-1', assignedTo: ['student-2'] },
+      { id: 'res-4', name: 'Genel Fizik Formülleri', type: 'pdf', url: '#', isPublic: true, uploaderId: 'coach-1', assignedTo: [] },
+      { id: 'res-5', name: 'Organik Kimya Giriş', type: 'pdf', url: '#', isPublic: true, uploaderId: 'coach-1', assignedTo: [] },
+      { id: 'res-6', name: 'İleri Düzey Paragraf Soru Bankası', type: 'pdf', url: '#', isPublic: false, uploaderId: 'coach-1', assignedTo: ['student-3', 'student-4'] },
     ];
     
     const goals: Goal[] = [

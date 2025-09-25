@@ -54,7 +54,9 @@ type Action =
     | { type: 'UPDATE_GOAL'; payload: Goal }
     | { type: 'ADD_REACTION'; payload: { messageId: string; emoji: string; userId: string } }
     | { type: 'VOTE_ON_POLL'; payload: { messageId: string; optionIndex: number; userId: string } }
-    | { type: 'TOGGLE_RESOURCE_RECOMMENDATION'; payload: { resourceId: string; studentId: string } }
+    | { type: 'TOGGLE_RESOURCE_ASSIGNMENT'; payload: { resourceId: string; studentId: string } }
+    | { type: 'ADD_RESOURCE'; payload: Resource }
+    | { type: 'DELETE_RESOURCE'; payload: string }
     | { type: 'ADD_CONVERSATION'; payload: Conversation }
     | { type: 'UPDATE_CONVERSATION'; payload: Conversation };
 
@@ -149,23 +151,27 @@ const dataReducer = (state: AppState, action: Action): AppState => {
                     return m;
                 })
             };
-        case 'TOGGLE_RESOURCE_RECOMMENDATION':
+        case 'TOGGLE_RESOURCE_ASSIGNMENT':
              return {
                 ...state,
                 resources: state.resources.map(r => {
                     if (r.id === action.payload.resourceId) {
-                        const recommendedTo = r.recommendedTo || [];
-                        const isRecommended = recommendedTo.includes(action.payload.studentId);
+                        const assignedTo = r.assignedTo || [];
+                        const isAssigned = assignedTo.includes(action.payload.studentId);
                         return {
                             ...r,
-                            recommendedTo: isRecommended
-                                ? recommendedTo.filter(id => id !== action.payload.studentId)
-                                : [...recommendedTo, action.payload.studentId],
+                            assignedTo: isAssigned
+                                ? assignedTo.filter(id => id !== action.payload.studentId)
+                                : [...assignedTo, action.payload.studentId],
                         };
                     }
                     return r;
                 }),
             };
+        case 'ADD_RESOURCE':
+            return { ...state, resources: [...state.resources, action.payload] };
+        case 'DELETE_RESOURCE':
+            return { ...state, resources: state.resources.filter(r => r.id !== action.payload) };
          case 'ADD_CONVERSATION':
             return { ...state, conversations: [...state.conversations, action.payload] };
         case 'UPDATE_CONVERSATION':
@@ -209,7 +215,9 @@ interface DataContextType {
     addReaction: (messageId: string, emoji: string) => Promise<void>;
     voteOnPoll: (messageId: string, optionIndex: number) => Promise<void>;
     findMessageById: (messageId: string) => Message | undefined;
-    toggleResourceRecommendation: (resourceId: string, studentId: string) => Promise<void>;
+    toggleResourceAssignment: (resourceId: string, studentId: string) => Promise<void>;
+    addResource: (newResource: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => Promise<void>;
+    deleteResource: (resourceId: string) => Promise<void>;
     uploadFile: (file: File, path: string) => Promise<string>;
     updateStudentNotes: (studentId: string, notes: string) => Promise<void>;
     unreadCounts: Map<string, number>;
@@ -423,8 +431,22 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             }
         };
         
-        const toggleResourceRecommendation = async (resourceId: string, studentId: string) => {
-            dispatch({ type: 'TOGGLE_RESOURCE_RECOMMENDATION', payload: { resourceId, studentId } });
+        const toggleResourceAssignment = async (resourceId: string, studentId: string) => {
+            dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
+        };
+
+        const addResource = async (resourceData: Omit<Resource, 'id' | 'uploaderId'>) => {
+            if (!state.currentUser) return;
+            const newResource: Resource = {
+                ...resourceData,
+                id: `res-${Date.now()}`,
+                uploaderId: state.currentUser.id,
+            };
+            dispatch({ type: 'ADD_RESOURCE', payload: newResource });
+        };
+
+        const deleteResource = async (resourceId: string) => {
+            dispatch({ type: 'DELETE_RESOURCE', payload: resourceId });
         };
         
         const uploadFile = async (file: File, path: string): Promise<string> => {
@@ -527,7 +549,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             addReaction,
             voteOnPoll,
             findMessageById,
-            toggleResourceRecommendation,
+            toggleResourceAssignment,
+            addResource,
+            deleteResource,
             uploadFile,
             updateStudentNotes,
             unreadCounts,

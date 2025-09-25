@@ -1,48 +1,145 @@
-
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { ChecklistItem, Resource, User, UserRole } from '../types';
+import { Resource, UserRole } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
+import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon } from '../components/Icons';
+import ConfirmationModal from '../components/ConfirmationModal';
+import EmptyState from '../components/EmptyState';
 
-const TemplateCard = ({ template }: { template: { id: string; title: string; description: string; checklist: Omit<ChecklistItem, 'id'|'isCompleted'>[] } }) => (
-    <Card>
-        <h4 className="font-bold text-primary-600 dark:text-primary-400">{template.title}</h4>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{template.description}</p>
-        {template.checklist.length > 0 && (
-            <div className="mt-4">
-                <h5 className="text-xs font-semibold uppercase text-gray-400">Kontrol Listesi</h5>
-                <ul className="mt-2 space-y-1 text-sm">
-                    {template.checklist.map((item, index) => (
-                        <li key={index} className="flex items-center">
-                           <span className="mr-2">☑</span> {item.text}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        )}
-    </Card>
-);
 
-const RecommendModal = ({ resource, onClose }: { resource: Resource; onClose: () => void }) => {
-    const { students, toggleResourceRecommendation } = useDataContext();
-    
+const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
+    const { addResource, uploadFile, currentUser } = useDataContext();
+    const { addToast } = useUI();
+    const [name, setName] = useState('');
+    const [url, setUrl] = useState('');
+    const [type, setType] = useState<'pdf' | 'link' | 'video'>('link');
+    const [isPublic, setIsPublic] = useState(true);
+    const [file, setFile] = useState<File | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleTypeChange = (newType: 'pdf' | 'link' | 'video') => {
+        setType(newType);
+        setUrl('');
+        setFile(null);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name && !file) {
+            addToast("Lütfen bir kaynak adı girin.", "error");
+            return;
+        }
+        if ((type === 'link' && !url) || (type !== 'link' && !file)) {
+            addToast("Lütfen bir URL girin veya bir dosya seçin.", "error");
+            return;
+        }
+        if (!currentUser) return;
+
+        setIsLoading(true);
+        try {
+            let resourceUrl = url;
+            let resourceName = name;
+
+            if (type !== 'link' && file) {
+                if (!resourceName) {
+                    resourceName = file.name;
+                }
+                resourceUrl = await uploadFile(file, `library/${currentUser.id}/${file.name}`);
+            }
+
+            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: [] });
+            addToast("Kaynak başarıyla eklendi.", "success");
+            onClose();
+        } catch (error) {
+            console.error("Error adding resource:", error);
+            addToast("Kaynak eklenirken bir hata oluştu.", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <Modal isOpen={true} onClose={onClose} title={`"${resource.name}" Kaynağını Öner`}>
+        <Modal isOpen={true} onClose={onClose} title="Yeni Kaynak Ekle">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1">Kaynak Adı</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={file ? file.name : "Örn: Türev Konu Anlatımı"} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
+                    <select value={type} onChange={e => handleTypeChange(e.target.value as any)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <option value="link">Bağlantı</option>
+                        <option value="video">Video</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+
+                {type === 'link' ? (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">URL (Bağlantı)</label>
+                        <input type="url" value={url} onChange={e => setUrl(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required />
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Dosya</label>
+                        <div className="mt-1">
+                            <label htmlFor="resource-file-upload" className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none border dark:border-gray-600 p-3 text-center block transition-colors hover:border-primary-500">
+                                <div className="flex items-center justify-center gap-2">
+                                    <DocumentIcon className="w-5 h-5"/>
+                                    <span>{file ? file.name : 'Bir dosya seçin veya sürükleyin'}</span>
+                                </div>
+                                <input 
+                                    id="resource-file-upload" 
+                                    name="resource-file-upload" 
+                                    type="file" 
+                                    className="sr-only" 
+                                    onChange={e => setFile(e.target.files ? e.target.files[0] : null)} 
+                                    accept={type === 'pdf' ? '.pdf' : 'video/*'} 
+                                    // FIX: Replaced `required={type !== 'link'}` with just `required`. Inside this code block, `type` can never be 'link', so the condition was always true and was flagged by the linter as an unintentional comparison. The `required` attribute without a value is treated as true.
+                                    required
+                                />
+                            </label>
+                        </div>
+                    </div>
+                )}
+               
+                <div className="flex items-center pt-2">
+                    <input type="checkbox" id="isPublic" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    <label htmlFor="isPublic" className="ml-2 text-sm">Herkese Açık</label>
+                </div>
+                <p className="text-xs text-gray-500">
+                    İşaretli ise, bu kaynak tüm öğrenciler tarafından görülebilir. İşaretli değilse, sadece sizin atadığınız öğrenciler görebilir.
+                </p>
+                <div className="flex justify-end pt-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
+                    <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
+                        {isLoading ? 'Ekleniyor...' : 'Ekle'}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClose: () => void }) => {
+    const { students, toggleResourceAssignment } = useDataContext();
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`"${resource.name}" Kaynağını Ata`}>
             <div className="max-h-80 overflow-y-auto">
-                <p className="text-sm text-gray-500 mb-4">Bu kaynağı önermek istediğiniz öğrencileri seçin.</p>
+                <p className="text-sm text-gray-500 mb-4">Bu özel kaynağı atamak istediğiniz öğrencileri seçin.</p>
                 <ul className="space-y-2">
                     {students.map(student => {
-                        const isRecommended = resource.recommendedTo?.includes(student.id);
+                        const isAssigned = resource.assignedTo?.includes(student.id);
                         return (
                             <li key={student.id}>
                                 <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        checked={isRecommended}
-                                        onChange={() => toggleResourceRecommendation(resource.id, student.id)}
+                                        checked={isAssigned}
+                                        onChange={() => toggleResourceAssignment(resource.id, student.id)}
                                         className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                     />
                                     <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3"/>
@@ -53,136 +150,170 @@ const RecommendModal = ({ resource, onClose }: { resource: Resource; onClose: ()
                     })}
                 </ul>
             </div>
+             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kapat</button>
+            </div>
         </Modal>
     );
 };
 
 
-const ResourceCard = ({ resource }: { resource: { id: string; name: string; type: string; url: string, recommendedTo?: string[] } }) => {
-    const { currentUser } = useDataContext();
-    const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
-    
+const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete }: { resource: Resource; isCoachOrAdmin: boolean; onAssign: (res: Resource) => void; onDelete: (res: Resource) => void; }) => {
     const typeIcons = {
-        pdf: '📄',
-        link: '🔗',
-        video: '🎬',
+        pdf: <DocumentIcon className="w-8 h-8 text-red-500" />,
+        link: <LinkIcon className="w-8 h-8 text-blue-500" />,
+        video: <VideoIcon className="w-8 h-8 text-purple-500" />,
     };
     
     return (
-        <>
         <Card>
             <div className="flex flex-col h-full">
-                <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 group flex-grow">
-                    <span className="text-2xl">{typeIcons[resource.type as keyof typeof typeIcons]}</span>
+                <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4 group flex-grow">
+                    <div className="flex-shrink-0">{typeIcons[resource.type]}</div>
                     <div>
-                        <h4 className="font-semibold group-hover:text-primary-500">{resource.name}</h4>
+                        <h4 className="font-semibold group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors">{resource.name}</h4>
                         <p className="text-xs text-gray-500 uppercase">{resource.type}</p>
                     </div>
                 </a>
-                {currentUser?.role === UserRole.Coach && (
-                    <div className="mt-4 pt-3 border-t dark:border-gray-700 text-right">
-                        <button onClick={() => setIsRecommendModalOpen(true)} className="text-sm font-semibold text-primary-600 hover:underline">
-                            Öner ({resource.recommendedTo?.length || 0})
-                        </button>
+                {isCoachOrAdmin && (
+                    <div className="mt-4 pt-3 border-t dark:border-gray-700 flex justify-end items-center gap-2">
+                       {!resource.isPublic && (
+                            <button onClick={() => onAssign(resource)} className="text-sm font-semibold text-primary-600 hover:underline">
+                                Ata ({resource.assignedTo?.length || 0})
+                            </button>
+                       )}
+                       <button onClick={() => onDelete(resource)} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Kaynağı Sil">
+                            <TrashIcon className="w-4 h-4" />
+                       </button>
                     </div>
                 )}
             </div>
         </Card>
-        {isRecommendModalOpen && <RecommendModal resource={resource as Resource} onClose={() => setIsRecommendModalOpen(false)} />}
-        </>
     )
 };
 
 const Library = () => {
-    const { templates, resources, currentUser } = useDataContext();
-    const [activeTab, setActiveTab] = useState('templates');
-    const isStudent = currentUser?.role === UserRole.Student;
+    const { resources, currentUser, students, deleteResource } = useDataContext();
+    const { addToast } = useUI();
+    const [activeTab, setActiveTab] = useState(currentUser?.role === UserRole.Student ? 'public' : 'public');
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [resourceToAssign, setResourceToAssign] = useState<Resource | null>(null);
+    const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
 
-    const recommendedResources = resources.filter(r => r.recommendedTo?.includes(currentUser?.id || ''));
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState<'all' | 'pdf' | 'link' | 'video'>('all');
+    const [filterStudent, setFilterStudent] = useState('all');
+    
+    const isCoachOrAdmin = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
 
+    const myPrivateResources = useMemo(() => 
+        resources.filter(r => !r.isPublic && r.assignedTo?.includes(currentUser?.id || '')),
+    [resources, currentUser]);
+
+    const displayedResources = useMemo(() => {
+        let initialList: Resource[] = [];
+
+        if (activeTab === 'public') {
+            initialList = resources.filter(r => r.isPublic);
+        } else if (activeTab === 'private' && isCoachOrAdmin) {
+            initialList = resources.filter(r => !r.isPublic);
+        } else if (activeTab === 'my-private' && currentUser?.role === UserRole.Student) {
+            initialList = myPrivateResources;
+        }
+
+        return initialList.filter(resource => {
+            const matchesSearch = resource.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesType = filterType === 'all' || resource.type === filterType;
+            const matchesStudent = (activeTab !== 'private' || !isCoachOrAdmin || filterStudent === 'all') || resource.assignedTo?.includes(filterStudent);
+            
+            return matchesSearch && matchesType && matchesStudent;
+        });
+
+    }, [resources, activeTab, isCoachOrAdmin, currentUser, myPrivateResources, searchTerm, filterType, filterStudent]);
+    
+    const handleDelete = () => {
+        if (resourceToDelete) {
+            deleteResource(resourceToDelete.id);
+            addToast("Kaynak başarıyla silindi.", "success");
+            setResourceToDelete(null);
+        }
+    };
+    
     return (
         <div className="space-y-6">
-            <div>
-                <div className="border-b border-gray-200 dark:border-gray-700">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                        <button
-                            onClick={() => setActiveTab('templates')}
-                            className={`${activeTab === 'templates' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                        >
-                            Ödev Şablonları
-                        </button>
-                        <button
-                             onClick={() => setActiveTab('resources')}
-                            className={`${activeTab === 'resources' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                        >
-                            Tüm Kaynaklar
-                        </button>
-                        {isStudent && (
-                             <button
-                                onClick={() => setActiveTab('recommended')}
-                                className={`${activeTab === 'recommended' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm relative`}
-                            >
-                                Bana Önerilenler
-                                {recommendedResources.length > 0 && <span className="absolute top-2 -right-3 ml-2 bg-primary-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">{recommendedResources.length}</span>}
+            <Card>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                     <div className="border-b border-gray-200 dark:border-gray-700 w-full md:w-auto">
+                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button onClick={() => setActiveTab('public')} className={`${activeTab === 'public' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                                Genel Kütüphane
                             </button>
-                        )}
-                    </nav>
+                            {isCoachOrAdmin && (
+                                 <button onClick={() => setActiveTab('private')} className={`${activeTab === 'private' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                                    Öğrenciye Özel Kaynaklar
+                                </button>
+                            )}
+                            {currentUser?.role === UserRole.Student && (
+                                <button onClick={() => setActiveTab('my-private')} className={`${activeTab === 'my-private' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm relative`}>
+                                    Bana Özel
+                                    {myPrivateResources.length > 0 && <span className="absolute top-2 -right-3 ml-2 bg-primary-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">{myPrivateResources.length}</span>}
+                                </button>
+                            )}
+                        </nav>
+                    </div>
+                     {isCoachOrAdmin && (
+                        <button onClick={() => setShowAddModal(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold w-full md:w-auto flex-shrink-0">
+                            + Yeni Kaynak Ekle
+                        </button>
+                    )}
                 </div>
-            </div>
+                 <div className="flex flex-col md:flex-row gap-4 pt-4">
+                    <input type="text" placeholder="Kaynak adı ile ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
+                    <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <option value="all">Tüm Türler</option>
+                        <option value="link">Bağlantı</option>
+                        <option value="video">Video</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    {isCoachOrAdmin && activeTab === 'private' && (
+                        <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <option value="all">Tüm Öğrenciler</option>
+                            {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    )}
+                </div>
+            </Card>
 
-            {activeTab === 'templates' && (
-                <div>
-                     <h2 className="text-2xl font-bold mb-4">Ödev Şablonları</h2>
-                     {templates.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* FIX: Pass template as a prop directly to avoid key prop error. */}
-                            {templates.map((template) => <TemplateCard key={template.id} template={template} />)}
-                        </div>
-                     ) : (
-                        <Card>
-                            <div className="text-center py-10">
-                                <h3 className="text-lg font-semibold">Henüz ödev şablonu oluşturulmadı.</h3>
-                                <p className="text-gray-500 mt-2">Gelecekte hızlıca ödev atamak için buraya şablonlar ekleyebilirsiniz.</p>
-                            </div>
-                        </Card>
-                     )}
+            {displayedResources.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedResources.map((resource) => (
+                        <ResourceCard 
+                            key={resource.id} 
+                            resource={resource} 
+                            isCoachOrAdmin={isCoachOrAdmin}
+                            onAssign={setResourceToAssign}
+                            onDelete={setResourceToDelete}
+                        />
+                    ))}
                 </div>
+            ) : (
+                <EmptyState
+                    icon={<LibraryIcon className="w-10 h-10" />}
+                    title="Kaynak Bulunamadı"
+                    description={searchTerm || filterType !== 'all' || filterStudent !== 'all' ? "Arama kriterlerinize uygun kaynak bulunamadı." : "Bu bölümde henüz bir kaynak bulunmuyor."}
+                />
             )}
-             {activeTab === 'resources' && (
-                <div>
-                    <h2 className="text-2xl font-bold mb-4">Tüm Kaynaklar</h2>
-                    {resources.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
-                            {resources.map((resource) => <ResourceCard key={resource.id} resource={resource} />)}
-                        </div>
-                    ) : (
-                         <Card>
-                            <div className="text-center py-10">
-                                <h3 className="text-lg font-semibold">Henüz kaynak eklenmedi.</h3>
-                                <p className="text-gray-500 mt-2">Öğrencilerinizle paylaşmak için PDF, video veya bağlantı gibi kaynakları buraya ekleyin.</p>
-                            </div>
-                        </Card>
-                    )}
-                </div>
-            )}
-            {activeTab === 'recommended' && isStudent && (
-                 <div>
-                    <h2 className="text-2xl font-bold mb-4">Bana Önerilenler</h2>
-                    {recommendedResources.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* FIX: Pass resource as a prop directly to avoid key prop error. */}
-                            {recommendedResources.map((resource) => <ResourceCard key={resource.id} resource={resource} />)}
-                        </div>
-                    ) : (
-                         <Card>
-                            <div className="text-center py-10">
-                                <h3 className="text-lg font-semibold">Henüz size özel bir kaynak önerilmedi.</h3>
-                                <p className="text-gray-500 mt-2">Koçunuz bir kaynak önerdiğinde burada görünecektir.</p>
-                            </div>
-                        </Card>
-                    )}
-                </div>
+            
+            {showAddModal && <AddResourceModal onClose={() => setShowAddModal(false)} />}
+            {resourceToAssign && <AssignResourceModal resource={resourceToAssign} onClose={() => setResourceToAssign(null)} />}
+            {resourceToDelete && (
+                <ConfirmationModal 
+                    isOpen={!!resourceToDelete}
+                    onClose={() => setResourceToDelete(null)}
+                    onConfirm={handleDelete}
+                    title="Kaynağı Sil"
+                    message={`'${resourceToDelete.name}' adlı kaynağı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+                />
             )}
         </div>
     );

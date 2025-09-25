@@ -1,32 +1,33 @@
 import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole } from '../types';
+import { UserRole, User } from '../types';
 import Card from '../components/Card';
+import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
+import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon } from '../components/Icons';
+import SetupWizard from '../components/SetupWizard';
 
-const StudentSettings = () => {
-    const { currentUser, updateUser, uploadFile } = useDataContext();
-    const { addToast, startTour } = useUI();
-    const [name, setName] = useState(currentUser?.name || '');
-    const [email, setEmail] = useState(currentUser?.email || '');
+const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }) => {
+    const { updateUser, uploadFile } = useDataContext();
+    const { addToast } = useUI();
+    const [name, setName] = useState(user.name);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleProfileUpdate = (e: React.FormEvent) => {
+    const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (currentUser) {
-            updateUser({ ...currentUser, name, email });
-            addToast("Profil başarıyla güncellendi.", "success");
-        }
+        await updateUser({ ...user, name });
+        addToast("Profil başarıyla güncellendi.", "success");
+        onClose();
     };
 
     const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && currentUser) {
+        if (file) {
             setIsUploading(true);
             try {
-                const newProfilePictureUrl = await uploadFile(file, `profile-pictures/${currentUser.id}`);
-                await updateUser({ ...currentUser, profilePicture: newProfilePictureUrl });
+                const newProfilePictureUrl = await uploadFile(file, `profile-pictures/${user.id}`);
+                await updateUser({ ...user, profilePicture: newProfilePictureUrl });
                 addToast("Profil fotoğrafı güncellendi.", "success");
             } catch (error) {
                 addToast("Profil fotoğrafı güncellenirken bir hata oluştu.", "error");
@@ -35,92 +36,163 @@ const StudentSettings = () => {
             }
         }
     };
-    
-    const requestNotificationPermission = async () => {
-        if (!('Notification' in window)) {
-            addToast('Bu tarayıcı bildirimleri desteklemiyor.', 'error');
-            return;
-        }
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            addToast('Bildirimlere izin verildi!', 'success');
-             new Notification('Eğitim Koçu Platformu', {
-                body: 'Artık yeni ödevler için bildirim alacaksınız.',
-            });
-        } else {
-             addToast('Bildirimlere izin verilmedi.', 'info');
-        }
-    };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
-            <Card title="Profil Ayarları">
-                <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <div className="flex flex-col items-center">
-                        <div className="relative">
-                            <img src={currentUser?.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
-                            {isUploading && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white">...</div>}
-                        </div>
-                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleProfilePictureChange} className="hidden" />
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline" disabled={isUploading}>
-                            {isUploading ? 'Yükleniyor...' : 'Fotoğrafı Değiştir'}
-                        </button>
+        <Modal isOpen={true} onClose={onClose} title="Profili Düzenle">
+            <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="flex flex-col items-center">
+                    <div className="relative">
+                        <img src={user.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
+                        {isUploading && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white">...</div>}
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Ad Soyad</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">E-posta</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" disabled/>
-                    </div>
-                    <div className="text-right">
-                        <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Kaydet</button>
-                    </div>
-                </form>
-            </Card>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleProfilePictureChange} className="hidden" />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline" disabled={isUploading}>
+                        {isUploading ? 'Yükleniyor...' : 'Fotoğrafı Değiştir'}
+                    </button>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">Ad Soyad</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">E-posta</label>
+                    <input type="email" value={user.email} className="w-full p-2 border rounded-md bg-gray-200 dark:bg-gray-800 dark:border-gray-700" disabled/>
+                </div>
+                 <div className="flex justify-end pt-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                    <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
 
-            <Card title="Bildirim Ayarları">
-                <div className="flex justify-between items-center">
-                    <p>Yaklaşan ödevler için tarayıcı bildirimleri alın.</p>
-                    <button onClick={requestNotificationPermission} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">İzin Ver</button>
-                </div>
-            </Card>
-            
-            <Card title="Yardım">
-                <div className="flex justify-between items-center">
-                    <p>Uygulama özelliklerini yeniden keşfedin.</p>
-                    <button onClick={startTour} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Tanıtım Turunu Başlat</button>
-                </div>
-            </Card>
+const StudentSettings = () => {
+    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, coach, logout } = useDataContext();
+    const { startTour, addToast } = useUI();
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    if (!currentUser) return null;
+
+    const assignments = getAssignmentsForStudent(currentUser.id);
+    const gradedAssignments = assignments.filter(a => a.grade !== null);
+    const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 'N/A';
+    const completedGoals = getGoalsForStudent(currentUser.id).filter(g => g.isCompleted);
+    
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+                <Card className="text-center">
+                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" />
+                    <h2 className="text-2xl font-bold mt-4">{currentUser.name}</h2>
+                    <p className="text-gray-500 dark:text-gray-400">{currentUser.email}</p>
+                    <button onClick={() => setIsEditModalOpen(true)} className="mt-4 w-full px-4 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 font-semibold flex items-center justify-center gap-2">
+                        <EditIcon className="w-4 h-4" /> Profili Düzenle
+                    </button>
+                </Card>
+                <Card title="İstatistiklerim">
+                     <ul className="space-y-3 text-sm">
+                        <li className="flex justify-between"><span>Atanmış Koç:</span> <span className="font-semibold">{coach?.name || 'Yok'}</span></li>
+                        <li className="flex justify-between"><span>Toplam Ödev:</span> <span className="font-semibold">{assignments.length}</span></li>
+                        <li className="flex justify-between"><span>Not Ortalaması:</span> <span className="font-semibold">{avgGrade}</span></li>
+                        <li className="flex justify-between"><span>Tamamlanan Hedef:</span> <span className="font-semibold">{completedGoals.length}</span></li>
+                    </ul>
+                </Card>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
+                 <Card title="Başarılarım">
+                    <h4 className="font-semibold mb-2">Tamamlanan Hedefler</h4>
+                    {completedGoals.length > 0 ? (
+                        <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            {completedGoals.map(goal => (
+                                <li key={goal.id} className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/50 rounded-md">
+                                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                                    <span className="text-sm text-green-800 dark:text-green-200">{goal.text}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-sm text-gray-500">Henüz tamamlanmış bir hedefiniz yok.</p>}
+                </Card>
+                <Card title="Hesap Yönetimi">
+                     <div className="space-y-4">
+                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik demo modunda aktif değildir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
+                        <div className="flex justify-between items-center"><p>Uygulama tanıtım turunu yeniden başlatın.</p><button onClick={startTour} className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">Turu Başlat</button></div>
+                         <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700"><p>Oturumu güvenle kapatın.</p><button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold"><LogoutIcon className="w-4 h-4"/> Çıkış Yap</button></div>
+                    </div>
+                </Card>
+            </div>
+            {isEditModalOpen && <EditProfileModal user={currentUser} onClose={() => setIsEditModalOpen(false)} />}
         </div>
     );
 };
 
 const CoachSettings = () => {
-    // Coach-specific settings can be added here in the future.
-    // For now, it will be similar to student settings for profile management.
+    const { currentUser, students, assignments, templates, logout } = useDataContext();
+    const { startTour, addToast } = useUI();
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    if (!currentUser) return null;
+
+    const gradedAssignments = assignments.filter(a => a.grade !== null);
+    const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 'N/A';
+
     return (
-        <StudentSettings /> // Re-using for profile, can be expanded
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+                <Card className="text-center">
+                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" />
+                    <h2 className="text-2xl font-bold mt-4">{currentUser.name}</h2>
+                    <p className="text-gray-500 dark:text-gray-400">{currentUser.email}</p>
+                    <button onClick={() => setIsEditModalOpen(true)} className="mt-4 w-full px-4 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 font-semibold flex items-center justify-center gap-2">
+                        <EditIcon className="w-4 h-4" /> Profili Düzenle
+                    </button>
+                </Card>
+                <Card title="Koçluk İstatistikleri">
+                     <ul className="space-y-3 text-sm">
+                        <li className="flex justify-between"><span>Toplam Öğrenci:</span> <span className="font-semibold">{students.length}</span></li>
+                        <li className="flex justify-between"><span>Notlandırılan Ödev:</span> <span className="font-semibold">{gradedAssignments.length}</span></li>
+                        <li className="flex justify-between"><span>Genel Not Ortalaması:</span> <span className="font-semibold">{avgGrade}</span></li>
+                        <li className="flex justify-between"><span>Ödev Şablonu:</span> <span className="font-semibold">{templates.length}</span></li>
+                    </ul>
+                </Card>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
+                 <Card title="Ödev Şablonlarım">
+                     {templates.length > 0 ? (
+                        <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            {templates.map(template => (
+                                <li key={template.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                                    <h5 className="font-semibold text-sm">{template.title}</h5>
+                                    <p className="text-xs text-gray-500 truncate">{template.description}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-sm text-gray-500">Henüz oluşturulmuş bir şablonunuz yok.</p>}
+                </Card>
+                <Card title="Hesap Yönetimi">
+                     <div className="space-y-4">
+                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik demo modunda aktif değildir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
+                        <div className="flex justify-between items-center"><p>Uygulama tanıtım turunu yeniden başlatın.</p><button onClick={startTour} className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">Turu Başlat</button></div>
+                        <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700"><p>Oturumu güvenle kapatın.</p><button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold"><LogoutIcon className="w-4 h-4"/> Çıkış Yap</button></div>
+                    </div>
+                </Card>
+            </div>
+            {isEditModalOpen && <EditProfileModal user={currentUser} onClose={() => setIsEditModalOpen(false)} />}
+        </div>
     );
 };
 
 const AdminSettings = () => {
-    const { startTour } = useUI();
-    
     return (
-        <div className="space-y-6">
-             <Card title="Yardım">
-                <div className="flex justify-between items-center">
-                    <p>Uygulama özelliklerini yeniden keşfedin.</p>
-                    <button onClick={startTour} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Tanıtım Turunu Başlat</button>
-                </div>
-            </Card>
-
+        <div className="space-y-6 max-w-4xl mx-auto pt-8">
+             <SetupWizard 
+                title="Veritabanı Kurulumu ve Demo Verileri"
+                description="Platformun tüm özelliklerini test etmek için demo verilerini veritabanınıza ekleyebilirsiniz. Bu işlem yalnızca veritabanınız boşsa önerilir."
+            />
             <Card title="Uygulama Bilgisi">
                  <div className="text-center">
                     <h4 className="font-semibold">Uygulama Yerel Modda Çalışıyor</h4>
-                    <p className="text-sm text-gray-500 mt-2">Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. Veritabanı bağlantısı yoktur ve yaptığınız değişiklikler sayfa yenilendiğinde sıfırlanacaktır.</p>
+                    <p className="text-sm text-gray-500 mt-2">Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. 'Kurulumu Tamamla' butonu bu demo ortamında bir veritabanına veri yazmayacaktır, ancak gerçek bir Firebase projesinde nasıl çalışacağını göstermektedir.</p>
                 </div>
             </Card>
         </div>
@@ -130,17 +202,21 @@ const AdminSettings = () => {
 const Settings = () => {
     const { currentUser } = useDataContext();
     if (!currentUser) return null;
+    
+    const roleBasedSettings = {
+        [UserRole.SuperAdmin]: <AdminSettings />,
+        [UserRole.Coach]: <CoachSettings />,
+        [UserRole.Student]: <StudentSettings />,
+    };
 
-    switch(currentUser.role) {
-        case UserRole.SuperAdmin:
-            return <AdminSettings />;
-        case UserRole.Coach:
-            return <CoachSettings />;
-        case UserRole.Student:
-            return <StudentSettings />;
-        default:
-            return null;
-    }
+    return (
+         <div>
+            {currentUser.role !== UserRole.SuperAdmin && <div className="h-32 bg-primary-600 dark:bg-primary-800 rounded-t-xl -mb-16"></div>}
+            <div className="px-4 md:px-6 lg:px-8">
+                {roleBasedSettings[currentUser.role] || null}
+            </div>
+        </div>
+    );
 };
 
 export default Settings;
