@@ -1,12 +1,9 @@
 
 
-
-
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
-import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon } from '../components/Icons';
+import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -427,8 +424,8 @@ const Messages = () => {
     
     return (
         <>
-            <div className="flex h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                <div className="w-full sm:w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div className="flex h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative">
+                <div className={`w-full lg:w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 ${selectedConversationId ? 'hidden lg:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                         <h2 className="text-lg font-semibold">Sohbetler</h2>
                         {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
@@ -439,17 +436,20 @@ const Messages = () => {
                                 key={conv.id}
                                 conv={conv}
                                 isSelected={selectedConversationId === conv.id}
-                                onSelect={setSelectedConversationId}
+                                onSelect={(id) => setSelectedConversationId(id)}
                             />
                         ))}
                     </div>
                 </div>
 
-                <div className="w-2/3 flex-col hidden sm:flex">
+                <div className={`w-full lg:w-2/3 flex flex-col transition-transform duration-300 ${selectedConversationId ? 'flex' : 'hidden lg:flex'}`}>
                     {selectedConversation ? (
                         <>
                             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                 <div className="flex items-center">
+                                    <button onClick={() => setSelectedConversationId(null)} className="lg:hidden mr-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <ArrowLeftIcon className="w-5 h-5" />
+                                    </button>
                                     <img src={getConversationDisplayInfo(selectedConversation).picture} alt={getConversationDisplayInfo(selectedConversation).name} className="w-10 h-10 rounded-full mr-3" />
                                     <div>
                                         <p className="font-semibold">{getConversationDisplayInfo(selectedConversation).name}</p>
@@ -489,7 +489,7 @@ const Messages = () => {
                                 ) : <p className="text-center text-sm text-gray-400">Duyurulara yanıt verilemez.</p>}
                             </div>
                         </>
-                    ) : <div className="flex items-center justify-center h-full text-gray-500"><p>Görüntülemek için bir sohbet seçin.</p></div>}
+                    ) : <div className="hidden lg:flex items-center justify-center h-full text-gray-500"><p>Görüntülemek için bir sohbet seçin.</p></div>}
                 </div>
             </div>
             {isAnnouncementModalOpen && <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setIsAnnouncementModalOpen(false)} />}

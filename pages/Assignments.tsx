@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
@@ -41,6 +37,24 @@ const AssignmentRow = React.memo(({ assignment, onSelect, studentName }: { assig
             <td className="py-3 px-4 text-center">{getStatusChip(assignment.status)}</td>
             <td className="py-3 px-4 text-sm font-semibold text-center hidden md:table-cell">{assignment.grade ?? '-'}</td>
         </tr>
+    );
+});
+
+const AssignmentCard = React.memo(({ assignment, onSelect, studentName }: { assignment: Assignment, onSelect: (assignment: Assignment) => void, studentName: string }) => {
+    const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3" onClick={() => onSelect(assignment)}>
+            <div className="flex justify-between items-start">
+                <h3 className="font-bold text-gray-900 dark:text-white pr-2">{assignment.title}</h3>
+                {getStatusChip(assignment.status)}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                <p><span className="font-semibold">Öğrenci:</span> {studentName}</p>
+                <p><span className="font-semibold">Teslim Tarihi:</span> <span className={isOverdue ? 'text-red-500 font-bold' : ''}>{new Date(assignment.dueDate).toLocaleDateString('tr-TR')}</span></p>
+                <p><span className="font-semibold">Not:</span> {assignment.grade ?? '-'}</p>
+            </div>
+        </div>
     );
 });
 
@@ -621,55 +635,64 @@ const Assignments = () => {
         <>
             <Card>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <div className="flex flex-wrap gap-2">
-                        <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <div className="flex flex-wrap gap-2 w-full">
+                        <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow md:flex-grow-0">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekliyor</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
                             <option value={AssignmentStatus.Graded}>Notlandırıldı</option>
                         </select>
                          {isCoach && (
-                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow md:flex-grow-0">
                                 <option value="all">Tüm Öğrenciler</option>
                                 {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                     </div>
                     {isCoach && (
-                        <div className="flex gap-2 w-full md:w-auto">
+                        <div className="flex gap-2 w-full md:w-auto flex-shrink-0">
                              <button onClick={handleStartQuickGrade} className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Hızlı Değerlendir</button>
                             <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 whitespace-nowrap" id="tour-step-4">Yeni Ödev</button>
                         </div>
                     )}
                 </div>
-                <div className="overflow-x-auto">
-                    {filteredAssignments.length > 0 ? (
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-700/50">
-                                <tr>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
-                                    {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
-                                    <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredAssignments.map(a => (
-                                    <AssignmentRow key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                         <EmptyState
-                            icon={<NoAssignmentsIcon className="w-8 h-8"/>}
-                            title={isCoach ? "Filtreye Uygun Ödev Yok" : "Harika! Henüz bir ödevin yok."}
-                            description={isCoach ? "Farklı bir filtre deneyin veya yeni bir ödev oluşturun." : "Koçun yeni bir ödev atadığında burada görünecek."}
-                            action={isCoach ? { label: "Yeni Ödev Oluştur", onClick: () => setIsNewAssignmentModalOpen(true) } : undefined}
-                         />
-                    )}
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                    {filteredAssignments.map(a => (
+                        <AssignmentCard key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
+                    ))}
                 </div>
+                
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
+                                {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
+                                <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredAssignments.map(a => (
+                                <AssignmentRow key={a.id} assignment={a} onSelect={setSelectedAssignment} studentName={getUserName(a.studentId)} />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                 {filteredAssignments.length === 0 && (
+                     <EmptyState
+                        icon={<NoAssignmentsIcon className="w-8 h-8"/>}
+                        title={isCoach ? "Filtreye Uygun Ödev Yok" : "Harika! Henüz bir ödevin yok."}
+                        description={isCoach ? "Farklı bir filtre deneyin veya yeni bir ödev oluşturun." : "Koçun yeni bir ödev atadığında burada görünecek."}
+                        action={isCoach ? { label: "Yeni Ödev Oluştur", onClick: () => setIsNewAssignmentModalOpen(true) } : undefined}
+                     />
+                )}
             </Card>
             {isNewAssignmentModalOpen && <NewAssignmentModal isOpen={isNewAssignmentModalOpen} onClose={() => setIsNewAssignmentModalOpen(false)} />}
             {selectedAssignment && <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} studentName={getUserName(selectedAssignment.studentId)} />}

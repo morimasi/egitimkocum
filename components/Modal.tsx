@@ -64,17 +64,27 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
     if (!isOpen) return null;
     
     const sizeClasses = {
-        sm: 'max-w-sm',
-        md: 'max-w-md',
-        lg: 'max-w-lg',
-        xl: 'max-w-xl',
+        sm: 'sm:max-w-sm',
+        md: 'sm:max-w-md',
+        lg: 'sm:max-w-lg',
+        xl: 'sm:max-w-xl',
     };
 
     const modalId = `modal-title-${Math.random().toString(36).substring(2, 9)}`;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog" aria-labelledby={modalId}>
-            <div ref={modalRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-all duration-300 animate-scale-in`}>
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-end sm:items-center p-0 sm:p-4" 
+            aria-modal="true" 
+            role="dialog" 
+            aria-labelledby={modalId}
+            onClick={onClose}
+        >
+            <div 
+                ref={modalRef} 
+                onClick={(e) => e.stopPropagation()}
+                className={`bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-transform duration-300 animate-fade-in sm:animate-scale-in`}
+            >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <h3 id={modalId} className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
                     <button

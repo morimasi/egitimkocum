@@ -245,7 +245,7 @@ const SuperAdminDashboard = () => {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">Platform Genel Bakış</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KpiCard title="Toplam Kullanıcı" value={users.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
                 <KpiCard title="Toplam Koç" value={coaches.length} icon={<StudentsIcon className="w-6 h-6 text-green-800" />} color="bg-green-200" />
                 <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" />
@@ -265,7 +265,57 @@ const SuperAdminDashboard = () => {
                         Yeni Kullanıcı Ekle
                     </button>
                 </div>
-                <div className="overflow-x-auto">
+
+                 {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                    {filteredUsers.map(user => (
+                        <div key={user.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-full mr-3" />
+                                    <div>
+                                        <p className="font-bold">{user.name}</p>
+                                        <p className="text-sm text-gray-500">{user.email}</p>
+                                    </div>
+                                </div>
+                                <div className="space-x-2 whitespace-nowrap">
+                                     <button onClick={() => handleEdit(user)} className="text-blue-500 hover:underline text-sm font-semibold">Düzenle</button>
+                                    {currentUser?.id !== user.id && (
+                                        <button onClick={() => handleDeleteRequest(user)} className="text-red-500 hover:underline text-sm font-semibold">Sil</button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div>
+                                    <label className="text-xs font-medium text-gray-500">Rol</label>
+                                    <div className="flex items-center gap-2">
+                                        <select value={roleChanges[user.id] || user.role} onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)} className="p-1 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600 text-sm w-full" disabled={savingStates[user.id] || currentUser?.id === user.id}>
+                                            <option value={UserRole.Student}>Öğrenci</option>
+                                            <option value={UserRole.Coach}>Koç</option>
+                                            <option value={UserRole.SuperAdmin}>Süper Admin</option>
+                                        </select>
+                                        {roleChanges[user.id] && (<button onClick={() => handleSaveRole(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
+                                    </div>
+                                </div>
+                                {(roleChanges[user.id] || user.role) === UserRole.Student && (
+                                <div>
+                                    <label className="text-xs font-medium text-gray-500">Atanmış Koç</label>
+                                    <div className="flex items-center gap-2">
+                                    <select value={coachChanges[user.id] !== undefined ? coachChanges[user.id] ?? '' : user.assignedCoachId ?? ''} onChange={(e) => handleCoachChange(user.id, e.target.value)} className="p-1 border rounded-md bg-white dark:bg-gray-700 dark:border-gray-600 text-sm w-full" disabled={savingStates[user.id]}>
+                                        <option value="">Atanmamış</option>
+                                        {coaches.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    {coachChanges[user.id] !== undefined && (<button onClick={() => handleSaveCoachAssignment(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
+                                    </div>
+                                </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>

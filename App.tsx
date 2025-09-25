@@ -15,6 +15,7 @@ import WeeklyReportModal from './components/WeeklyReportModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
 import CommandPalette from './components/CommandPalette';
+import TabBar from './components/TabBar';
 
 // Lazy load pages for better initial performance
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -161,7 +162,7 @@ const AppContent = () => {
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8 animate-fade-in">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8 pb-20 lg:pb-8 animate-fade-in">
                     <div className="max-w-7xl mx-auto">
                         <Suspense fallback={<PageSkeleton />}>
                             {renderPage()}
@@ -169,6 +170,7 @@ const AppContent = () => {
                     </div>
                 </main>
             </div>
+            <TabBar />
             <ToastContainer />
             <Tour />
             <VideoCallModal />
