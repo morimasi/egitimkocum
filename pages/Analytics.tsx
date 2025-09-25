@@ -2,7 +2,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
-import { AssignmentStatus, UserRole } from '../types';
+import { Assignment, AssignmentStatus, User, UserRole } from '../types';
 import Card from '../components/Card';
 
 const COLORS = {
@@ -17,21 +17,16 @@ const STATUS_NAMES = {
     [AssignmentStatus.Graded]: 'Notlandırıldı',
 };
 
-const CoachAnalytics = () => {
-    const { assignments, students } = useDataContext();
-
-    // Filter assignments to only include those of the coach's students
-    const studentIds = students.map(s => s.id);
-    const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
-
+const PerformanceAnalytics = ({ title, assignments, students }: { title: string, assignments: Assignment[], students: User[] }) => {
+    
     const statusData = [
-        { name: STATUS_NAMES[AssignmentStatus.Pending], value: coachAssignments.filter(a => a.status === AssignmentStatus.Pending).length },
-        { name: STATUS_NAMES[AssignmentStatus.Submitted], value: coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length },
-        { name: STATUS_NAMES[AssignmentStatus.Graded], value: coachAssignments.filter(a => a.status === AssignmentStatus.Graded).length },
+        { name: STATUS_NAMES[AssignmentStatus.Pending], value: assignments.filter(a => a.status === AssignmentStatus.Pending).length },
+        { name: STATUS_NAMES[AssignmentStatus.Submitted], value: assignments.filter(a => a.status === AssignmentStatus.Submitted).length },
+        { name: STATUS_NAMES[AssignmentStatus.Graded], value: assignments.filter(a => a.status === AssignmentStatus.Graded).length },
     ];
     
     const radarData = students.map(student => {
-        const studentAssignments = coachAssignments.filter(a => a.studentId === student.id);
+        const studentAssignments = assignments.filter(a => a.studentId === student.id);
         const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
         const averageGrade = graded.length > 0 ? graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length : 0;
         const completionRate = studentAssignments.length > 0 ? (studentAssignments.filter(a => a.status !== AssignmentStatus.Pending).length / studentAssignments.length) * 100 : 0;
@@ -46,7 +41,7 @@ const CoachAnalytics = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card title="Tüm Ödevlerin Durum Dağılımı">
+            <Card title={title}>
                 <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <PieChart>
@@ -129,9 +124,19 @@ const StudentAnalytics = () => {
 
 
 const Analytics = () => {
-    const { currentUser } = useDataContext();
+    const { currentUser, assignments, students, users } = useDataContext();
     if (!currentUser) return null;
-    return currentUser.role === UserRole.Coach ? <CoachAnalytics /> : <StudentAnalytics />;
+    
+    if(currentUser.role === UserRole.SuperAdmin) {
+        const allStudents = users.filter(u => u.role === UserRole.Student);
+        return <PerformanceAnalytics title="Platform Geneli Ödev Durum Dağılımı" assignments={assignments} students={allStudents} />
+    }
+    
+    if (currentUser.role === UserRole.Coach) {
+        return <PerformanceAnalytics title="Tüm Ödevlerin Durum Dağılımı" assignments={assignments} students={students} />
+    }
+    
+    return <StudentAnalytics />;
 };
 
 export default Analytics;

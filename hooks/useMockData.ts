@@ -1,4 +1,4 @@
-import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus } from '../types';
+import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation } from '../types';
 
 export const getMockData = () => {
     const users: User[] = [
@@ -10,6 +10,15 @@ export const getMockData = () => {
       { id: 'superadmin-1', name: 'Admin User', email: 'admin@platform.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
     ];
     
+    const conversations: Conversation[] = [
+        { id: 'conv-1', participantIds: ['coach-1', 'student-1'], isGroup: false },
+        { id: 'conv-2', participantIds: ['coach-1', 'student-2'], isGroup: false },
+        { id: 'conv-3', participantIds: ['coach-1', 'student-3'], isGroup: false },
+        { id: 'conv-4', participantIds: ['coach-1', 'student-4'], isGroup: false },
+        { id: 'conv-announcements', participantIds: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4'], isGroup: true, groupName: "Duyurular", groupImage: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png', adminId: 'coach-1' },
+        { id: 'conv-group-1', participantIds: ['coach-1', 'student-1', 'student-2'], isGroup: true, groupName: "Proje Grubu", adminId: 'coach-1' },
+    ];
+
     const assignments: Assignment[] = [
         { id: 'asg-1', studentId: 'student-1', coachId: 'coach-1', title: 'Matematik Problemleri', description: 'Limit ve Türev konularında 20 problem çözülecek.', dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Pending, grade: null, feedback: '', fileUrl: null, submittedAt: null, feedbackReaction: null, submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null, fileName: '' },
         { id: 'asg-2', studentId: 'student-1', coachId: 'coach-1', title: 'Fizik Deney Raporu', description: 'Basit sarkaç deneyi raporu hazırlanacak.', dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: AssignmentStatus.Graded, grade: 85, feedback: 'Raporun gayet başarılı, özellikle sonuç bölümünü çok iyi analiz etmişsin. Bir dahaki sefere hipotez kısmını daha detaylı yazabilirsin.', fileUrl: '#', fileName: 'fizik_raporu.pdf', submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), feedbackReaction: '👍', submissionType: 'file', coachAttachments: [], audioFeedbackUrl: null, textSubmission: null },
@@ -26,14 +35,16 @@ export const getMockData = () => {
     ];
     
     const messages: Message[] = [
-        { id: 'msg-1', senderId: 'student-1', receiverId: 'coach-1', text: 'Hocam merhaba, matematik ödevindeki 5. soruda takıldım. Yardımcı olabilir misiniz?', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-1'] },
-        { id: 'msg-2', senderId: 'coach-1', receiverId: 'student-1', text: 'Merhaba Ali, tabii ki. Hangi adımı anlamadığını söylersen oradan devam edelim.', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-1', 'coach-1'], reactions: {'👍': ['student-1']} },
-        { id: 'msg-3', senderId: 'student-1', receiverId: 'coach-1', type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
-        { id: 'msg-4', senderId: 'coach-1', receiverId: 'student-2', text: 'Zeynep, kompozisyon ödevin gelmiş, en kısa zamanda değerlendireceğim.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-2', 'coach-1'] },
-        { id: 'msg-5', senderId: 'student-2', receiverId: 'coach-1', text: 'Teşekkürler hocam, bekliyorum 😊', timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-2'] },
-        { id: 'msg-6', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4'] },
-        { id: 'msg-8', senderId: 'coach-1', receiverId: 'all', type: 'announcement', text: 'Önemli: Gelecek hafta yapılacak olan deneme sınavı için konu dağılımları kütüphane bölümüne eklenmiştir. Göz atmayı unutmayın!', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
-        { id: 'msg-7', senderId: 'coach-1', receiverId: 'student-3', type: 'poll', text: 'Anket: Gelecek haftaki deneme sınavı', poll: { question: 'Gelecek haftaki deneme sınavı hangi gün olsun?', options: [{text: 'Cumartesi', votes: ['student-3']}, {text: 'Pazar', votes: []}] }, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), readBy: ['student-3', 'coach-1'] }
+        { id: 'msg-1', senderId: 'student-1', conversationId: 'conv-1', text: 'Hocam merhaba, matematik ödevindeki 5. soruda takıldım. Yardımcı olabilir misiniz?', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-1'] },
+        { id: 'msg-2', senderId: 'coach-1', conversationId: 'conv-1', text: 'Merhaba Ali, tabii ki. Hangi adımı anlamadığını söylersen oradan devam edelim.', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-1', 'coach-1'], reactions: {'👍': ['student-1']} },
+        { id: 'msg-3', senderId: 'student-1', conversationId: 'conv-1', type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
+        { id: 'msg-4', senderId: 'coach-1', conversationId: 'conv-2', text: 'Zeynep, kompozisyon ödevin gelmiş, en kısa zamanda değerlendireceğim.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-2', 'coach-1'] },
+        { id: 'msg-5', senderId: 'student-2', conversationId: 'conv-2', text: 'Teşekkürler hocam, bekliyorum 😊', timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-2'] },
+        { id: 'msg-6', senderId: 'coach-1', conversationId: 'conv-announcements', type: 'announcement', text: 'Arkadaşlar merhaba, yarınki etüt saatimiz 15:00\'e alınmıştır. Herkesin katılımını bekliyorum.', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1', 'student-2', 'student-3', 'student-4'] },
+        { id: 'msg-8', senderId: 'coach-1', conversationId: 'conv-announcements', type: 'announcement', text: 'Önemli: Gelecek hafta yapılacak olan deneme sınavı için konu dağılımları kütüphane bölümüne eklenmiştir. Göz atmayı unutmayın!', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },
+        { id: 'msg-7', senderId: 'coach-1', conversationId: 'conv-3', type: 'poll', text: 'Anket: Gelecek haftaki deneme sınavı', poll: { question: 'Gelecek haftaki deneme sınavı hangi gün olsun?', options: [{text: 'Cumartesi', votes: ['student-3']}, {text: 'Pazar', votes: []}] }, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), readBy: ['student-3', 'coach-1'] },
+        { id: 'msg-group-1', senderId: 'coach-1', conversationId: 'conv-group-1', type: 'system', text: 'Ayşe Yılmaz, Ali Veli ve Zeynep Kaya ile bir grup sohbeti başlattı.', timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1', 'student-2'] },
+        { id: 'msg-group-2', senderId: 'coach-1', conversationId: 'conv-group-1', type: 'text', text: 'Merhaba arkadaşlar, bu grupta yeni proje ödevimizin detaylarını konuşacağız.', timestamp: new Date(Date.now() - 9 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1', 'student-2'] },
     ];
 
     const templates: AssignmentTemplate[] = [
@@ -60,5 +71,5 @@ export const getMockData = () => {
         {id: 'goal-4', studentId: 'student-4', text: 'Haftalık deneme sınavı netini 5 puan artır.', isCompleted: false},
     ];
 
-    return { users, assignments, messages, templates, resources, goals };
+    return { users, assignments, messages, templates, resources, goals, conversations };
 };

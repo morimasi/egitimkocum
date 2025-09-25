@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
@@ -534,6 +535,7 @@ const Assignments = () => {
     const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>('all');
     const [filterStudent, setFilterStudent] = useState<string>(initialFilters.studentId || 'all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(false);
     
     useEffect(() => {
@@ -541,8 +543,19 @@ const Assignments = () => {
             setInitialFilters({});
         }
     }, [initialFilters, setInitialFilters]);
+
+    useEffect(() => {
+        const timerId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [searchTerm]);
     
     const isCoach = currentUser?.role === UserRole.Coach;
+    const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
 
     const displayedAssignments = useMemo(() => {
         if (!currentUser) return [];
@@ -551,10 +564,10 @@ const Assignments = () => {
             case UserRole.Student:
                 return getAssignmentsForStudent(currentUser.id);
             case UserRole.Coach:
-                const studentIds = students.map(s => s.id); // `students` is pre-filtered by context
+                const studentIds = students.map(s => s.id); // `students` is pre-filtered by context for a coach
                 return assignments.filter(a => studentIds.includes(a.studentId));
             case UserRole.SuperAdmin:
-                return assignments;
+                return assignments; // Super Admin sees all assignments
             default:
                 return [];
         }
@@ -564,8 +577,8 @@ const Assignments = () => {
         return displayedAssignments
             .filter(a => filterStatus === 'all' || a.status === filterStatus)
             .filter(a => filterStudent === 'all' || a.studentId === filterStudent)
-            .filter(a => a.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [displayedAssignments, filterStatus, filterStudent, searchTerm]);
+            .filter(a => a.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+    }, [displayedAssignments, filterStatus, filterStudent, debouncedSearchTerm]);
 
     const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor';
     
@@ -596,6 +609,8 @@ const Assignments = () => {
         }
     };
     
+    const allStudents = useMemo(() => users.filter(u => u.role === UserRole.Student), [users]);
+
     return (
         <>
             <Card>
@@ -608,10 +623,10 @@ const Assignments = () => {
                             <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
                             <option value={AssignmentStatus.Graded}>Notlandırıldı</option>
                         </select>
-                         {isCoach && (
+                         {(isCoach || isSuperAdmin) && (
                             <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
-                                {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {(isSuperAdmin ? allStudents : students).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                     </div>
@@ -628,7 +643,7 @@ const Assignments = () => {
                             <thead className="bg-gray-50 dark:bg-gray-700/50">
                                 <tr>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Başlık</th>
-                                    {isCoach && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
+                                    {(isCoach || isSuperAdmin) && <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 hidden md:table-cell">Öğrenci</th>}
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">Teslim Tarihi</th>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center">Durum</th>
                                     <th className="py-3 px-4 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 text-center hidden md:table-cell">Not</th>

@@ -25,7 +25,7 @@ const getStatusChip = (status: AssignmentStatus) => {
 
 
 const StudentDetailModal = ({ student, onClose }: { student: User | null; onClose: () => void; }) => {
-    const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal, updateStudentNotes } = useDataContext();
+    const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal, updateStudentNotes, users } = useDataContext();
     const { addToast } = useUI();
     const [newGoalText, setNewGoalText] = useState('');
     const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
@@ -39,6 +39,8 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     }, [student]);
 
     if (!student) return null;
+    
+    const assignedCoach = users.find(u => u.id === student.assignedCoachId);
     
     const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setNotes(e.target.value);
@@ -122,11 +124,16 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
 
     return (
         <Modal isOpen={!!student} onClose={onClose} title={`${student.name} - Performans Detayları`} size="lg">
-            <div className="flex items-center space-x-4 mb-4 pb-4 border-b dark:border-gray-700">
+            <div className="flex items-start space-x-4 mb-4 pb-4 border-b dark:border-gray-700">
                 <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" />
                 <div>
                     <h3 className="text-2xl font-bold">{student.name}</h3>
                     <p className="text-gray-500">{student.email}</p>
+                    <div className="mt-2">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>
+                            Koç: {assignedCoach?.name || 'Atanmamış'}
+                        </span>
+                    </div>
                 </div>
             </div>
             <div className="border-b border-gray-200 dark:border-gray-700">
@@ -177,31 +184,34 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
 };
 
 const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
-    const { getAssignmentsForStudent } = useDataContext();
-    
+    const { getAssignmentsForStudent, users } = useDataContext();
+
     const assignments = getAssignmentsForStudent(student.id);
     const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-    const averageGrade = gradedAssignments.length > 0
+    const averageGrade: number | string = gradedAssignments.length > 0
         ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length)
-        : 0;
+        : 'N/A';
 
     const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-    const hasAlert = (averageGrade > 0 && averageGrade < 60) || overdueCount > 0;
+    const hasAlert = (typeof averageGrade === 'number' && averageGrade > 0 && averageGrade < 60) || overdueCount > 0;
     
     let alertTitle = '';
     if (overdueCount > 0) alertTitle += `${overdueCount} gecikmiş ödev. `;
-    if (averageGrade > 0 && averageGrade < 60) alertTitle += `Not ortalaması: ${averageGrade}.`;
+    if (typeof averageGrade === 'number' && averageGrade > 0 && averageGrade < 60) alertTitle += `Not ortalaması: ${averageGrade}.`;
+    
+    const assignedCoach = users.find(u => u.id === student.assignedCoachId);
         
     return (
-        <Card className="flex flex-col text-center items-center cursor-pointer relative transition-transform duration-300 hover:-translate-y-1" onClick={() => onSelect(student)}>
+        <Card className="flex flex-col text-center items-center cursor-pointer relative transition-transform duration-300 hover:-translate-y-1 pt-12" onClick={() => onSelect(student)}>
              {hasAlert && (
                  <div className="absolute top-4 right-4" title={alertTitle.trim()}>
                     <AlertTriangleIcon className="w-5 h-5 text-yellow-500" />
                 </div>
             )}
-            <img src={student.profilePicture} alt={student.name} className="w-24 h-24 rounded-full -mt-12 border-4 border-white dark:border-gray-800" />
+            <img src={student.profilePicture} alt={student.name} className="w-24 h-24 rounded-full absolute -top-10 border-4 border-white dark:border-gray-800" />
             <h4 className="text-xl font-bold mt-4">{student.name}</h4>
             <p className="text-sm text-gray-500">{student.email}</p>
+             <p className={`text-xs font-medium mt-2 px-2 py-0.5 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>{assignedCoach?.name || 'Atanmamış'}</p>
             <div className="flex justify-around w-full mt-6 border-t dark:border-gray-700 pt-4">
                 <div className="text-center">
                     <p className="font-bold text-lg">{assignments.length}</p>
@@ -219,13 +229,24 @@ const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect
 const Students = () => {
     const { students } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+
+    useEffect(() => {
+        const timerId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [searchTerm]);
 
     const filteredStudents = useMemo(() => {
         return students.filter(student =>
-            student.name.toLowerCase().includes(searchTerm.toLowerCase())
+            student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
         );
-    }, [students, searchTerm]);
+    }, [students, debouncedSearchTerm]);
 
     return (
         <>
@@ -253,7 +274,7 @@ const Students = () => {
                     description="Arama kriterlerinizi değiştirmeyi deneyin veya tüm öğrencileri görmek için aramayı temizleyin."
                  />
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-16 pt-10">
                     {filteredStudents.map(student => (
                         <StudentCard key={student.id} student={student} onSelect={setSelectedStudent} />
                     ))}

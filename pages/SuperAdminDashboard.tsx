@@ -1,10 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, UserRole } from '../types';
+import { User, UserRole, AssignmentStatus } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { StudentsIcon, AssignmentsIcon } from '../components/Icons';
+
+const KpiCard = React.memo(({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
+    <Card className="flex items-center">
+        <div className={`p-3 rounded-full mr-4 ${color}`}>
+            {icon}
+        </div>
+        <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+        </div>
+    </Card>
+));
 
 const NewUserModal = ({ onClose }: { onClose: () => void }) => {
     const { addUser, users } = useDataContext();
@@ -74,11 +87,12 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
 
 
 const SuperAdminDashboard = () => {
-    const { currentUser, users, updateUser, deleteUser } = useDataContext();
+    const { currentUser, users, updateUser, deleteUser, assignments } = useDataContext();
     const { addToast } = useUI();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [roleChanges, setRoleChanges] = useState<Record<string, UserRole>>({});
@@ -87,6 +101,19 @@ const SuperAdminDashboard = () => {
     const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
 
     const coaches = users.filter(u => u.role === UserRole.Coach);
+    const students = users.filter(u => u.role === UserRole.Student);
+    const totalAssignments = assignments.length;
+    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded).length;
+
+    useEffect(() => {
+        const timerId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [searchTerm]);
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
@@ -166,8 +193,8 @@ const SuperAdminDashboard = () => {
 
 
     const filteredUsers = users.filter(u => 
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        u.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+        u.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     );
 
     const UserEditModal = ({ user, onClose }: { user: User | null; onClose: () => void }) => {
@@ -216,7 +243,15 @@ const SuperAdminDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Kullanıcı Yönetimi</h1>
+            <h1 className="text-3xl font-bold">Platform Genel Bakış</h1>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KpiCard title="Toplam Kullanıcı" value={users.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
+                <KpiCard title="Toplam Koç" value={coaches.length} icon={<StudentsIcon className="w-6 h-6 text-green-800" />} color="bg-green-200" />
+                <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" />
+                <KpiCard title="Toplam Ödev" value={totalAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
+            </div>
+
             <Card>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <input
@@ -275,7 +310,7 @@ const SuperAdminDashboard = () => {
                                         </div>
                                     </td>
                                      <td className="py-3 px-4">
-                                        {user.role === UserRole.Student ? (
+                                        {(roleChanges[user.id] || user.role) === UserRole.Student ? (
                                              <div className="flex items-center gap-2">
                                                 <select
                                                     value={coachChanges[user.id] !== undefined ? coachChanges[user.id] ?? '' : user.assignedCoachId ?? ''}

@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, XIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentFocusSuggestion, generatePersonalCoachSummary } from '../services/geminiService';
 
-const AnnouncementsCard = () => {
+const AnnouncementsCard = React.memo(() => {
     const { messages, coach } = useDataContext();
     const { setActivePage } = useUI();
     const announcements = messages
@@ -39,7 +39,7 @@ const AnnouncementsCard = () => {
             </ul>
         </Card>
     );
-};
+});
 
 const KpiCard = React.memo(({ title, value, icon, color, id }: { title: string, value: string | number, icon: React.ReactNode, color: string, id?: string }) => (
     <Card className="flex items-center" id={id}>
@@ -53,7 +53,7 @@ const KpiCard = React.memo(({ title, value, icon, color, id }: { title: string, 
     </Card>
 ));
 
-const FocusAreaCard = () => {
+const FocusAreaCard = React.memo(() => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const [suggestion, setSuggestion] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -79,9 +79,9 @@ const FocusAreaCard = () => {
              {isLoading ? <SkeletonText className="h-16 w-full" /> : <p className="text-sm text-gray-600 dark:text-gray-300">{suggestion}</p>}
         </Card>
     );
-};
+});
 
-const GoalsCard = () => {
+const GoalsCard = React.memo(() => {
     const { currentUser, getGoalsForStudent, updateGoal } = useDataContext();
     if (!currentUser) return null;
 
@@ -114,10 +114,10 @@ const GoalsCard = () => {
             </ul>
         </Card>
     );
-}
+});
 
 const StudentDashboard = () => {
-    const { currentUser, getAssignmentsForStudent, coach, messages } = useDataContext();
+    const { currentUser, getAssignmentsForStudent, coach, messages, conversations } = useDataContext();
     const { setActivePage } = useUI();
     
     if (!currentUser) return null;
@@ -132,8 +132,14 @@ const StudentDashboard = () => {
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
         .slice(0, 5);
 
+    // FIX: Correctly filter for unread messages using conversations instead of non-existent 'receiverId'.
+    const myConversationIds = useMemo(() => {
+        if (!currentUser) return [];
+        return conversations.filter(c => c.participantIds.includes(currentUser.id)).map(c => c.id);
+    }, [conversations, currentUser]);
+
     const recentMessages = messages
-        .filter(m => m.receiverId === currentUser.id && !m.readBy.includes(currentUser.id))
+        .filter(m => myConversationIds.includes(m.conversationId) && m.senderId !== currentUser.id && !m.readBy.includes(currentUser.id))
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0,3);
 
@@ -222,7 +228,7 @@ const CoachInsightsCard = ({ currentUser }: { currentUser: User }) => {
 
 
 const CoachDashboard = () => {
-    const { students, assignments, messages, currentUser } = useDataContext();
+    const { students, assignments, currentUser, unreadCounts } = useDataContext();
     const { setActivePage } = useUI();
     
     // A coach should only see data for their assigned students
@@ -256,7 +262,11 @@ const CoachDashboard = () => {
     }).filter(s => s.showAlert)
       .sort((a, b) => (b.overdue - a.overdue) || (a.avg - b.avg));
     
-    const unreadMessagesCount = messages.filter(m => m.receiverId === currentUser?.id && !m.readBy.includes(currentUser.id)).length;
+    // FIX: Correctly calculate unread messages from the unreadCounts map instead of using non-existent 'receiverId'.
+    const unreadMessagesCount = useMemo(() => 
+        Array.from(unreadCounts.values()).reduce((sum, count) => sum + count, 0),
+        [unreadCounts]
+    );
 
     return (
         <div className="space-y-6">
@@ -264,7 +274,7 @@ const CoachDashboard = () => {
                 <KpiCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6 text-blue-800" />} color="bg-blue-200" />
                 <KpiCard title="Değerlendirilecek Ödev" value={pendingCount} icon={<AssignmentsIcon className="w-6 h-6 text-yellow-800" />} color="bg-yellow-200" id="tour-step-3"/>
                 <KpiCard title="Gecikmiş Ödev" value={overdueCount} icon={<XIcon className="w-6 h-6 text-red-800" />} color="bg-red-200" />
-                 <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<XIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
+                 <KpiCard title="Okunmamış Mesaj" value={unreadMessagesCount} icon={<MessagesIcon className="w-6 h-6 text-indigo-800" />} color="bg-indigo-200" />
             </div>
             <AnnouncementsCard />
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

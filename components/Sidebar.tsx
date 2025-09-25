@@ -15,7 +15,7 @@ interface NavItemProps {
     icon: React.ReactNode;
 }
 
-const NavItem = ({ page, label, icon }: NavItemProps) => {
+const NavItem = React.memo(({ page, label, icon }: NavItemProps) => {
     const { activePage, setActivePage } = useUI();
     const isActive = activePage === page;
 
@@ -37,7 +37,7 @@ const NavItem = ({ page, label, icon }: NavItemProps) => {
             <span className="ml-3">{label}</span>
         </a>
     );
-};
+});
 
 
 interface SidebarProps {

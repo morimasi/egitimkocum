@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Message, UserRole, Poll, PollOption } from '../types';
-import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon } from '../components/Icons';
+import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
+import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -58,15 +58,15 @@ const PollCreationModal = ({ isOpen, onClose, onSend }: { isOpen: boolean; onClo
 };
 
 const AnnouncementModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-    const { coach, sendMessage } = useDataContext();
+    const { currentUser, sendMessage } = useDataContext();
     const { addToast } = useUI();
     const [announcementText, setAnnouncementText] = useState('');
 
     const handleSendAnnouncement = () => {
-        if (!announcementText.trim() || !coach) return;
+        if (!announcementText.trim() || !currentUser) return;
         sendMessage({
-            senderId: coach.id,
-            receiverId: 'all', // Special receiver for announcements
+            senderId: currentUser.id,
+            conversationId: 'conv-announcements',
             text: announcementText,
             type: 'announcement',
         });
@@ -120,17 +120,34 @@ const ReactionPicker = ({ onSelect, onClose }: { onSelect: (emoji: string) => vo
     );
 };
 
-const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void }) => {
+const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, conversation }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void, conversation: Conversation }) => {
     const { findMessageById, voteOnPoll, currentUser, users } = useDataContext();
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const repliedToMessage = msg.replyTo ? findMessageById(msg.replyTo) : null;
     
+    if (msg.type === 'system') {
+        return (
+            <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-2 italic">
+                <span>{msg.text}</span>
+            </div>
+        );
+    }
+    
     const ReadReceipt = () => {
         if (!isOwnMessage || msg.type === 'announcement') return null;
-        const isRead = msg.readBy.length > 1; // Read by someone other than the sender
+
+        const totalParticipants = conversation.participantIds.length;
+        const isRead = conversation.isGroup
+            ? msg.readBy.length === totalParticipants // For groups, read if everyone read it
+            : msg.readBy.length > 1; // For 1-on-1, read if the other person read it
+
+        const tooltipText = conversation.isGroup
+            ? isRead ? "Herkes tarafından okundu" : "İletildi"
+            : isRead ? "Okundu" : "İletildi";
+
         return (
-             <div className={`relative w-4 h-4 ${isRead ? 'text-blue-400' : 'text-gray-400'}`}>
+             <div title={tooltipText} className={`relative w-4 h-4 ${isRead ? 'text-blue-400' : 'text-gray-400'}`}>
                 <CheckIcon className="w-4 h-4 absolute" style={{ left: '2px' }}/>
                 <CheckIcon className="w-4 h-4" />
             </div>
@@ -205,6 +222,7 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg
                         </div>
                     )}
                 </div>
+                 {/* FIX: Removed redundant `msg.type !== 'system'` check. The component returns early for system messages, so this check is not needed. */}
                  {showToolbar && msg.type !== 'announcement' && (
                     <div className={`absolute top-1/2 -translate-y-1/2 flex items-center bg-gray-100 dark:bg-gray-900 rounded-full shadow-md transition-opacity duration-200 ${isOwnMessage ? '-left-20' : '-right-20'} ${showToolbar ? 'opacity-100' : 'opacity-0'}`}>
                         {showReactionPicker && <ReactionPicker onSelect={handleReactionSelect} onClose={() => setShowReactionPicker(false)} />}
@@ -221,15 +239,115 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact }: { msg
     );
 });
 
+const GroupInfoModal = ({ conversation, onClose }: { conversation: Conversation | null; onClose: () => void; }) => {
+    const { users, currentUser, removeUserFromConversation, endConversation } = useDataContext();
+    if (!conversation) return null;
+    const members = users.filter(u => conversation.participantIds.includes(u.id));
+    const isAdmin = conversation.adminId === currentUser?.id;
+    return (
+        <Modal isOpen={!!conversation} onClose={onClose} title="Grup Bilgisi">
+            <h4 className="font-semibold mb-2">{conversation.groupName}</h4>
+            <p className="text-sm text-gray-500 mb-4">{members.length} üye</p>
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+                {members.map(member => (
+                    <li key={member.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <div className="flex items-center">
+                            <img src={member.profilePicture} alt={member.name} className="w-8 h-8 rounded-full" />
+                            <span className="ml-3 font-medium">{member.name}</span>
+                        </div>
+                        {isAdmin && member.id !== currentUser?.id && (
+                            <button onClick={() => removeUserFromConversation(conversation.id, member.id)} className="text-xs text-red-500 hover:underline">Çıkar</button>
+                        )}
+                    </li>
+                ))}
+            </ul>
+            {isAdmin && (
+                <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                    <button onClick={() => {endConversation(conversation.id); onClose()}} className="w-full text-red-600 font-semibold py-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50">Grubu Sonlandır</button>
+                </div>
+            )}
+        </Modal>
+    )
+};
+
+const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: Conversation; onClose: () => void; onAddUsers: (userIds: string[]) => void; }) => {
+    const { students } = useDataContext();
+    const [selected, setSelected] = useState<string[]>([]);
+    const unselectedStudents = students.filter(s => !conversation.participantIds.includes(s.id));
+    
+    const handleToggle = (id: string) => {
+        setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+    
+    return (
+        <Modal isOpen={true} onClose={onClose} title="Gruba Kişi Ekle">
+            <ul className="space-y-2 max-h-80 overflow-y-auto">
+                {unselectedStudents.map(student => (
+                    <li key={student.id}>
+                        <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={selected.includes(student.id)} onChange={() => handleToggle(student.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3" />
+                            <span className="font-medium">{student.name}</span>
+                        </label>
+                    </li>
+                ))}
+            </ul>
+             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                <button onClick={() => { onAddUsers(selected); onClose(); }} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Ekle</button>
+            </div>
+        </Modal>
+    );
+};
+
+const ConversationListItem = React.memo(({ conv, isSelected, onSelect }: { conv: Conversation, isSelected: boolean, onSelect: (id: string) => void }) => {
+    const { unreadCounts, lastMessagesMap, currentUser, users } = useDataContext();
+    const unreadCount = unreadCounts.get(conv.id) || 0;
+    const lastMessage = lastMessagesMap.get(conv.id);
+
+    const getConversationDisplayInfo = (c: Conversation) => {
+        if (!currentUser) return { name: '...', picture: '' };
+        if (c.isGroup) {
+            return { name: c.groupName || 'Grup Sohbeti', picture: c.groupImage || 'https://i.pravatar.cc/150?u=group-' + c.id };
+        } else {
+            const otherUserId = c.participantIds.find(id => id !== currentUser.id);
+            const otherUser = users.find(u => u.id === otherUserId);
+            return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
+        }
+    };
+
+    const { name, picture } = getConversationDisplayInfo(conv);
+
+    return (
+        <div onClick={() => onSelect(conv.id)} className={`flex items-center p-3 cursor-pointer transition-colors ${isSelected ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+            <div className="relative">
+                <img src={picture} alt={name} className="w-12 h-12 rounded-full" />
+                {unreadCount > 0 && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800"></span>}
+            </div>
+            <div className="flex-1 ml-3 overflow-hidden">
+                <div className="flex justify-between items-center">
+                    <p className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{name}</p>
+                    {lastMessage && <p className={`text-xs flex-shrink-0 ${isSelected ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
+                </div>
+                <p className={`text-xs truncate ${isSelected ? 'text-primary-200' : 'text-gray-500'}`}>
+                    {lastMessage ? (lastMessage.type === 'audio' ? '🎤 Sesli Mesaj' : (lastMessage.type === 'file' ? '📎 Dosya' : (lastMessage.senderId === currentUser?.id && lastMessage.type !== 'announcement' ? `Siz: ${lastMessage.text}` : lastMessage.text))) : 'Henüz mesaj yok'}
+                </p>
+            </div>
+        </div>
+    );
+});
+
 
 const Messages = () => {
-    const { currentUser, coach, students, getMessagesWithUser, sendMessage, markMessagesAsRead, messages, typingStatus, updateTypingStatus, addReaction, uploadFile, unreadCounts, lastMessagesMap } = useDataContext();
+    const { currentUser, users, conversations, getMessagesForConversation, sendMessage, markMessagesAsRead, typingStatus, addReaction, uploadFile, unreadCounts, lastMessagesMap, startGroupChat, addUserToConversation } = useDataContext();
     const { addToast, startCall, initialFilters, setInitialFilters } = useUI();
     
-    const [selectedContactId, setSelectedContactId] = useState<string | null>(initialFilters.contactId || null);
+    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.contactId || null);
     const [newMessage, setNewMessage] = useState('');
     const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
     const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+    const [isGroupInfoModalOpen, setIsGroupInfoModalOpen] = useState(false);
+    const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
     const [showAudioRecorder, setShowAudioRecorder] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -237,42 +355,48 @@ const Messages = () => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
-    const typingTimeoutRef = useRef<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
-    useEffect(() => {
-        if (initialFilters.contactId) {
-            setInitialFilters({});
-        }
-    }, [initialFilters, setInitialFilters]);
 
     const isCoach = currentUser?.role === UserRole.Coach;
-    const contacts = isCoach ? students : (coach ? [coach] : []);
     
-    const studentContacts = isCoach ? contacts : [{ id: 'announcements', name: 'Duyurular', profilePicture: 'https://cdn-icons-png.flaticon.com/512/1041/1041891.png' }, ...contacts];
+    const userConversations = useMemo(() => {
+        if (!currentUser) return [];
+        return conversations
+            .filter(c => c.participantIds.includes(currentUser.id) && !c.isArchived)
+            .sort((a,b) => {
+                const lastMsgA = lastMessagesMap.get(a.id);
+                const lastMsgB = lastMessagesMap.get(b.id);
+                if (!lastMsgA) return 1;
+                if (!lastMsgB) return -1;
+                return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
+            });
+    }, [conversations, currentUser, lastMessagesMap]);
 
-    const selectedContact = studentContacts.find(c => c.id === selectedContactId) || null;
+    const selectedConversation = useMemo(() => userConversations.find(c => c.id === selectedConversationId) || null, [userConversations, selectedConversationId]);
 
     useEffect(() => {
-        if (!selectedContactId && studentContacts.length > 0) {
-            const firstContact = studentContacts[0].id === 'announcements' && studentContacts.length > 1 ? studentContacts[1] : studentContacts[0];
-            setSelectedContactId(firstContact.id);
+        if (initialFilters.contactId) {
+            const conversation = userConversations.find(c => !c.isGroup && c.participantIds.includes(initialFilters.contactId!));
+            if (conversation) setSelectedConversationId(conversation.id);
+            setInitialFilters({});
+        } else if (!selectedConversationId && userConversations.length > 0) {
+            setSelectedConversationId(userConversations[0].id);
         }
-    }, [studentContacts, selectedContactId]);
+    }, [userConversations, selectedConversationId, initialFilters, setInitialFilters]);
     
     useEffect(() => {
-        if (selectedContactId) {
-            markMessagesAsRead(selectedContactId);
+        if (selectedConversationId) {
+            markMessagesAsRead(selectedConversationId);
         }
-    }, [selectedContactId, messages, markMessagesAsRead]);
+    }, [selectedConversationId, getMessagesForConversation, markMessagesAsRead]);
     
-    const conversation = selectedContactId ? getMessagesWithUser(selectedContactId) : [];
+    const conversationMessages = selectedConversationId ? getMessagesForConversation(selectedConversationId) : [];
     
     useEffect(() => {
         if (!showScrollToBottom) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [conversation, typingStatus, showScrollToBottom]);
+    }, [conversationMessages, typingStatus, showScrollToBottom]);
 
     const handleScroll = () => {
         const container = chatContainerRef.current;
@@ -282,155 +406,110 @@ const Messages = () => {
         }
     };
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !currentUser || !selectedContactId || selectedContactId === 'announcements') return;
+        if (newMessage.trim() === '' || !currentUser || !selectedConversationId) return;
         sendMessage({
             senderId: currentUser.id,
-            receiverId: selectedContactId,
+            conversationId: selectedConversationId,
             text: newMessage,
             type: 'text',
             replyTo: replyingTo?.id,
         });
         setNewMessage('');
         setReplyingTo(null);
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-    };
-    
-    const handleSendPoll = (poll: Poll) => {
-        if (!currentUser || !selectedContactId || selectedContactId === 'announcements') return;
-        sendMessage({
-            senderId: currentUser.id,
-            receiverId: selectedContactId,
-            text: `Anket: ${poll.question}`,
-            type: 'poll',
-            poll,
-        });
-    };
-    
-    const handleSendAudio = (audioUrl: string) => {
-        if (!currentUser || !selectedContactId || selectedContactId === 'announcements') return;
-         sendMessage({
-            senderId: currentUser.id,
-            receiverId: selectedContactId,
-            text: 'Sesli mesaj',
-            type: 'audio',
-            audioUrl: audioUrl,
-        });
-        setShowAudioRecorder(false);
     };
 
-    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file && currentUser && selectedContactId) {
-            setIsUploading(true);
-            try {
-                const fileUrl = await uploadFile(file, `messages/${currentUser.id}`);
-                const isImage = file.type.startsWith('image/');
-                
-                sendMessage({
-                    senderId: currentUser.id,
-                    receiverId: selectedContactId,
-                    text: file.name,
-                    type: 'file',
-                    fileName: file.name,
-                    fileUrl: fileUrl,
-                    fileType: file.type,
-                    imageUrl: isImage ? fileUrl : undefined,
-                });
-                addToast("Dosya başarıyla gönderildi.", "success");
-            } catch (error) {
-                 addToast("Dosya gönderilirken bir hata oluştu.", "error");
-            } finally {
-                setIsUploading(false);
+    const handleStartNewGroup = async (userId: string) => {
+        if (!currentUser) return;
+        const otherUser = users.find(u => u.id === userId);
+        if (!otherUser) return;
+        const groupName = `${currentUser.name}, ${otherUser.name}`;
+        const newConvId = await startGroupChat([currentUser.id, userId], groupName);
+        if (newConvId) setSelectedConversationId(newConvId);
+    };
+
+    const handleAddUsersToConversation = async (userIds: string[]) => {
+        if (!selectedConversation) return;
+        
+        if (!selectedConversation.isGroup) {
+            const participantIds = [...selectedConversation.participantIds, ...userIds];
+            const participants = users.filter(u => participantIds.includes(u.id));
+            const groupName = participants.map(p => p.name.split(' ')[0]).slice(0, 3).join(', ');
+            const newConvId = await startGroupChat(participantIds, groupName);
+            if (newConvId) setSelectedConversationId(newConvId);
+        } else {
+            for (const userId of userIds) {
+                await addUserToConversation(selectedConversation.id, userId);
             }
         }
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setNewMessage(e.target.value);
     };
     
+    const getConversationDisplayInfo = (conv: Conversation) => {
+        if (!currentUser) return { name: '...', picture: '' };
+        if (conv.isGroup) {
+            return { name: conv.groupName || 'Grup Sohbeti', picture: conv.groupImage || 'https://i.pravatar.cc/150?u=group-' + conv.id };
+        } else {
+            const otherUserId = conv.participantIds.find(id => id !== currentUser.id);
+            const otherUser = users.find(u => u.id === otherUserId);
+            return { name: otherUser?.name || 'Bilinmeyen Kullanıcı', picture: otherUser?.profilePicture || '' };
+        }
+    };
+
     if (!currentUser) return null;
-
-    const isContactTyping = selectedContactId && typingStatus[selectedContactId];
-
+    
     return (
         <>
             <div className="flex h-[calc(100vh-10rem)] bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
                 <div className="w-full sm:w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                        <h2 className="text-lg font-semibold">Kişiler</h2>
+                        <h2 className="text-lg font-semibold">Sohbetler</h2>
                         {isCoach && <button onClick={() => setIsAnnouncementModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Duyuru Yap"><BellIcon className="w-5 h-5"/></button>}
                     </div>
                     <div className="flex-1 overflow-y-auto">
-                        {studentContacts.map(contact => {
-                            const unreadCount = unreadCounts.get(contact.id) || 0;
-                            const lastMessage = lastMessagesMap.get(contact.id);
-                            return (
-                                <div key={contact.id} onClick={() => setSelectedContactId(contact.id)} className={`flex items-center p-3 cursor-pointer transition-colors ${selectedContactId === contact.id ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                    <div className="relative"><img src={contact.profilePicture} alt={contact.name} className="w-12 h-12 rounded-full" />{unreadCount > 0 && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800"></span>}</div>
-                                    <div className="flex-1 ml-3 overflow-hidden">
-                                        <div className="flex justify-between items-center"><p className={`font-semibold text-sm ${selectedContactId === contact.id ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{contact.name}</p>{lastMessage && <p className={`text-xs flex-shrink-0 ${selectedContactId === contact.id ? 'text-primary-200' : 'text-gray-400'}`}>{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}</div>
-                                        <p className={`text-xs truncate ${selectedContactId === contact.id ? 'text-primary-200' : 'text-gray-500'}`}>{typingStatus[contact.id] ? <span className="italic text-green-500">yazıyor...</span> : (lastMessage ? (lastMessage.type === 'audio' ? '🎤 Sesli Mesaj' : (lastMessage.type === 'file' ? '📎 Dosya' : (lastMessage.senderId === currentUser.id && lastMessage.type !== 'announcement' ? `Siz: ${lastMessage.text}` : lastMessage.text))) : 'Henüz mesaj yok')}</p>
-                                    </div>
-                                </div>
-                            )
-                        })}
+                        {userConversations.map(conv => (
+                            <ConversationListItem
+                                key={conv.id}
+                                conv={conv}
+                                isSelected={selectedConversationId === conv.id}
+                                onSelect={setSelectedConversationId}
+                            />
+                        ))}
                     </div>
                 </div>
 
                 <div className="w-2/3 flex-col hidden sm:flex">
-                    {selectedContact ? (
+                    {selectedConversation ? (
                         <>
                             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                <div className="flex items-center"><img src={selectedContact.profilePicture} alt={selectedContact.name} className="w-10 h-10 rounded-full mr-3" /><div><p className="font-semibold">{selectedContact.name}</p></div></div>
-                                {selectedContact.id !== 'announcements' && <button onClick={() => startCall(selectedContact as User)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Görüntülü Arama Başlat"><VideoIcon className="w-6 h-6" /></button>}
+                                <div className="flex items-center"><img src={getConversationDisplayInfo(selectedConversation).picture} alt={getConversationDisplayInfo(selectedConversation).name} className="w-10 h-10 rounded-full mr-3" /><div><p className="font-semibold">{getConversationDisplayInfo(selectedConversation).name}</p></div></div>
+                                {isCoach && selectedConversation.id !== 'conv-announcements' && (
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setIsAddToGroupModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Gruba Kişi Ekle"><UserPlusIcon className="w-5 h-5" /></button>
+                                        {selectedConversation.isGroup && <button onClick={() => setIsGroupInfoModalOpen(true)} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Grup Bilgisi"><UserGroupIcon className="w-5 h-5" /></button>}
+                                    </div>
+                                )}
                             </div>
                             <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 space-y-4 relative">
-                                {conversation.map(msg => <MessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} />)}
-                                {isContactTyping && <div className="flex justify-start"><div className="bg-gray-200 dark:bg-gray-700 rounded-lg"><TypingIndicator /></div></div>}
+                                {conversationMessages.map(msg => <MessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} conversation={selectedConversation} />)}
                                 <div ref={messagesEndRef} />
-                                {showScrollToBottom && <button onClick={scrollToBottom} className="absolute bottom-4 right-4 bg-primary-500 text-white w-10 h-10 rounded-full shadow-lg animate-bounce">↓</button>}
+                                {showScrollToBottom && <button onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })} className="absolute bottom-4 right-4 bg-primary-500 text-white w-10 h-10 rounded-full shadow-lg animate-bounce">↓</button>}
                             </div>
                             <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                                {selectedContactId !== 'announcements' ? (
-                                    showAudioRecorder ? (
-                                        <div className="flex flex-col items-center"><AudioRecorder onSave={handleSendAudio} /><button onClick={() => setShowAudioRecorder(false)} className="text-sm text-gray-500 mt-2">İptal</button></div>
-                                    ) : (
-                                        <div>
-                                            {replyingTo && (
-                                                <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-t-md flex justify-between items-center">
-                                                    <div><p className="text-xs font-bold text-primary-600">Yanıtlanıyor:</p><p className="text-sm truncate text-gray-600 dark:text-gray-300">{replyingTo.text}</p></div>
-                                                    <button onClick={() => setReplyingTo(null)} className="p-1"><XIcon className="w-4 h-4" /></button>
-                                                </div>
-                                            )}
-                                            <form onSubmit={handleSendMessage} className="flex items-center">
-                                                <input type="text" value={newMessage} onChange={handleTyping} placeholder="Mesajınızı yazın..." className={`flex-1 p-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 ${replyingTo ? 'rounded-b-full rounded-t-none' : 'rounded-full'}`}/>
-                                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                                                {isCoach && <button type="button" onClick={() => setIsPollModalOpen(true)} className="ml-3 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Anket Oluştur"><PollIcon className="w-5 h-5"/></button>}
-                                                <button type="button" onClick={() => fileInputRef.current?.click()} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Dosya Ekle" disabled={isUploading}><PaperclipIcon className="w-5 h-5"/></button>
-                                                <button type="button" onClick={() => setShowAudioRecorder(true)} className="ml-1 p-3 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Sesli Mesaj Gönder"><MicIcon className="w-5 h-5"/></button>
-                                                <button type="submit" className="ml-1 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
-                                            </form>
-                                        </div>
-                                    )
+                                {selectedConversation.id !== 'conv-announcements' ? (
+                                    <form onSubmit={handleSendMessage} className="flex items-center">
+                                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Mesajınızı yazın..." className={`flex-1 p-2 border bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full`}/>
+                                        <button type="submit" className="ml-2 p-3 rounded-full bg-primary-500 text-white hover:bg-primary-600" aria-label="Gönder"><SendIcon className="w-5 h-5" /></button>
+                                    </form>
                                 ) : <p className="text-center text-sm text-gray-400">Duyurulara yanıt verilemez.</p>}
                             </div>
                         </>
-                    ) : <div className="flex items-center justify-center h-full text-gray-500"><p>Görüntülemek için bir kişi seçin.</p></div>}
+                    ) : <div className="flex items-center justify-center h-full text-gray-500"><p>Görüntülemek için bir sohbet seçin.</p></div>}
                 </div>
             </div>
             {isAnnouncementModalOpen && <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setIsAnnouncementModalOpen(false)} />}
-            {isPollModalOpen && <PollCreationModal isOpen={isPollModalOpen} onClose={() => setIsPollModalOpen(false)} onSend={handleSendPoll} />}
-
+            {isGroupInfoModalOpen && <GroupInfoModal conversation={selectedConversation} onClose={() => setIsGroupInfoModalOpen(false)} />}
+            {isAddToGroupModalOpen && selectedConversation && <AddToGroupModal conversation={selectedConversation} onClose={() => setIsAddToGroupModalOpen(false)} onAddUsers={handleAddUsersToConversation} />}
         </>
     );
 };

@@ -63,13 +63,23 @@ export interface Poll {
   options: PollOption[];
 }
 
+export interface Conversation {
+  id: string;
+  participantIds: string[];
+  isGroup: boolean;
+  groupName?: string | null;
+  groupImage?: string | null;
+  adminId?: string | null;
+  isArchived?: boolean;
+}
+
 export interface Message {
   id: string;
   senderId: string;
-  receiverId: string;
+  conversationId: string;
   text: string;
   timestamp: string;
-  type: 'text' | 'file' | 'audio' | 'announcement' | 'poll';
+  type: 'text' | 'file' | 'audio' | 'announcement' | 'poll' | 'system';
   fileUrl?: string;
   fileName?: string;
   fileType?: string;
