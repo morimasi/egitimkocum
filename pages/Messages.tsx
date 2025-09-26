@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Message, UserRole, Poll, PollOption, Conversation } from '../types';
+import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
 import { SendIcon, BellIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, PlusCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon, SearchIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
@@ -17,7 +17,7 @@ const TypingIndicator = () => (
     </div>
 );
 
-const PollCreationModal = ({ isOpen, onClose, onSend }: { isOpen: boolean; onClose: () => void; onSend: (poll: Poll) => void }) => {
+const PollCreationModal = ({ isOpen, onClose, onSend, addToast }: { isOpen: boolean; onClose: () => void; onSend: (poll: Poll) => void; addToast: (message: string, type: ToastType) => void; }) => {
     const [question, setQuestion] = useState('');
     const [options, setOptions] = useState(['', '']);
 
@@ -27,6 +27,8 @@ const PollCreationModal = ({ isOpen, onClose, onSend }: { isOpen: boolean; onClo
             onClose();
             setQuestion('');
             setOptions(['', '']);
+        } else {
+            addToast("Lütfen anket sorusunu ve tüm seçenekleri doldurun.", "error");
         }
     };
     
@@ -801,6 +803,7 @@ const Messages = () => {
                 <PollCreationModal
                     isOpen={isPollModalOpen}
                     onClose={() => setIsPollModalOpen(false)}
+                    addToast={addToast}
                     onSend={(poll) => {
                         if (currentUser) {
                             sendMessage({

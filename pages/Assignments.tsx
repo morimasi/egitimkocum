@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
@@ -60,7 +59,7 @@ const AssignmentCard = React.memo(({ assignment, onSelect, studentName, isCoach 
 });
 
 
-const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen: boolean; onClose: () => void; preselectedStudentId?: string | null; }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
     const { addToast } = useUI();
     const [title, setTitle] = useState('');
@@ -73,6 +72,13 @@ const NewAssignmentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
     const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
     const [submissionType, setSubmissionType] = useState<SubmissionType>('file');
     const [videoDescriptionUrl, setVideoDescriptionUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen && preselectedStudentId) {
+            setSelectedStudents([preselectedStudentId]);
+        }
+    }, [isOpen, preselectedStudentId]);
+
 
     const handleGenerateDescription = async () => {
         if (!title) {
@@ -247,7 +253,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const [isSuggestingGrade, setIsSuggestingGrade] = useState(false);
     const [gradeRationale, setGradeRationale] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-
+    const [studentVideoSubmissionUrl, setStudentVideoSubmissionUrl] = useState<string | null>(null);
+    const [videoFeedbackUrl, setVideoFeedbackUrl] = useState<string | null>(null);
 
     useEffect(() => {
         if (assignment) {
@@ -255,6 +262,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             setFeedback(assignment.feedback || '');
             setTextSubmission(assignment.textSubmission || '');
             setGradeRationale('');
+            setStudentVideoSubmissionUrl(assignment.studentVideoSubmissionUrl || null);
+            setVideoFeedbackUrl(assignment.videoFeedbackUrl || null);
         }
     }, [assignment]);
 
@@ -263,7 +272,12 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const isCoach = currentUser.role === UserRole.Coach || currentUser.role === UserRole.SuperAdmin;
 
     const handleSubmission = async () => {
-        let updatedAssignment: Assignment = { ...assignment, status: AssignmentStatus.Submitted, submittedAt: new Date().toISOString() };
+        let updatedAssignment: Assignment = { 
+            ...assignment, 
+            status: AssignmentStatus.Submitted, 
+            submittedAt: new Date().toISOString(),
+            studentVideoSubmissionUrl,
+        };
         
         switch(assignment.submissionType) {
             case 'text':
@@ -276,6 +290,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             case 'completed':
                 break;
             default:
+                 // This case is handled by handleFileUpload now
                 addToast("Lütfen dosya yükleme alanını kullanın.", "error");
                 return;
         }
@@ -295,7 +310,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 status: AssignmentStatus.Submitted, 
                 fileUrl: fileUrl, 
                 fileName: file.name,
-                submittedAt: new Date().toISOString() 
+                submittedAt: new Date().toISOString(),
+                studentVideoSubmissionUrl,
             });
             addToast("Ödev dosyası başarıyla yüklendi.", "success");
             onClose();
@@ -385,10 +401,27 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         await updateAssignment({ ...assignment, audioFeedbackUrl: audioUrl });
         addToast("Sesli geri bildirim kaydedildi.", "success");
     };
+
+    const handleVideoFeedbackSave = async (videoUrl: string | null) => {
+        if (!videoUrl) return;
+        await updateAssignment({ ...assignment, videoFeedbackUrl: videoUrl });
+        addToast("Video geri bildirim kaydedildi.", "success");
+    };
     
     const handleFeedbackReaction = async (reaction: '👍' | '🤔') => {
         await updateAssignment({ ...assignment, feedbackReaction: reaction });
         addToast("Geri bildiriminiz için teşekkürler!", "success");
+    };
+
+    const handleStudentAudioResponseSave = async (audioUrl: string) => {
+        await updateAssignment({ ...assignment, studentAudioFeedbackResponseUrl: audioUrl });
+        addToast("Sesli yanıtınız gönderildi.", "success");
+    };
+
+    const handleStudentVideoResponseSave = async (videoUrl: string | null) => {
+        if (!videoUrl) return;
+        await updateAssignment({ ...assignment, studentVideoFeedbackResponseUrl: videoUrl });
+        addToast("Görüntülü yanıtınız gönderildi.", "success");
     };
 
     return (
@@ -433,15 +466,20 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                     </div>
                 )}
 
-                {assignment.status !== AssignmentStatus.Pending && (
-                    <div>
+                 {assignment.status !== AssignmentStatus.Pending && (
+                    <div className="space-y-3">
                         <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
+                        {assignment.studentVideoSubmissionUrl && (
+                            <div>
+                                <strong className="font-semibold text-sm block mb-1">Öğrencinin Video Açıklaması:</strong>
+                                <VideoRecorder initialVideo={assignment.studentVideoSubmissionUrl} readOnly />
+                            </div>
+                        )}
                         {assignment.submissionType === 'file' && assignment.fileUrl && <p><strong className="font-semibold">Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
                         {assignment.submissionType === 'text' && assignment.textSubmission && <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md whitespace-pre-wrap">{assignment.textSubmission}</div>}
                         {assignment.submissionType === 'completed' && <p className="text-sm text-gray-500">Öğrenci bu görevi 'Tamamlandı' olarak işaretledi.</p>}
                     </div>
                 )}
-                
 
                 <div>
                     <strong className="font-semibold block mb-1">Koçun Eklediği Dosyalar:</strong>
@@ -459,33 +497,45 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 </div>
                 
                 {!isCoach && assignment.status === AssignmentStatus.Pending && (
-                    <div className="border-t dark:border-gray-600 pt-4">
-                        <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
-                         {assignment.submissionType === 'file' && (
-                            <FileUpload onUpload={handleFileUpload} isUploading={isUploading} />
-                        )}
-                         {assignment.submissionType === 'text' && (
-                             <div>
-                                <textarea value={textSubmission} onChange={(e) => setTextSubmission(e.target.value)} rows={6} placeholder="Cevabınızı buraya yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
-                                <button onClick={handleSubmission} className="w-full mt-2 bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Metin Olarak Gönder</button>
-                            </div>
-                        )}
-                        {assignment.submissionType === 'completed' && (
-                            <button onClick={handleSubmission} className="w-full bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Tamamlandı Olarak İşaretle</button>
-                        )}
+                    <div className="border-t dark:border-gray-600 pt-4 space-y-4">
+                        <div>
+                            <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
+                             {assignment.submissionType === 'file' && (
+                                <FileUpload onUpload={handleFileUpload} isUploading={isUploading} />
+                            )}
+                             {assignment.submissionType === 'text' && (
+                                 <div>
+                                    <textarea value={textSubmission} onChange={(e) => setTextSubmission(e.target.value)} rows={6} placeholder="Cevabınızı buraya yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                                    <button onClick={handleSubmission} className="w-full mt-2 bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Metin Olarak Gönder</button>
+                                </div>
+                            )}
+                            {assignment.submissionType === 'completed' && (
+                                <button onClick={handleSubmission} className="w-full bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Tamamlandı Olarak İşaretle</button>
+                            )}
+                        </div>
+                         <div>
+                            <h4 className="font-semibold mb-2">Video Açıklaması Ekle (İsteğe Bağlı)</h4>
+                            <VideoRecorder onSave={setStudentVideoSubmissionUrl} initialVideo={studentVideoSubmissionUrl} />
+                        </div>
                     </div>
                 )}
 
                 {!isCoach && assignment.status === AssignmentStatus.Graded && (
-                    <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
+                    <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md space-y-3">
                         <div className="flex justify-between items-start">
                              <div>
                                 <h4 className="font-semibold text-lg">Notunuz: {assignment.grade}/100</h4>
                                 <p className="mt-2 text-sm"><strong className="font-semibold">Koç Geri Bildirimi:</strong> {assignment.feedback}</p>
-                                {assignment.audioFeedbackUrl && <AudioRecorder initialAudio={assignment.audioFeedbackUrl} readOnly={true} />}
                              </div>
                               {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full">{assignment.feedbackReaction}</span>}
                         </div>
+                         {assignment.audioFeedbackUrl && <AudioRecorder initialAudio={assignment.audioFeedbackUrl} readOnly={true} />}
+                         {assignment.videoFeedbackUrl && (
+                            <div>
+                                <strong className="font-semibold block mb-1 text-sm">Video Geri Bildirim:</strong>
+                                <VideoRecorder initialVideo={assignment.videoFeedbackUrl} readOnly={true} />
+                            </div>
+                        )}
                          {!assignment.feedbackReaction && (
                             <div className="mt-4 pt-3 border-t dark:border-gray-600 flex items-center gap-2">
                                 <p className="text-sm font-medium">Geri bildirim faydalı oldu mu?</p>
@@ -493,6 +543,36 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                                 <button onClick={() => handleFeedbackReaction('🤔')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Anlamadım">🤔</button>
                             </div>
                         )}
+                        <div className="mt-4 pt-4 border-t dark:border-gray-600 space-y-4">
+                            <h5 className="font-semibold text-base">Geri Bildirime Yanıt Ver (İsteğe Bağlı)</h5>
+                            {!assignment.studentAudioFeedbackResponseUrl && !assignment.studentVideoFeedbackResponseUrl ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Sesli Yanıt</label>
+                                        <AudioRecorder onSave={handleStudentAudioResponseSave} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Görüntülü Yanıt</label>
+                                        <VideoRecorder onSave={handleStudentVideoResponseSave} />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {assignment.studentAudioFeedbackResponseUrl && (
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Gönderdiğiniz Sesli Yanıt</label>
+                                            <AudioRecorder initialAudio={assignment.studentAudioFeedbackResponseUrl} readOnly />
+                                        </div>
+                                    )}
+                                    {assignment.studentVideoFeedbackResponseUrl && (
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Gönderdiğiniz Görüntülü Yanıt</label>
+                                            <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -527,6 +607,10 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Sesli Geri Bildirim</label>
                                         <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
                                     </div>
+                                     <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Video Geri Bildirim</label>
+                                        <VideoRecorder onSave={handleVideoFeedbackSave} initialVideo={videoFeedbackUrl} />
+                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Dosya Ekle</label>
                                         <p className="text-xs text-gray-500 mb-2">Öğrenciyle paylaşmak için bir dosya (ör. notlandırma anahtarı, örnek çözüm) ekleyin.</p>
@@ -549,6 +633,23 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                                     </div>
                                     {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full" title={`Öğrenci reaksiyonu: ${assignment.feedbackReaction}`}>{assignment.feedbackReaction}</span>}
                                 </div>
+                                 {(assignment.studentAudioFeedbackResponseUrl || assignment.studentVideoFeedbackResponseUrl) && (
+                                    <div className="mt-4 pt-4 border-t dark:border-gray-600 space-y-3">
+                                        <h4 className="font-semibold">Öğrencinin Yanıtı</h4>
+                                        {assignment.studentAudioFeedbackResponseUrl && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">Sesli Yanıt</label>
+                                                <AudioRecorder initialAudio={assignment.studentAudioFeedbackResponseUrl} readOnly />
+                                            </div>
+                                        )}
+                                        {assignment.studentVideoFeedbackResponseUrl && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1">Görüntülü Yanıt</label>
+                                                <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ) : null}
                     </div>
@@ -569,15 +670,20 @@ const Assignments = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(false);
+    const [preselectedStudentId, setPreselectedStudentId] = useState<string | null>(null);
     
     useEffect(() => {
         if (initialFilters.studentId) {
             setFilterStudent(initialFilters.studentId);
+             if (initialFilters.openNewAssignmentModal) {
+                setPreselectedStudentId(initialFilters.studentId);
+                setIsNewAssignmentModalOpen(true);
+            }
         }
         if (initialFilters.status) {
             setFilterStatus(initialFilters.status);
         }
-        if (initialFilters.studentId || initialFilters.status) {
+        if (Object.keys(initialFilters).length > 0) {
             setInitialFilters({});
         }
     }, [initialFilters, setInitialFilters]);
@@ -704,7 +810,14 @@ const Assignments = () => {
                      />
                 )}
             </Card>
-            {isNewAssignmentModalOpen && <NewAssignmentModal isOpen={isNewAssignmentModalOpen} onClose={() => setIsNewAssignmentModalOpen(false)} />}
+            <NewAssignmentModal 
+                isOpen={isNewAssignmentModalOpen} 
+                onClose={() => {
+                    setIsNewAssignmentModalOpen(false);
+                    setPreselectedStudentId(null);
+                }} 
+                preselectedStudentId={preselectedStudentId}
+            />
             {selectedAssignment && <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} studentName={getUserName(selectedAssignment.studentId)} />}
             {quickGradeAssignments.length > 0 && 
                 <AssignmentDetailModal 

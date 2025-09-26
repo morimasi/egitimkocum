@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus } from '../types';
+import { User, Assignment, AssignmentStatus, UserRole } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
 import EmptyState from '../components/EmptyState';
@@ -184,7 +184,8 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
 };
 
 const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
-    const { getAssignmentsForStudent, users } = useDataContext();
+    const { getAssignmentsForStudent, users, findOrCreateConversation } = useDataContext();
+    const { setActivePage, addToast } = useUI();
 
     const assignments = getAssignmentsForStudent(student.id);
     const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
@@ -201,36 +202,98 @@ const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect
     
     const assignedCoach = users.find(u => u.id === student.assignedCoachId);
         
+    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
+    const submittedCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+    const gradedCount = assignments.filter(a => a.status === AssignmentStatus.Graded).length;
+
+    const handleSendMessage = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const convId = await findOrCreateConversation(student.id);
+        if (convId) {
+            setActivePage('messages', { contactId: convId });
+        }
+    };
+
+    const handleAssignResource = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setActivePage('library');
+        addToast(`${student.name} için bir kaynak seçip atayabilirsiniz.`, 'info');
+    };
+
+    const handleAssignTask = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setActivePage('assignments', { studentId: student.id, openNewAssignmentModal: true });
+    };
+
     return (
-        <Card className="flex flex-col text-center items-center cursor-pointer relative transition-transform duration-300 hover:-translate-y-1 pt-12" onClick={() => onSelect(student)}>
-             {hasAlert && (
-                 <div className="absolute top-4 right-4" title={alertTitle.trim()}>
-                    <AlertTriangleIcon className="w-5 h-5 text-yellow-500" />
+        <Card className="flex flex-col p-4 cursor-pointer transition-shadow duration-300 h-full hover:shadow-lg" onClick={() => onSelect(student)}>
+            <div className="flex items-center gap-4 flex-grow">
+                <img src={student.profilePicture} alt={student.name} className="w-16 h-16 rounded-full flex-shrink-0" />
+                <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-bold truncate">{student.name}</h4>
+                        {hasAlert && (
+                            <div title={alertTitle.trim()}>
+                                <AlertTriangleIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-sm text-gray-500 truncate">{student.email}</p>
+                    <p className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>{assignedCoach?.name || 'Atanmamış'}</p>
                 </div>
-            )}
-            <img src={student.profilePicture} alt={student.name} className="w-24 h-24 rounded-full absolute -top-10 border-4 border-white dark:border-gray-800" />
-            <h4 className="text-xl font-bold mt-4">{student.name}</h4>
-            <p className="text-sm text-gray-500">{student.email}</p>
-             <p className={`text-xs font-medium mt-2 px-2 py-0.5 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>{assignedCoach?.name || 'Atanmamış'}</p>
-            <div className="flex justify-around w-full mt-6 border-t dark:border-gray-700 pt-4">
-                <div className="text-center">
-                    <p className="font-bold text-lg">{assignments.length}</p>
-                    <p className="text-xs text-gray-500">Toplam Ödev</p>
+            </div>
+
+            <div className="mt-4 pt-3 border-t dark:border-gray-700">
+                <div className="flex justify-around items-center">
+                    <div className="text-center">
+                        <p className="font-bold text-base">{assignments.length}</p>
+                        <p className="text-xs text-gray-500">Ödev</p>
+                    </div>
+                     <div className="text-center">
+                        <p className="font-bold text-base text-primary-500">{averageGrade}</p>
+                        <p className="text-xs text-gray-500">Not Ort.</p>
+                    </div>
                 </div>
-                 <div className="text-center">
-                    <p className="font-bold text-lg text-primary-500">{averageGrade}</p>
-                    <p className="text-xs text-gray-500">Not Ort.</p>
+                <div className="flex justify-center gap-4 w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                     <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Bekleyen Ödevler">
+                        <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                        <span className="font-semibold">{pendingCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Teslim Edilmiş Ödevler">
+                        <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                        <span className="font-semibold">{submittedCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Notlandırılmış Ödevler">
+                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                        <span className="font-semibold">{gradedCount}</span>
+                    </div>
                 </div>
+            </div>
+
+            <div className="flex justify-around items-center mt-3 pt-3 border-t dark:border-gray-700">
+                <button onClick={handleAssignTask} title="Ödev Ver" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <AssignmentsIcon className="w-5 h-5" />
+                </button>
+                <button onClick={handleAssignResource} title="Kaynak Gönder" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <LibraryIcon className="w-5 h-5" />
+                </button>
+                <button onClick={handleSendMessage} title="Mesaj At" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <MessagesIcon className="w-5 h-5" />
+                </button>
             </div>
         </Card>
     );
 });
 
 const Students = () => {
-    const { students } = useDataContext();
+    const { students, currentUser, users } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+    const [filterCoach, setFilterCoach] = useState('all');
+
+    const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
+    const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -243,15 +306,36 @@ const Students = () => {
     }, [searchTerm]);
 
     const filteredStudents = useMemo(() => {
-        return students.filter(student =>
-            student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        );
-    }, [students, debouncedSearchTerm]);
+        return students.filter(student => {
+            const matchesSearch = student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+            if (!isSuperAdmin) {
+                return matchesSearch;
+            }
+            const matchesCoach = filterCoach === 'all' || 
+                                (filterCoach === 'null' && !student.assignedCoachId) ||
+                                student.assignedCoachId === filterCoach;
+            return matchesSearch && matchesCoach;
+        });
+    }, [students, debouncedSearchTerm, isSuperAdmin, filterCoach]);
 
     return (
         <>
         <div className="space-y-6">
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row justify-end gap-4">
+                {isSuperAdmin && (
+                    <select
+                        value={filterCoach}
+                        onChange={e => setFilterCoach(e.target.value)}
+                        className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-auto"
+                        aria-label="Koça göre filtrele"
+                    >
+                        <option value="all">Tüm Öğrenciler</option>
+                        {coaches.map(coach => (
+                            <option key={coach.id} value={coach.id}>{coach.name}</option>
+                        ))}
+                         <option value="null">Atanmamış Öğrenciler</option>
+                    </select>
+                )}
                 <input
                     type="text"
                     placeholder="Öğrenci ara..."
@@ -264,8 +348,8 @@ const Students = () => {
             {students.length === 0 ? (
                  <EmptyState 
                     icon={<NoStudentsIcon className="w-10 h-10"/>}
-                    title="Henüz Öğrenciniz Yok"
-                    description="Yeni öğrenciler eklendiğinde burada görünecekler. Süper Admin panelinden yeni kullanıcılar oluşturabilirsiniz."
+                    title={isSuperAdmin ? "Platformda Öğrenci Yok" : "Henüz Öğrenciniz Yok"}
+                    description={isSuperAdmin ? "Süper Admin panelinden yeni kullanıcılar oluşturarak öğrenci ekleyebilirsiniz." : "Size yeni öğrenciler atandığında burada görünecekler."}
                  />
             ) : filteredStudents.length === 0 ? (
                  <EmptyState
@@ -274,7 +358,7 @@ const Students = () => {
                     description="Arama kriterlerinizi değiştirmeyi deneyin veya tüm öğrencileri görmek için aramayı temizleyin."
                  />
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-16 pt-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredStudents.map(student => (
                         <StudentCard key={student.id} student={student} onSelect={setSelectedStudent} />
                     ))}

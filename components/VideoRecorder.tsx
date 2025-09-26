@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MicIcon, VideoIcon, StopIcon, PlayIcon, PauseIcon, XIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';
@@ -9,9 +8,10 @@ interface VideoRecorderProps {
     onSave?: (videoUrl: string | null) => void;
     initialVideo?: string | null;
     readOnly?: boolean;
+    uploadPath?: string;
 }
 
-const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false }: VideoRecorderProps) => {
+const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPath }: VideoRecorderProps) => {
     const [status, setStatus] = useState<'idle' | 'recording' | 'preview' | 'uploading'>('idle');
     const [videoSrc, setVideoSrc] = useState<string | null>(initialVideo);
     const [isMuted, setIsMuted] = useState(true);
@@ -81,7 +81,8 @@ const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false }: VideoR
         setStatus('uploading');
         try {
             const file = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], "video.webm", { type: "video/webm" });
-            const uploadedUrl = await uploadFile(file, `video-descriptions/${currentUser.id}/${Date.now()}.webm`);
+            const finalUploadPath = uploadPath ? `${uploadPath}/${Date.now()}.webm` : `video-uploads/${currentUser.id}/${Date.now()}.webm`;
+            const uploadedUrl = await uploadFile(file, finalUploadPath);
             onSave?.(uploadedUrl);
             setVideoSrc(uploadedUrl); // Update src to the persistent URL
             addToast("Video başarıyla yüklendi.", "success");

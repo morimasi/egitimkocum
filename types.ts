@@ -45,9 +45,13 @@ export interface Assignment {
   checklist?: ChecklistItem[];
   audioFeedbackUrl?: string | null;
   videoDescriptionUrl?: string | null;
+  videoFeedbackUrl?: string | null;
+  studentVideoSubmissionUrl?: string | null;
   feedbackReaction?: '👍' | '🤔' | null;
   submissionType?: SubmissionType;
   textSubmission?: string | null;
+  studentAudioFeedbackResponseUrl?: string | null;
+  studentVideoFeedbackResponseUrl?: string | null;
 }
 
 export interface Reaction {

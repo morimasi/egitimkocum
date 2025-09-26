@@ -141,15 +141,24 @@ const dataReducer = (state: AppState, action: Action): AppState => {
                 ...state,
                 messages: state.messages.map(m => {
                     if (m.id === action.payload.messageId && m.poll) {
-                        const newOptions = m.poll.options.map((opt, index) => {
-                            const newVotes = opt.votes.filter(v => v !== action.payload.userId);
-                            if (index === action.payload.optionIndex) {
-                                if (!opt.votes.includes(action.payload.userId)) {
-                                    newVotes.push(action.payload.userId);
-                                }
+                        const userId = action.payload.userId;
+                        const optionIndex = action.payload.optionIndex;
+                        const originalOptions = m.poll.options;
+
+                        // Check if the user has already voted for the option they just clicked.
+                        const alreadyVotedForThisOption = originalOptions[optionIndex]?.votes.includes(userId);
+
+                        const newOptions = originalOptions.map((opt, index) => {
+                            // First, remove user's vote from all options.
+                            const votes = opt.votes.filter(vId => vId !== userId);
+                            
+                            // If it's the clicked option AND they weren't already voting for it, add the vote.
+                            if (index === optionIndex && !alreadyVotedForThisOption) {
+                                votes.push(userId);
                             }
-                            return { ...opt, votes: newVotes };
+                            return { ...opt, votes };
                         });
+
                         return { ...m, poll: { ...m.poll, options: newOptions } };
                     }
                     return m;

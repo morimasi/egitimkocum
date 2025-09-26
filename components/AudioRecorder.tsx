@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { MicIcon, PlayIcon, PauseIcon, StopIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';
@@ -8,9 +7,10 @@ interface AudioRecorderProps {
     onSave?: (audioUrl: string) => void;
     initialAudio?: string | null;
     readOnly?: boolean;
+    uploadPath?: string;
 }
 
-const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorderProps) => {
+const AudioRecorder = ({ onSave, initialAudio, readOnly = false, uploadPath }: AudioRecorderProps) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioURL, setAudioURL] = useState(initialAudio || '');
@@ -54,7 +54,7 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorder
                 if (onSave && currentUser) {
                     setIsUploading(true);
                     try {
-                        const uploadedUrl = await uploadFile(new File([blob], "audio.webm"), `audio-feedback/${currentUser.id}`);
+                        const uploadedUrl = await uploadFile(new File([blob], "audio.webm"), uploadPath || `audio-feedback/${currentUser.id}`);
                         setAudioURL(uploadedUrl);
                         onSave(uploadedUrl);
                     } catch (error) {

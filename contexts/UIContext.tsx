@@ -1,7 +1,4 @@
 
-
-
-
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } from '../types';
 
@@ -12,6 +9,7 @@ interface InitialFilters {
     studentId?: string;
     contactId?: string;
     status?: AssignmentStatus;
+    openNewAssignmentModal?: boolean;
 }
 
 interface UIContextType {
@@ -132,6 +130,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         setCallConversation(null);
     }, []);
 
+    // FIX: The context value should be an object, not an array, to match the UIContextType interface.
     const value = useMemo(() => ({
         theme,
         toggleTheme,
@@ -154,9 +153,9 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         answerCall,
         endCall,
     }), [
-        theme, activePage, toasts, initialFilters, isTourActive, tourStep, callState, callContact, callConversation,
-        toggleTheme, setActivePage, addToast, removeToast, startTour, nextTourStep, endTour,
-        startCall, answerCall, endCall
+        theme, toggleTheme, activePage, setActivePage, toasts, addToast, removeToast, initialFilters, setInitialFilters,
+        isTourActive, tourStep, startTour, nextTourStep, endTour,
+        callState, callContact, callConversation, startCall, answerCall, endCall
     ]);
 
     return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
