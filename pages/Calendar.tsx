@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, UserRole, AssignmentStatus } from '../types';
@@ -16,7 +18,8 @@ const getStatusColor = (status: AssignmentStatus) => {
     }
 };
 
-const Calendar = () => {
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Calendar() {
     const { currentUser, assignments, students } = useDataContext();
     const { setActivePage } = useUI();
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -136,5 +139,3 @@ const Calendar = () => {
         </Card>
     );
 };
-
-export default Calendar;

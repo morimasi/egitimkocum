@@ -1,5 +1,8 @@
 
 
+
+
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
@@ -345,7 +348,8 @@ const CoachDashboard = () => {
 };
 
 
-const Dashboard = () => {
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Dashboard() {
     const { currentUser, isLoading } = useDataContext();
     
     if (isLoading) {
@@ -366,5 +370,3 @@ const Dashboard = () => {
             return <div>Bilinmeyen kullanıcı rolü.</div>;
     }
 };
-
-export default Dashboard;

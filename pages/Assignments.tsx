@@ -1,17 +1,16 @@
-
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
 import FileUpload from '../components/FileUpload';
 import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -27,21 +26,44 @@ const getStatusChip = (status: AssignmentStatus) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{text[status]}</span>;
 };
 
-const AssignmentCard = ({ assignment, onSelect, studentName, isCoach }: { assignment: Assignment; onSelect: (assignment: Assignment) => void; studentName: string; isCoach: boolean; }) => {
+const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSelect, isSelected }: { 
+    assignment: Assignment; 
+    onSelect: (assignment: Assignment) => void; 
+    studentName: string; 
+    isCoach: boolean;
+    onToggleSelect: (id: string) => void;
+    isSelected: boolean;
+}) => {
     const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
 
     return (
         <div
-            onClick={() => onSelect(assignment)}
-            className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} p-4`}
+            onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('input[type="checkbox"]')) return;
+                onSelect(assignment);
+            }}
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 p-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
         >
+             {isCoach && (
+                <input 
+                    type="checkbox"
+                    className="absolute top-3 left-3 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 z-10"
+                    checked={isSelected}
+                    onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleSelect(assignment.id);
+                    }}
+                    aria-label={`Select assignment ${assignment.title}`}
+                />
+            )}
             <div>
-                <div className="flex justify-between items-start gap-2">
+                <div className={`flex justify-between items-start gap-2 ${isCoach ? 'pl-8' : ''}`}>
                     <h3 className="font-bold text-gray-900 dark:text-white pr-2 leading-tight flex-1">{assignment.title}</h3>
                     {getStatusChip(assignment.status)}
                 </div>
 
-                {isCoach && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{studentName}</p>}
+                {isCoach && <p className={`text-sm text-gray-500 dark:text-gray-400 mt-1 ${isCoach ? 'pl-8' : ''}`}>{studentName}</p>}
             </div>
             
             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
@@ -189,6 +211,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
             feedbackReaction: null,
             submissionType,
             videoDescriptionUrl,
+            videoFeedbackUrl: null,
         };
         await addAssignment(newAssignmentBase, selectedStudents);
         addToast("Ödev başarıyla oluşturuldu.", "success");
@@ -313,7 +336,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
 
 
 const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (next: boolean) => void }) => {
-    const { currentUser, updateAssignment, uploadFile, getAssignmentsForStudent } = useDataContext();
+    const { currentUser, updateAssignment, uploadFile, getAssignmentsForStudent, assignments: allAssignments } = useDataContext();
     const { addToast } = useUI();
     const [grade, setGrade] = useState<string>('');
     const [feedback, setFeedback] = useState('');
@@ -408,326 +431,134 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
 
     const handleGenerateFeedback = async () => {
         if (!grade) {
-            addToast("Akıllı geri bildirim için önce not girmelisiniz.", "error");
+            addToast("Lütfen önce bir not girin.", "error");
             return;
         }
         setIsGenerating(true);
         try {
-            const allStudentAssignments = getAssignmentsForStudent(assignment.studentId);
-            const assignmentWithGrade = { ...assignment, grade: parseInt(grade, 10) };
-            const generatedFeedback = await generateSmartFeedback(assignmentWithGrade, allStudentAssignments);
+            const studentAssignments = allAssignments.filter(a => a.studentId === assignment.studentId);
+            const generatedFeedback = await generateSmartFeedback({ ...assignment, grade: parseInt(grade, 10) }, studentAssignments);
             setFeedback(generatedFeedback);
-        } catch (e) {
+        } catch(e) {
             addToast("Geri bildirim üretilemedi.", "error");
         } finally {
             setIsGenerating(false);
         }
     };
-
+    
     const handleSuggestGrade = async () => {
         setIsSuggestingGrade(true);
-        setGradeRationale('');
         try {
             const result = await suggestGrade(assignment);
             if (result) {
                 setGrade(result.suggestedGrade.toString());
                 setGradeRationale(result.rationale);
-                addToast("Not önerisi başarıyla alındı.", "success");
-            } else {
-                throw new Error("API'den geçerli bir sonuç alınamadı.");
             }
-        } catch (e) {
-            addToast("Not önerisi oluşturulurken bir hata oluştu.", "error");
+        } catch(e) {
+            addToast("Not önerisi alınamadı.", "error");
         } finally {
             setIsSuggestingGrade(false);
         }
     };
 
-    const handleCoachFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            setIsUploading(true);
-            try {
-                const url = await uploadFile(file, `coach-attachments/${currentUser.id}`);
-                const newAttachment = { name: file.name, url };
-                const updatedAttachments = [...(assignment.coachAttachments || []), newAttachment];
-                await updateAssignment({ ...assignment, coachAttachments: updatedAttachments });
-                addToast("Dosya başarıyla eklendi.", "success");
-            } catch(error) {
-                addToast("Dosya eklenirken hata oluştu.", "error");
-            } finally {
-                setIsUploading(false);
-            }
-        }
-    };
-
-    const handleChecklistToggle = async (itemId: string) => {
-        const updatedChecklist = assignment.checklist?.map(item => 
+    const handleChecklistToggle = (itemId: string) => {
+        const updatedChecklist = assignment.checklist?.map(item =>
             item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
         );
-        await updateAssignment({ ...assignment, checklist: updatedChecklist });
+        updateAssignment({ ...assignment, checklist: updatedChecklist });
     };
 
-    const handleAudioSave = async (audioUrl: string) => {
-        await updateAssignment({ ...assignment, audioFeedbackUrl: audioUrl });
-        addToast("Sesli geri bildirim kaydedildi.", "success");
-    };
-
-    const handleVideoFeedbackSave = async (videoUrl: string | null) => {
-        if (!videoUrl) return;
-        setVideoFeedbackUrl(videoUrl); // Save locally to be sent with grade
-        addToast("Video geri bildirim kaydedildi. Notu kaydettiğinizde öğrenciye gönderilecek.", "info");
-    };
-    
-    const handleFeedbackReaction = async (reaction: '👍' | '🤔') => {
-        await updateAssignment({ ...assignment, feedbackReaction: reaction });
-        addToast("Geri bildiriminiz için teşekkürler!", "success");
-    };
-
-    const handleStudentAudioResponseSave = async (audioUrl: string) => {
-        await updateAssignment({ ...assignment, studentAudioFeedbackResponseUrl: audioUrl });
-        addToast("Sesli yanıtınız gönderildi.", "success");
-    };
-
-    const handleStudentVideoResponseSave = async (videoUrl: string | null) => {
-        if (!videoUrl) return;
-        await updateAssignment({ ...assignment, studentVideoFeedbackResponseUrl: videoUrl });
-        addToast("Görüntülü yanıtınız gönderildi.", "success");
-    };
+    const isStudentViewing = currentUser.role === UserRole.Student;
+    const isSubmitted = assignment.status === AssignmentStatus.Submitted || assignment.status === AssignmentStatus.Graded;
 
     return (
-        <Modal isOpen={!!assignment} onClose={onClose} title={assignment.title}>
+        <Modal isOpen={!!assignment} onClose={onClose} title={assignment.title} size="lg">
             <div className="space-y-4">
-                 {onNavigate && (
-                    <div className="flex justify-between">
-                        <button onClick={() => onNavigate(false)} className="text-sm font-semibold text-primary-500 hover:underline">{"< Önceki"}</button>
-                        <button onClick={() => onNavigate(true)} className="text-sm font-semibold text-primary-500 hover:underline">{"Sonraki >"}</button>
-                    </div>
-                )}
-                <p><strong className="font-semibold">Öğrenci:</strong> {studentName}</p>
-                <p><strong className="font-semibold">Teslim Tarihi:</strong> {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
-                <p><strong className="font-semibold">Durum:</strong> {getStatusChip(assignment.status)}</p>
-                <p className="text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded-md">{assignment.description}</p>
+                {isCoach && <p className="font-semibold">Öğrenci: {studentName}</p>}
                 
-                 {assignment.videoDescriptionUrl && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{assignment.description}</p>
+                 <p className="text-xs text-gray-500">Teslim Tarihi: {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
+                 
+                {assignment.videoDescriptionUrl && (
                     <div>
-                        <strong className="font-semibold block mb-2">Video Açıklaması:</strong>
+                        <h4 className="font-semibold text-sm mb-1">Video Açıklama</h4>
                         <VideoRecorder initialVideo={assignment.videoDescriptionUrl} readOnly />
                     </div>
                 )}
-                
-                {assignment.checklist && assignment.checklist.length > 0 && (
-                     <div>
-                        <strong className="font-semibold block mb-2">Kontrol Listesi:</strong>
+                 
+                 {assignment.checklist && assignment.checklist.length > 0 && (
+                    <div>
+                        <h4 className="font-semibold text-sm mb-2">Kontrol Listesi</h4>
                         <ul className="space-y-2">
-                           {assignment.checklist.map(item => (
-                                <li key={item.id} className="flex items-center cursor-pointer group" onClick={() => isCoach ? null : handleChecklistToggle(item.id)}>
-                                    <button
-                                        type="button"
-                                        role="checkbox"
-                                        aria-checked={item.isCompleted}
-                                        disabled={isCoach}
-                                        className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-200 group-hover:border-primary-500 ${
-                                            item.isCompleted
-                                                ? 'bg-primary-500 border-primary-500'
-                                                : 'bg-transparent border-gray-400 dark:border-gray-500'
-                                        } disabled:cursor-not-allowed disabled:opacity-50`}
-                                    >
-                                        {item.isCompleted && <CheckIcon className="w-3.5 h-3.5 text-white" />}
-                                    </button>
-                                    <label className={`ml-3 text-sm cursor-pointer ${item.isCompleted ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{item.text}</label>
-                                </li>
-                           ))}
-                        </ul>
-                    </div>
-                )}
-
-                 {assignment.status !== AssignmentStatus.Pending && (
-                    <div className="space-y-3">
-                        <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
-                        {assignment.studentVideoSubmissionUrl && (
-                            <div>
-                                <strong className="font-semibold text-sm block mb-1">Öğrencinin Video Açıklaması:</strong>
-                                <VideoRecorder initialVideo={assignment.studentVideoSubmissionUrl} readOnly />
-                            </div>
-                        )}
-                        {assignment.submissionType === 'file' && assignment.fileUrl && <p><strong className="font-semibold">Dosya:</strong> <a href={assignment.fileUrl} download={assignment.fileName} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">{assignment.fileName || 'Dosyayı Görüntüle'}</a></p>}
-                        {assignment.submissionType === 'text' && assignment.textSubmission && <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md whitespace-pre-wrap">{assignment.textSubmission}</div>}
-                        {assignment.submissionType === 'completed' && <p className="text-sm text-gray-500">Öğrenci bu görevi 'Tamamlandı' olarak işaretledi.</p>}
-                    </div>
-                )}
-
-                <div>
-                    <strong className="font-semibold block mb-1">Koçun Eklediği Dosyalar:</strong>
-                    {assignment.coachAttachments && assignment.coachAttachments.length > 0 ? (
-                        <ul className="space-y-1">
-                            {assignment.coachAttachments.map((file, index) => (
-                                <li key={index} className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded-md flex items-center justify-between">
-                                    <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">{file.name}</a>
+                            {assignment.checklist.map(item => (
+                                <li key={item.id} className="flex items-center">
+                                    <input type="checkbox" id={`chk-${item.id}`} checked={item.isCompleted} onChange={() => handleChecklistToggle(item.id)} disabled={!isStudentViewing || isSubmitted} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50" />
+                                    <label htmlFor={`chk-${item.id}`} className={`ml-3 text-sm ${item.isCompleted ? 'line-through text-gray-500' : ''} ${!isStudentViewing || isSubmitted ? 'cursor-default' : ''}`}>{item.text}</label>
                                 </li>
                             ))}
                         </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500">Ek dosya bulunmuyor.</p>
-                    )}
-                </div>
-                
-                {!isCoach && assignment.status === AssignmentStatus.Pending && (
-                    <div className="border-t dark:border-gray-600 pt-4 space-y-4">
+                    </div>
+                 )}
+
+                <div className="pt-4 border-t dark:border-gray-700">
+                    {isSubmitted ? (
                         <div>
-                            <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
-                             {assignment.submissionType === 'file' && (
-                                <FileUpload onUpload={handleFileUpload} isUploading={isUploading} />
-                            )}
-                             {assignment.submissionType === 'text' && (
-                                 <div>
-                                    <textarea value={textSubmission} onChange={(e) => setTextSubmission(e.target.value)} rows={6} placeholder="Cevabınızı buraya yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
-                                    <button onClick={handleSubmission} className="w-full mt-2 bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Metin Olarak Gönder</button>
-                                </div>
-                            )}
-                            {assignment.submissionType === 'completed' && (
-                                <button onClick={handleSubmission} className="w-full bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600">Tamamlandı Olarak İşaretle</button>
-                            )}
+                            <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
+                            {assignment.fileUrl && <p>Dosya: <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 underline">{assignment.fileName}</a></p>}
+                            {assignment.textSubmission && <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded"><p className="text-sm italic whitespace-pre-wrap">"{assignment.textSubmission}"</p></div>}
+                            {assignment.studentVideoSubmissionUrl && <VideoRecorder initialVideo={assignment.studentVideoSubmissionUrl} readOnly />}
+                            {!assignment.fileUrl && !assignment.textSubmission && !assignment.studentVideoSubmissionUrl && <p className="text-sm italic">Bu ödev "Tamamlandı" olarak işaretlendi.</p>}
                         </div>
-                         <div>
-                            <h4 className="font-semibold mb-2">Video Açıklaması Ekle (İsteğe Bağlı)</h4>
-                            <VideoRecorder onSave={setStudentVideoSubmissionUrl} initialVideo={studentVideoSubmissionUrl} />
+                    ) : isStudentViewing ? (
+                        <div>
+                             <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
+                             {assignment.submissionType === 'file' && <FileUpload onUpload={handleFileUpload} isUploading={isUploading}/>}
+                             {assignment.submissionType === 'text' && <textarea value={textSubmission} onChange={e => setTextSubmission(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />}
+                             <button onClick={handleSubmission} className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" disabled={isUploading}>
+                                {isUploading ? 'Yükleniyor...' : 'Teslim Et'}
+                            </button>
+                        </div>
+                    ) : null}
+                </div>
+
+                {/* Grading Section */}
+                {isCoach && isSubmitted && (
+                    <div className="pt-4 border-t dark:border-gray-700">
+                        <h4 className="font-semibold mb-2">Değerlendirme</h4>
+                        <div className="flex items-center gap-2 mb-2">
+                            <input type="number" value={grade} onChange={e => setGrade(e.target.value)} placeholder="Not (0-100)" className="w-32 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                            <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50">
+                                <SparklesIcon className={`w-4 h-4 mr-1 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
+                                {isSuggestingGrade ? 'Öneriliyor...' : '✨ Not Öner'}
+                            </button>
+                        </div>
+                         {gradeRationale && <p className="text-xs text-gray-500 italic p-2 bg-gray-100 dark:bg-gray-700 rounded-md mb-2">Öneri: {gradeRationale}</p>}
+                        <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Geri bildirim yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                        <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 mt-2">
+                             <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+                             {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
+                        </button>
+                        <div className="mt-2">
+                             <h4 className="font-semibold text-sm mb-1">Video Geri Bildirim (İsteğe Bağlı)</h4>
+                            <VideoRecorder onSave={setVideoFeedbackUrl} initialVideo={videoFeedbackUrl}/>
+                        </div>
+                        <div className="flex justify-end mt-4">
+                            <button onClick={handleGradeSubmit} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Notu Kaydet</button>
                         </div>
                     </div>
                 )}
-
-                {!isCoach && assignment.status === AssignmentStatus.Graded && (
-                    <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md space-y-3">
-                        <div className="flex justify-between items-start">
-                             <div>
-                                <h4 className="font-semibold text-lg">Notunuz: {assignment.grade}/100</h4>
-                                <p className="mt-2 text-sm"><strong className="font-semibold">Koç Geri Bildirimi:</strong> {assignment.feedback}</p>
-                             </div>
-                              {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full">{assignment.feedbackReaction}</span>}
-                        </div>
-                         {assignment.audioFeedbackUrl && <AudioRecorder initialAudio={assignment.audioFeedbackUrl} readOnly={true} />}
+                
+                {assignment.status === AssignmentStatus.Graded && (
+                     <div className="pt-4 border-t dark:border-gray-700">
+                        <h4 className="font-semibold mb-2">Sonuç</h4>
+                        <p><strong>Not:</strong> {assignment.grade}</p>
+                        <p><strong>Geri Bildirim:</strong> {assignment.feedback || "Geri bildirim yok."}</p>
                          {assignment.videoFeedbackUrl && (
-                            <div>
-                                <strong className="font-semibold block mb-1 text-sm">Video Geri Bildirim:</strong>
-                                <VideoRecorder initialVideo={assignment.videoFeedbackUrl} readOnly={true} />
+                             <div className="mt-2">
+                                <h5 className="font-semibold text-sm mb-1">Video Geri Bildirim</h5>
+                                <VideoRecorder initialVideo={assignment.videoFeedbackUrl} readOnly />
                             </div>
-                        )}
-                         {!assignment.feedbackReaction && (
-                            <div className="mt-4 pt-3 border-t dark:border-gray-600 flex items-center gap-2">
-                                <p className="text-sm font-medium">Geri bildirim faydalı oldu mu?</p>
-                                <button onClick={() => handleFeedbackReaction('👍')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Beğendim">👍</button>
-                                <button onClick={() => handleFeedbackReaction('🤔')} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Anlamadım">🤔</button>
-                            </div>
-                        )}
-                        <div className="mt-4 pt-4 border-t dark:border-gray-600 space-y-4">
-                            <h5 className="font-semibold text-base">Geri Bildirime Yanıt Ver (İsteğe Bağlı)</h5>
-                            {!assignment.studentAudioFeedbackResponseUrl && !assignment.studentVideoFeedbackResponseUrl ? (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Sesli Yanıt</label>
-                                        <AudioRecorder onSave={handleStudentAudioResponseSave} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Görüntülü Yanıt</label>
-                                        <VideoRecorder onSave={handleStudentVideoResponseSave} />
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    {assignment.studentAudioFeedbackResponseUrl && (
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Gönderdiğiniz Sesli Yanıt</label>
-                                            <AudioRecorder initialAudio={assignment.studentAudioFeedbackResponseUrl} readOnly />
-                                        </div>
-                                    )}
-                                    {assignment.studentVideoFeedbackResponseUrl && (
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Gönderdiğiniz Görüntülü Yanıt</label>
-                                            <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {isCoach && (
-                     <div className="mt-6">
-                        {assignment.status === AssignmentStatus.Submitted ? (
-                             <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-                                <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-t-lg border-b dark:border-gray-200 dark:border-gray-700">
-                                    <h3 className="text-lg font-semibold" id="degerlendirme-paneli">Değerlendirme</h3>
-                                </div>
-                                <div className="p-4 space-y-5" role="region" aria-labelledby="degerlendirme-paneli">
-                                    <div>
-                                        <label htmlFor="grade-input" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Not (0-100)</label>
-                                        <div className="flex items-center gap-2">
-                                            <input id="grade-input" type="number" min="0" max="100" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"/>
-                                            <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex-shrink-0 flex items-center px-3 py-2 text-sm rounded-md bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-300 dark:hover:bg-primary-900 disabled:opacity-50 transition-colors">
-                                                <SparklesIcon className={`w-4 h-4 mr-1.5 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
-                                                {isSuggestingGrade ? '...' : 'Not Öner'}
-                                            </button>
-                                        </div>
-                                        {gradeRationale && <p className="text-xs text-gray-500 mt-1.5 pl-1">✨ {gradeRationale}</p>}
-                                    </div>
-                                    <div>
-                                         <label htmlFor="feedback-textarea" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Geri Bildirim</label>
-                                         <textarea id="feedback-textarea" value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"/>
-                                         <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
-                                            <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                                            {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
-                                         </button>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Sesli Geri Bildirim</label>
-                                        <AudioRecorder onSave={handleAudioSave} initialAudio={assignment.audioFeedbackUrl} />
-                                    </div>
-                                     <div>
-                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Video Geri Bildirim</label>
-                                        <VideoRecorder onSave={handleVideoFeedbackSave} initialVideo={videoFeedbackUrl} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Dosya Ekle</label>
-                                        <p className="text-xs text-gray-500 mb-2">Öğrenciyle paylaşmak için bir dosya (ör. notlandırma anahtarı, örnek çözüm) ekleyin.</p>
-                                        <label className={`cursor-pointer bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1.5 text-sm rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 inline-block transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                            {isUploading ? 'Yükleniyor...' : 'Dosya Seç...'}
-                                            <input type="file" className="hidden" onChange={handleCoachFileUpload} disabled={isUploading}/>
-                                        </label>
-                                    </div>
-                                    <div className="text-right pt-4 border-t dark:border-gray-600">
-                                        <button onClick={handleGradeSubmit} className="px-6 py-2 rounded-md bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors">Notu Kaydet</button>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : assignment.status === AssignmentStatus.Graded ? (
-                            <div className="bg-green-50 dark:bg-green-900/50 p-4 rounded-md">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h4 className="font-semibold text-lg">Not: {assignment.grade}/100</h4>
-                                        <p className="mt-2 text-sm"><strong className="font-semibold">Geri Bildirim:</strong> {assignment.feedback}</p>
-                                    </div>
-                                    {assignment.feedbackReaction && <span className="text-2xl p-1 bg-white dark:bg-gray-800 rounded-full" title={`Öğrenci reaksiyonu: ${assignment.feedbackReaction}`}>{assignment.feedbackReaction}</span>}
-                                </div>
-                                 {(assignment.studentAudioFeedbackResponseUrl || assignment.studentVideoFeedbackResponseUrl) && (
-                                    <div className="mt-4 pt-4 border-t dark:border-gray-600 space-y-3">
-                                        <h4 className="font-semibold">Öğrencinin Yanıtı</h4>
-                                        {assignment.studentAudioFeedbackResponseUrl && (
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Sesli Yanıt</label>
-                                                <AudioRecorder initialAudio={assignment.studentAudioFeedbackResponseUrl} readOnly />
-                                            </div>
-                                        )}
-                                        {assignment.studentVideoFeedbackResponseUrl && (
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Görüntülü Yanıt</label>
-                                                <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ) : null}
+                         )}
                     </div>
                 )}
             </div>
@@ -735,188 +566,241 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     );
 };
 
+const BatchGradeModal = ({ isOpen, onClose, onBatchGrade, assignmentCount }: { isOpen: boolean, onClose: () => void, onBatchGrade: (grade: number, feedback: string) => void, assignmentCount: number }) => {
+    const [grade, setGrade] = useState('');
+    const [feedback, setFeedback] = useState('');
 
-const Assignments = () => {
-    const { currentUser, assignments, users, students, getAssignmentsForStudent } = useDataContext();
-    const { initialFilters, setInitialFilters, addToast } = useUI();
-    
+    const handleSubmit = () => {
+        if (!grade) {
+            alert("Lütfen bir not girin.");
+            return;
+        }
+        onBatchGrade(parseInt(grade, 10), feedback);
+        onClose();
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Toplu Notlandırma (${assignmentCount} Ödev)`}>
+            <div className="space-y-4">
+                <p className="text-sm text-gray-500">Seçilen tüm ödevlere aynı not ve geri bildirim uygulanacaktır.</p>
+                <div>
+                    <label className="block text-sm font-medium mb-1">Not (0-100)</label>
+                    <input type="number" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">Geri Bildirim (İsteğe Bağlı)</label>
+                    <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+            </div>
+            <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                <button onClick={handleSubmit} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Notlandır</button>
+            </div>
+        </Modal>
+    );
+};
+
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Assignments() {
+    const { currentUser, assignments, students, updateAssignment, deleteAssignments } = useDataContext();
+    const { addToast, initialFilters, setInitialFilters } = useUI();
+    const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(initialFilters.openNewAssignmentModal || false);
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-    const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>('all');
-    const [filterStudent, setFilterStudent] = useState<string>('all');
+    const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>(initialFilters.status || 'all');
+    const [filterStudent, setFilterStudent] = useState<string>(initialFilters.studentId || 'all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-    const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(false);
-    const [preselectedStudentId, setPreselectedStudentId] = useState<string | null>(null);
-    
+    const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+    const [isBatchGradeModalOpen, setIsBatchGradeModalOpen] = useState(false);
+
     useEffect(() => {
-        if (initialFilters.studentId) {
-            setFilterStudent(initialFilters.studentId);
-             if (initialFilters.openNewAssignmentModal) {
-                setPreselectedStudentId(initialFilters.studentId);
-                setIsNewAssignmentModalOpen(true);
-            }
-        }
-        if (initialFilters.status) {
-            setFilterStatus(initialFilters.status);
-        }
         if (initialFilters.assignmentId) {
             const assignmentToOpen = assignments.find(a => a.id === initialFilters.assignmentId);
             if (assignmentToOpen) {
                 setSelectedAssignment(assignmentToOpen);
-            } else {
-                addToast("İstenen ödev bulunamadı.", "error");
             }
         }
+        if (initialFilters.openNewAssignmentModal) {
+            setIsNewAssignmentModalOpen(true);
+        }
+        // Clear filters after applying them once
         if (Object.keys(initialFilters).length > 0) {
             setInitialFilters({});
         }
-    }, [initialFilters, setInitialFilters, assignments, addToast]);
+    }, [initialFilters, setInitialFilters, assignments]);
 
-    useEffect(() => {
-        const timerId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 300);
-
-        return () => {
-            clearTimeout(timerId);
-        };
-    }, [searchTerm]);
-    
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
 
+    const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
+    
     const displayedAssignments = useMemo(() => {
-        if (!currentUser) return [];
-    
-        switch (currentUser.role) {
-            case UserRole.Student:
-                return getAssignmentsForStudent(currentUser.id);
-            case UserRole.Coach:
-            case UserRole.SuperAdmin:
-                const studentIds = students.map(s => s.id);
-                return assignments.filter(a => studentIds.includes(a.studentId));
-            default:
-                return [];
+        let filtered = assignments;
+        if (currentUser?.role === UserRole.Student) {
+            filtered = assignments.filter(a => a.studentId === currentUser.id);
         }
-    }, [currentUser, assignments, students, getAssignmentsForStudent]);
-
-    const filteredAssignments = useMemo(() => {
-        const filtered = displayedAssignments
-            .filter(a => filterStatus === 'all' || a.status === filterStatus)
-            .filter(a => filterStudent === 'all' || a.studentId === filterStudent)
-            .filter(a => a.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
-
-        return filtered.sort((a, b) => {
-            const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-            const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
-            
-            if (timeB !== timeA) {
-                return timeB - timeA;
-            }
-            
-            return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-        });
-    }, [displayedAssignments, filterStatus, filterStudent, debouncedSearchTerm]);
-
-    const getUserName = useCallback((id: string) => users.find(u => u.id === id)?.name || 'Bilinmiyor', [users]);
-    
-    const [quickGradeAssignments, setQuickGradeAssignments] = useState<Assignment[]>([]);
-    const [quickGradeIndex, setQuickGradeIndex] = useState(0);
-
-    const handleStartQuickGrade = () => {
-        const submitted = filteredAssignments.filter(a => a.status === AssignmentStatus.Submitted);
-        if (submitted.length > 0) {
-            setQuickGradeAssignments(submitted);
-            setQuickGradeIndex(0);
-        } else {
-            addToast("Değerlendirilecek ödev bulunmuyor.", "info");
+        if (filterStatus !== 'all') {
+            filtered = filtered.filter(a => a.status === filterStatus);
         }
-    };
-    
-    const handleQuickGradeClose = () => {
-        setQuickGradeAssignments([]);
-    };
-
-    const handleQuickGradeNavigation = (next: boolean) => {
-        const newIndex = next ? quickGradeIndex + 1 : quickGradeIndex - 1;
-        if (newIndex >= 0 && newIndex < quickGradeAssignments.length) {
-            setQuickGradeIndex(newIndex);
-        } else {
-            handleQuickGradeClose();
-            addToast("Tüm ödevler değerlendirildi!", "success");
+        if (isCoach && filterStudent !== 'all') {
+            filtered = filtered.filter(a => a.studentId === filterStudent);
         }
-    };
-    
-    const handleSelectAssignment = useCallback((assignment: Assignment) => {
+        if (searchTerm) {
+            filtered = filtered.filter(a => a.title.toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+        return filtered.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+    }, [assignments, currentUser, filterStatus, isCoach, filterStudent, searchTerm]);
+
+    const handleSelectAssignment = (assignment: Assignment) => {
         setSelectedAssignment(assignment);
-    }, []);
+    };
 
+    const handleToggleSelect = (id: string) => {
+        setSelectedAssignmentIds(prev => 
+            prev.includes(id) ? prev.filter(prevId => prevId !== id) : [...prev, id]
+        );
+    };
+    
+    const handleSelectAll = () => {
+        if (selectedAssignmentIds.length === displayedAssignments.length) {
+            setSelectedAssignmentIds([]);
+        } else {
+            setSelectedAssignmentIds(displayedAssignments.map(a => a.id));
+        }
+    };
+
+    const handleBatchDelete = async () => {
+        await deleteAssignments(selectedAssignmentIds);
+        addToast(`${selectedAssignmentIds.length} ödev başarıyla silindi.`, "success");
+        setSelectedAssignmentIds([]);
+        setIsConfirmDeleteOpen(false);
+    };
+    
+    const handleBatchGrade = async (grade: number, feedback: string) => {
+        const promises = selectedAssignmentIds.map(id => {
+            const assignment = assignments.find(a => a.id === id);
+            if (assignment) {
+                return updateAssignment({
+                    ...assignment,
+                    grade,
+                    feedback,
+                    status: AssignmentStatus.Graded,
+                    gradedAt: new Date().toISOString(),
+                });
+            }
+            return Promise.resolve();
+        });
+        await Promise.all(promises);
+        addToast(`${selectedAssignmentIds.length} ödev başarıyla notlandırıldı.`, "success");
+        setSelectedAssignmentIds([]);
+    };
+    
     return (
-        <>
+        <div className="space-y-6">
             <Card>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <div className="flex flex-wrap gap-2 w-full">
-                        <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow md:flex-grow-0">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
-                            <option value={AssignmentStatus.Pending}>Bekliyor</option>
-                            <option value={AssignmentStatus.Submitted}>Teslim Edildi</option>
-                            <option value={AssignmentStatus.Graded}>Notlandırıldı</option>
+                            <option value={AssignmentStatus.Pending}>Bekleyen</option>
+                            <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>
+                            <option value={AssignmentStatus.Graded}>Notlandırılan</option>
                         </select>
-                         {isCoach && (
-                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow md:flex-grow-0">
+                        {isCoach && (
+                            <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
                                 {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
+                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
+                          {isCoach && (
+                            <div className="flex items-center">
+                                <input 
+                                    type="checkbox"
+                                    id="select-all"
+                                    className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                                    checked={displayedAssignments.length > 0 && selectedAssignmentIds.length === displayedAssignments.length}
+                                    onChange={handleSelectAll}
+                                />
+                                <label htmlFor="select-all" className="ml-2 text-sm">Tümünü Seç</label>
+                            </div>
+                         )}
                     </div>
-                    {isCoach && (
-                        <div className="flex gap-2 w-full md:w-auto flex-shrink-0">
-                             <button onClick={handleStartQuickGrade} className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Hızlı Değerlendir</button>
-                            <button onClick={() => setIsNewAssignmentModalOpen(true)} className="w-full px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 whitespace-nowrap" id="tour-step-4">Yeni Ödev</button>
-                        </div>
-                    )}
+                     {isCoach && (
+                         <button onClick={() => setIsNewAssignmentModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold w-full sm:w-auto">
+                            + Yeni Ödev
+                        </button>
+                     )}
                 </div>
-                
-                {filteredAssignments.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredAssignments.map(a => (
-                            <MemoizedAssignmentCard 
-                                key={a.id} 
-                                assignment={a} 
-                                onSelect={handleSelectAssignment} 
-                                studentName={getUserName(a.studentId)}
-                                isCoach={isCoach}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                     <EmptyState
-                        icon={<NoAssignmentsIcon className="w-8 h-8"/>}
-                        title={isCoach ? "Filtreye Uygun Ödev Yok" : "Harika! Henüz bir ödevin yok."}
-                        description={isCoach ? "Farklı bir filtre deneyin veya yeni bir ödev oluşturun." : "Koçun yeni bir ödev atadığında burada görünecek."}
-                        action={isCoach ? { label: "Yeni Ödev Oluştur", onClick: () => setIsNewAssignmentModalOpen(true) } : undefined}
-                     />
-                )}
             </Card>
+
+            {displayedAssignments.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {displayedAssignments.map(assignment => (
+                        <MemoizedAssignmentCard
+                            key={assignment.id}
+                            assignment={assignment}
+                            onSelect={handleSelectAssignment}
+                            studentName={studentMap.get(assignment.studentId) || ''}
+                            isCoach={isCoach}
+                            isSelected={selectedAssignmentIds.includes(assignment.id)}
+                            onToggleSelect={handleToggleSelect}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <EmptyState 
+                    icon={<NoAssignmentsIcon className="w-10 h-10"/>}
+                    title="Ödev Bulunamadı"
+                    description="Bu filtrelerde gösterilecek bir ödev yok. Yeni bir ödev oluşturmayı deneyin."
+                />
+            )}
+             {isCoach && selectedAssignmentIds.length > 0 && (
+                <div className="fixed bottom-24 lg:bottom-10 right-10 z-40 animate-fade-in-right">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-4 flex items-center gap-4 border dark:border-gray-700">
+                        <span className="text-sm font-semibold">{selectedAssignmentIds.length} ödev seçildi</span>
+                        <button onClick={() => setIsBatchGradeModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                           ✅ Notlandır
+                        </button>
+                        <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                            <TrashIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <NewAssignmentModal 
                 isOpen={isNewAssignmentModalOpen} 
-                onClose={() => {
-                    setIsNewAssignmentModalOpen(false);
-                    setPreselectedStudentId(null);
-                }} 
-                preselectedStudentId={preselectedStudentId}
+                onClose={() => setIsNewAssignmentModalOpen(false)} 
+                preselectedStudentId={filterStudent !== 'all' ? filterStudent : null}
             />
-            {selectedAssignment && <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} studentName={getUserName(selectedAssignment.studentId)} />}
-            {quickGradeAssignments.length > 0 && 
-                <AssignmentDetailModal 
-                    assignment={quickGradeAssignments[quickGradeIndex]}
-                    onClose={handleQuickGradeClose}
-                    studentName={getUserName(quickGradeAssignments[quickGradeIndex].studentId)}
-                    onNavigate={handleQuickGradeNavigation}
-                />
-            }
-        </>
-    );
-};
 
-export default Assignments;
+            {selectedAssignment && (
+                <AssignmentDetailModal
+                    assignment={selectedAssignment}
+                    onClose={() => setSelectedAssignment(null)}
+                    studentName={studentMap.get(selectedAssignment.studentId)}
+                />
+            )}
+
+            {isConfirmDeleteOpen && (
+                <ConfirmationModal
+                    isOpen={isConfirmDeleteOpen}
+                    onClose={() => setIsConfirmDeleteOpen(false)}
+                    onConfirm={handleBatchDelete}
+                    title="Ödevleri Sil"
+                    message={`${selectedAssignmentIds.length} ödevi kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+                />
+            )}
+            
+            {isBatchGradeModalOpen && (
+                 <BatchGradeModal
+                    isOpen={isBatchGradeModalOpen}
+                    onClose={() => setIsBatchGradeModalOpen(false)}
+                    onBatchGrade={handleBatchGrade}
+                    assignmentCount={selectedAssignmentIds.length}
+                />
+            )}
+
+        </div>
+    );
+}

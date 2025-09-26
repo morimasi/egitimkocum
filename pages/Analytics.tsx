@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, Sector } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
@@ -131,7 +133,8 @@ const CoachAnalytics = () => {
     )
 };
 
-const Analytics = () => {
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Analytics() {
     const { currentUser, isLoading } = useDataContext();
 
     if (isLoading) {
@@ -148,5 +151,3 @@ const Analytics = () => {
     
     return <StudentAnalytics />;
 };
-
-export default Analytics;

@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -295,7 +297,8 @@ const AdminSettings = () => {
     );
 };
 
-const Settings = () => {
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Settings() {
     const { currentUser } = useDataContext();
     if (!currentUser) return null;
     
@@ -315,5 +318,3 @@ const Settings = () => {
         </div>
     );
 };
-
-export default Settings;

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -313,7 +315,8 @@ const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete, ...props }
     )
 };
 
-const Library = () => {
+// Fix: Changed component export to a function declaration to solve lazy loading issue.
+export default function Library() {
     const { resources, currentUser, students, deleteResource } = useDataContext();
     const { addToast } = useUI();
     const [activeTab, setActiveTab] = useState(currentUser?.role === UserRole.Student ? 'public' : 'public');
@@ -443,5 +446,3 @@ const Library = () => {
         </div>
     );
 };
-
-export default Library;

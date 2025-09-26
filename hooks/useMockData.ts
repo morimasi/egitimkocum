@@ -1,3 +1,4 @@
+
 import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation, AcademicTrack, Badge, BadgeID, CalendarEvent } from '../types';
 
 export const getMockData = () => {

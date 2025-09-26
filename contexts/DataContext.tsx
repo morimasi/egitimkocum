@@ -46,6 +46,7 @@ type Action =
     | { type: 'SET_CURRENT_USER'; payload: User | null }
     | { type: 'ADD_ASSIGNMENTS'; payload: Assignment[] }
     | { type: 'UPDATE_ASSIGNMENT'; payload: Assignment }
+    | { type: 'DELETE_ASSIGNMENTS'; payload: string[] }
     | { type: 'ADD_MESSAGE'; payload: Message }
     | { type: 'UPDATE_USER'; payload: User }
     | { type: 'ADD_USER'; payload: User }
@@ -60,6 +61,7 @@ type Action =
     | { type: 'ADD_REACTION'; payload: { messageId: string; emoji: string; userId: string } }
     | { type: 'VOTE_ON_POLL'; payload: { messageId: string; optionIndex: number; userId: string } }
     | { type: 'TOGGLE_RESOURCE_ASSIGNMENT'; payload: { resourceId: string; studentId: string } }
+    | { type: 'ASSIGN_RESOURCE_TO_STUDENTS'; payload: { resourceId: string; studentIds: string[] } }
     | { type: 'ADD_RESOURCE'; payload: Resource }
     | { type: 'DELETE_RESOURCE'; payload: string }
     | { type: 'ADD_TEMPLATE'; payload: AssignmentTemplate }
@@ -84,6 +86,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, assignments: [...state.assignments, ...action.payload] };
         case 'UPDATE_ASSIGNMENT':
             return { ...state, assignments: state.assignments.map(a => a.id === action.payload.id ? action.payload : a) };
+        case 'DELETE_ASSIGNMENTS':
+            return { ...state, assignments: state.assignments.filter(a => !action.payload.includes(a.id)) };
         case 'ADD_MESSAGE':
              return { ...state, messages: [...state.messages, action.payload] };
         case 'UPDATE_USER': {
@@ -191,6 +195,18 @@ const dataReducer = (state: AppState, action: Action): AppState => {
                     return r;
                 }),
             };
+        case 'ASSIGN_RESOURCE_TO_STUDENTS':
+            return {
+                ...state,
+                resources: state.resources.map(r => {
+                    if (r.id === action.payload.resourceId) {
+                        const currentAssigned = r.assignedTo || [];
+                        const newAssigned = [...new Set([...currentAssigned, ...action.payload.studentIds])];
+                        return { ...r, assignedTo: newAssigned };
+                    }
+                    return r;
+                }),
+            };
         case 'ADD_RESOURCE':
             return { ...state, resources: [...state.resources, action.payload] };
         case 'DELETE_RESOURCE':
@@ -247,6 +263,7 @@ interface DataContextType {
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => Promise<void>;
     addAssignment: (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => Promise<void>;
     updateAssignment: (updatedAssignment: Assignment) => Promise<void>;
+    deleteAssignments: (assignmentIds: string[]) => Promise<void>;
     updateUser: (updatedUser: User) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     addUser: (newUser: Omit<User, 'id'>) => Promise<User | null>;
@@ -260,6 +277,7 @@ interface DataContextType {
     voteOnPoll: (messageId: string, optionIndex: number) => Promise<void>;
     findMessageById: (messageId: string) => Message | undefined;
     toggleResourceAssignment: (resourceId: string, studentId: string) => Promise<void>;
+    assignResourceToStudents: (resourceId: string, studentIds: string[]) => Promise<void>;
     addResource: (newResource: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => Promise<void>;
     deleteResource: (resourceId: string) => Promise<void>;
     addTemplate: (templateData: Omit<AssignmentTemplate, 'id'>) => Promise<void>;
@@ -501,6 +519,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
         }
     }, [state.assignments, state.currentUser, state.users]);
+
+    const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
+        dispatch({ type: 'DELETE_ASSIGNMENTS', payload: assignmentIds });
+    }, []);
     
     const updateUser = useCallback(async (updatedUser: User) => {
         dispatch({ type: 'UPDATE_USER', payload: updatedUser });
@@ -553,6 +575,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const toggleResourceAssignment = useCallback(async (resourceId: string, studentId: string) => {
         dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
+    }, []);
+
+    const assignResourceToStudents = useCallback(async (resourceId: string, studentIds: string[]) => {
+        dispatch({ type: 'ASSIGN_RESOURCE_TO_STUDENTS', payload: { resourceId, studentIds } });
     }, []);
 
     const addResource = useCallback(async (resourceData: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => {
@@ -743,6 +769,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         sendMessage,
         addAssignment,
         updateAssignment,
+        deleteAssignments,
         updateUser,
         deleteUser,
         addUser,
@@ -756,6 +783,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         voteOnPoll,
         findMessageById,
         toggleResourceAssignment,
+        assignResourceToStudents,
         addResource,
         deleteResource,
         addTemplate,
@@ -778,10 +806,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
-        sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
+        sendMessage, addAssignment, updateAssignment, deleteAssignments, updateUser, deleteUser, addUser,
         markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,
         updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
-        addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
+        assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
         findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
         seedDatabase, updateBadge, addCalendarEvent, deleteCalendarEvent, toggleTemplateFavorite
     ]);
