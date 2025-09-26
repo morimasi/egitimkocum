@@ -1,6 +1,7 @@
 
 
 
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus } from '../types';
 import { getMockData } from '../hooks/useMockData';
@@ -696,7 +697,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         removeUserFromConversation,
         endConversation,
         seedDatabase,
-    }), [
+    }, [
         state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
         sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
