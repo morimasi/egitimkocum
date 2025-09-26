@@ -1,7 +1,8 @@
 
 
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, CalendarEvent } from '../types';
 import { getMockData } from '../hooks/useMockData';
 
 export const getInitialDataForSeeding = () => {
@@ -19,6 +20,7 @@ const getInitialState = (): AppState => ({
     resources: [],
     goals: [],
     badges: [],
+    calendarEvents: [],
     currentUser: null,
     isLoading: true,
     typingStatus: {},
@@ -34,6 +36,7 @@ type AppState = {
     resources: Resource[];
     goals: Goal[];
     badges: Badge[];
+    calendarEvents: CalendarEvent[];
     currentUser: User | null;
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
@@ -66,7 +69,10 @@ type Action =
     | { type: 'DELETE_TEMPLATE'; payload: string }
     | { type: 'ADD_CONVERSATION'; payload: Conversation }
     | { type: 'UPDATE_CONVERSATION'; payload: Conversation }
-    | { type: 'UPDATE_BADGE'; payload: Badge };
+    | { type: 'UPDATE_BADGE'; payload: Badge }
+    | { type: 'ADD_CALENDAR_EVENT'; payload: CalendarEvent }
+    | { type: 'DELETE_CALENDAR_EVENT'; payload: string }
+    | { type: 'TOGGLE_TEMPLATE_FAVORITE'; payload: string };
 
 const dataReducer = (state: AppState, action: Action): AppState => {
     switch (action.type) {
@@ -203,6 +209,17 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, conversations: state.conversations.map(c => c.id === action.payload.id ? action.payload : c) };
         case 'UPDATE_BADGE':
             return { ...state, badges: state.badges.map(b => b.id === action.payload.id ? action.payload : b) };
+        case 'ADD_CALENDAR_EVENT':
+            return { ...state, calendarEvents: [...state.calendarEvents, action.payload] };
+        case 'DELETE_CALENDAR_EVENT':
+            return { ...state, calendarEvents: state.calendarEvents.filter(e => e.id !== action.payload) };
+        case 'TOGGLE_TEMPLATE_FAVORITE':
+            return {
+                ...state,
+                templates: state.templates.map(t =>
+                    t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t
+                ),
+            };
         default:
             return state;
     }
@@ -221,6 +238,7 @@ interface DataContextType {
     resources: Resource[];
     goals: Goal[];
     badges: Badge[];
+    calendarEvents: CalendarEvent[];
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
     login: (email: string, pass: string) => Promise<User | null>;
@@ -260,6 +278,9 @@ interface DataContextType {
     endConversation: (conversationId: string) => Promise<void>;
     seedDatabase: (uids: Record<string, string>) => Promise<void>;
     updateBadge: (updatedBadge: Badge) => Promise<void>;
+    addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<void>;
+    deleteCalendarEvent: (eventId: string) => Promise<void>;
+    toggleTemplateFavorite: (templateId: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -275,14 +296,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const loadData = () => {
             dispatch({ type: 'SET_LOADING', payload: true });
             
-            const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
+            const { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } = getMockData();
             
             const defaultUser = users.find(u => u.role === UserRole.Coach) || users[0];
             sessionStorage.setItem('currentUser', JSON.stringify(defaultUser));
             
             dispatch({
                 type: 'SET_INITIAL_DATA',
-                payload: { users, assignments, messages, templates, resources, goals, conversations, badges, notifications: [
+                payload: { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents, notifications: [
                      { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false, link: { page: 'assignments' } },
                      { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false, link: { page: 'assignments' } },
                 ] }
@@ -293,8 +314,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         
         const persistedUser = sessionStorage.getItem('currentUser');
         if (persistedUser) {
-             const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
-             dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations, badges } });
+             const { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } = getMockData();
+             dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } });
              dispatch({ type: 'SET_CURRENT_USER', payload: JSON.parse(persistedUser) });
              dispatch({ type: 'SET_LOADING', payload: false });
         } else {
@@ -687,6 +708,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const seedDatabase = useCallback(async (uids: Record<string, string>) => {}, []);
 
+    const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>) => {
+        const newEvent: CalendarEvent = { ...event, id: `ce-${Date.now()}` };
+        dispatch({ type: 'ADD_CALENDAR_EVENT', payload: newEvent });
+    }, []);
+
+    const deleteCalendarEvent = useCallback(async (eventId: string) => {
+        dispatch({ type: 'DELETE_CALENDAR_EVENT', payload: eventId });
+    }, []);
+
+    const toggleTemplateFavorite = useCallback(async (templateId: string) => {
+        dispatch({ type: 'TOGGLE_TEMPLATE_FAVORITE', payload: templateId });
+    }, []);
+
     const value = useMemo(() => ({
         currentUser: state.currentUser,
         users: state.users,
@@ -698,6 +732,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         resources: state.resources,
         goals: state.goals,
         badges: state.badges,
+        calendarEvents: state.calendarEvents,
         isLoading: state.isLoading,
         typingStatus: state.typingStatus,
         coach,
@@ -739,7 +774,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         endConversation,
         seedDatabase,
         updateBadge,
-    }), [
+        addCalendarEvent,
+        deleteCalendarEvent,
+        toggleTemplateFavorite,
+    }, [
         state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
         sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
@@ -747,7 +785,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
         addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
         findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
-        seedDatabase, updateBadge
+        seedDatabase, updateBadge, addCalendarEvent, deleteCalendarEvent, toggleTemplateFavorite
     ]);
 
 

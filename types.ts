@@ -1,4 +1,5 @@
 
+
 export enum UserRole {
   Coach = 'coach',
   Student = 'student',
@@ -74,6 +75,7 @@ export interface Assignment {
   studentId: string;
   coachId: string;
   submittedAt: string | null;
+  gradedAt?: string | null;
   coachAttachments?: { name: string; url: string }[];
   checklist?: ChecklistItem[];
   audioFeedbackUrl?: string | null;
@@ -85,6 +87,8 @@ export interface Assignment {
   textSubmission?: string | null;
   studentAudioFeedbackResponseUrl?: string | null;
   studentVideoFeedbackResponseUrl?: string | null;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface Reaction {
@@ -163,6 +167,7 @@ export interface AssignmentTemplate {
   title: string;
   description: string;
   checklist: Omit<ChecklistItem, 'id' | 'isCompleted'>[];
+  isFavorite?: boolean;
 }
 
 export interface Resource {
@@ -180,4 +185,14 @@ export interface Goal {
   studentId: string;
   text: string;
   isCompleted: boolean;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  type: 'personal' | 'study';
+  color: string;
+  startTime?: string;
+  endTime?: string;
 }

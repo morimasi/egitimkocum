@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -320,4 +315,5 @@ const Settings = () => {
     );
 };
 
+// FIX: Add default export to resolve React.lazy import error.
 export default Settings;

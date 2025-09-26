@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack } from '../types';
@@ -395,7 +397,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             addToast("Lütfen bir not girin.", "error");
             return;
         }
-        await updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback });
+        await updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback, gradedAt: new Date().toISOString(), videoFeedbackUrl });
         addToast("Ödev notlandırıldı.", "success");
         if (onNavigate) {
             onNavigate(true);
@@ -473,8 +475,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
 
     const handleVideoFeedbackSave = async (videoUrl: string | null) => {
         if (!videoUrl) return;
-        await updateAssignment({ ...assignment, videoFeedbackUrl: videoUrl });
-        addToast("Video geri bildirim kaydedildi.", "success");
+        setVideoFeedbackUrl(videoUrl); // Save locally to be sent with grade
+        addToast("Video geri bildirim kaydedildi. Notu kaydettiğinizde öğrenciye gönderilecek.", "info");
     };
     
     const handleFeedbackReaction = async (reaction: '👍' | '🤔') => {

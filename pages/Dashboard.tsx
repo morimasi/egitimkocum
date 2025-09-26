@@ -1,17 +1,18 @@
 
+
 import React, { useEffect, useState, useMemo } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentFocusSuggestion, generatePersonalCoachSummary } from '../services/geminiService';
 import AnnouncementModal from '../components/AnnouncementModal';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 
-const AnnouncementsCard = React.memo(() => {
+const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) => {
     const { messages, coach } = useDataContext();
     const { setActivePage } = useUI();
     const announcements = useMemo(() => messages
@@ -24,7 +25,7 @@ const AnnouncementsCard = React.memo(() => {
     }
 
     return (
-        <Card title="Son Duyurular" id="tour-announcements" className="h-full">
+        <Card title="Son Duyurular" className={`h-full ${className}`}>
              <ul className="space-y-3">
                 {announcements.map(msg => (
                      <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-start space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'conv-announcements'})}>
@@ -51,6 +52,8 @@ const StudentWelcomeHeader = React.memo(() => {
     const [suggestion, setSuggestion] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const currentLevel = useMemo(() => currentUser?.xp ? Math.floor(Math.sqrt(currentUser.xp / 100)) + 1 : 1, [currentUser?.xp]);
+
     const handleGenerateSuggestion = async () => {
         if (!currentUser) return;
         setIsLoading(true);
@@ -63,59 +66,69 @@ const StudentWelcomeHeader = React.memo(() => {
 
     return (
         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
-            <div className="mt-2 text-white/80 min-h-[40px] flex items-center">
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
+                    <p className="text-sm text-white/80">Seviye: {currentLevel} | XP: {currentUser?.xp || 0}</p>
+                </div>
+                 <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-full transition-colors flex-shrink-0">
+                    ✨ Günlük Tavsiyeni Al
+                </button>
+            </div>
+             <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] flex items-center text-sm">
                  {isLoading ? (
                     <SkeletonText className="h-5 w-3/4 bg-white/30" />
                 ) : suggestion ? (
                     <p>{suggestion}</p>
                 ) : (
-                    <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-md transition-colors">
-                        ✨ Günlük Tavsiyeni Al
-                    </button>
+                   <p className="opacity-80">Güne motive başlamak için günlük tavsiyeni al!</p>
                 )}
             </div>
         </Card>
     );
 });
 
-const ProgressCircle = ({ percentage, label, colorClass }: { percentage: number, label: string, colorClass: string }) => {
-    const radius = 50;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (percentage / 100) * circumference;
-
-    return (
-        <div className="flex flex-col items-center">
-            <svg width="120" height="120" viewBox="0 0 120 120" className="-rotate-90">
-                <circle className="text-gray-200 dark:text-gray-700" strokeWidth="10" stroke="currentColor" fill="transparent" r={radius} cx="60" cy="60" />
-                <circle className={colorClass} strokeWidth="10" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" stroke="currentColor" fill="transparent" r={radius} cx="60" cy="60" style={{transition: 'stroke-dashoffset 0.5s ease-out'}} />
-            </svg>
-            <div className="text-center -mt-20">
-                <p className="text-2xl font-bold">{percentage.toFixed(0)}<span className="text-lg">%</span></p>
-                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
-            </div>
+const StudentStatCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
+    <Card className={`relative overflow-hidden`}>
+         <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
+            {icon}
         </div>
-    );
-};
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+    </Card>
+);
 
 const ProgressOverview = React.memo(() => {
     const { currentUser, getAssignmentsForStudent, getGoalsForStudent } = useDataContext();
     if(!currentUser) return null;
 
     const assignments = getAssignmentsForStudent(currentUser.id);
-    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-    const averageGrade = gradedAssignments.length > 0 ? gradedAssignments.reduce((acc, a) => acc + (a.grade || 0), 0) / gradedAssignments.length : 0;
     const completionRate = assignments.length > 0 ? (assignments.filter(a => a.status !== AssignmentStatus.Pending).length / assignments.length) * 100 : 0;
     
     const goals = getGoalsForStudent(currentUser.id);
     const goalsRate = goals.length > 0 ? (goals.filter(g => g.isCompleted).length / goals.length) * 100 : 0;
     
     return (
-        <Card title="Haftalık İlerlemen">
-            <div className="flex justify-around items-center">
-                <ProgressCircle percentage={completionRate} label="Ödev Tamamlama" colorClass="text-primary-500" />
-                <ProgressCircle percentage={averageGrade} label="Not Ortalaması" colorClass="text-green-500" />
-                 <ProgressCircle percentage={goalsRate} label="Hedefler" colorClass="text-yellow-500" />
+        <Card title="Genel İlerleme Durumu">
+            <div className="space-y-4">
+                 <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ödev Tamamlama</span>
+                        <span className="text-sm font-bold text-primary-500">{completionRate.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${completionRate}%` }}></div>
+                    </div>
+                </div>
+                 <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Hedefler</span>
+                        <span className="text-sm font-bold text-yellow-500">{goalsRate.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${goalsRate}%` }}></div>
+                    </div>
+                </div>
             </div>
         </Card>
     );
@@ -132,9 +145,9 @@ const ToDoTabs = React.memo(() => {
     const upcomingAssignments = getAssignmentsForStudent(currentUser.id)
         .filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) > new Date())
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 5);
+        .slice(0, 4);
         
-    const goals = getGoalsForStudent(currentUser.id);
+    const goals = getGoalsForStudent(currentUser.id).slice(0, 5);
      const handleToggleGoal = (goalId: string) => {
         const goal = goals.find(g => g.id === goalId);
         if(goal) updateGoal({...goal, isCompleted: !goal.isCompleted});
@@ -162,7 +175,7 @@ const ToDoTabs = React.memo(() => {
                                         <p className="font-semibold">{a.title}</p>
                                         <p className={`text-sm ${isUrgent ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>Son teslim: {dueDate.toLocaleDateString('tr-TR')}</p>
                                     </div>
-                                    <button onClick={() => setActivePage('assignments')} className="text-sm font-semibold text-primary-500 hover:underline">Detay</button>
+                                    <button onClick={() => setActivePage('assignments', { assignmentId: a.id })} className="text-sm font-semibold text-primary-500 hover:underline">Detay</button>
                                 </li>
                             )
                         }) : (
@@ -187,20 +200,42 @@ const ToDoTabs = React.memo(() => {
 });
 
 
-const StudentDashboard = () => (
-    <div className="space-y-8">
-        <StudentWelcomeHeader />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-                <ToDoTabs />
+const StudentDashboard = () => {
+    const { currentUser, getAssignmentsForStudent, getGoalsForStudent } = useDataContext();
+    if (!currentUser) return null;
+    
+    const assignments = getAssignmentsForStudent(currentUser.id);
+    const goals = getGoalsForStudent(currentUser.id);
+
+    const stats = useMemo(() => {
+        const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+        return {
+            pending: assignments.filter(a => a.status === AssignmentStatus.Pending).length,
+            avgGrade: graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A',
+            goalsCompleted: goals.filter(g => g.isCompleted).length
+        };
+    }, [assignments, goals]);
+    
+    return (
+        <div className="space-y-6">
+            <StudentWelcomeHeader />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <StudentStatCard title="Bekleyen Ödev" value={stats.pending} icon={<AssignmentsIcon/>} color="text-yellow-500"/>
+                <StudentStatCard title="Not Ortalaması" value={stats.avgGrade} icon={<TrendingUpIcon/>} color="text-green-500"/>
+                <StudentStatCard title="Tamamlanan Hedef" value={stats.goalsCompleted} icon={<TargetIcon/>} color="text-blue-500"/>
             </div>
-            <div className="space-y-8">
-                <ProgressOverview />
-                <AnnouncementsCard />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-7">
+                    <ToDoTabs />
+                </div>
+                <div className="lg:col-span-5 space-y-6">
+                    <ProgressOverview />
+                    <AnnouncementsCard />
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 
 // --- Coach Dashboard Components ---
@@ -220,15 +255,15 @@ const CoachWelcomeHeader = React.memo(() => {
 
     return (
         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
-             <h1 className="text-2xl md:text-3xl font-bold text-white">Merhaba, {currentUser?.name}!</h1>
-             <p className="mt-2 text-white/80">Haftalık koçluk özetini ve tavsiyelerini görmek için butona tıkla.</p>
-             <div className="mt-4 p-4 bg-white/10 rounded-lg text-sm min-h-[96px]">
+             <h1 className="text-2xl font-bold text-white">Merhaba, {currentUser?.name}!</h1>
+             <p className="mt-1 text-white/80">Haftalık koçluk özetini ve tavsiyelerini görmek için butona tıkla.</p>
+             <div className="mt-3 p-3 bg-white/10 rounded-lg text-sm min-h-[72px]">
                 {isLoading ? (
                     <SkeletonText className="h-full w-full bg-white/20" />
                 ) : insights ? (
                     <p className="whitespace-pre-wrap">{insights}</p>
                 ) : (
-                    <button onClick={handleGenerateInsights} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-md transition-colors">
+                    <button onClick={handleGenerateInsights} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-full transition-colors">
                         ✨ Haftalık Özeti Oluştur
                     </button>
                 )}
@@ -252,7 +287,7 @@ const StatCard = React.memo(({ title, value, icon, onClick }: { title: string, v
 const QuickActionsCard = ({ onAnnounceClick }: { onAnnounceClick: () => void }) => {
     const { setActivePage } = useUI();
     const actions = [
-        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6"/>, action: () => setActivePage('assignments') },
+        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6"/>, action: () => setActivePage('assignments', { openNewAssignmentModal: true }) },
         { label: "Duyuru Yap", icon: <MegaphoneIcon className="w-6 h-6"/>, action: onAnnounceClick },
         { label: "Kütüphane", icon: <LibraryIcon className="w-6 h-6"/>, action: () => setActivePage('library') },
         { label: "Öğrenciler", icon: <StudentsIcon className="w-6 h-6"/>, action: () => setActivePage('students') },
@@ -273,7 +308,7 @@ const QuickActionsCard = ({ onAnnounceClick }: { onAnnounceClick: () => void }) 
 
 
 const CoachDashboard = () => {
-    const { students, assignments } = useDataContext();
+    const { students, assignments, findOrCreateConversation } = useDataContext();
     const { setActivePage } = useUI();
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     
@@ -305,8 +340,15 @@ const CoachDashboard = () => {
         ];
     }, [assignments, students]);
 
+    const handleSendMessage = async (studentId: string) => {
+        const convId = await findOrCreateConversation(studentId);
+        if (convId) {
+            setActivePage('messages', { contactId: convId });
+        }
+    };
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             <CoachWelcomeHeader />
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="tour-step-3">
@@ -315,51 +357,55 @@ const CoachDashboard = () => {
                 <StatCard title="Gecikmiş Ödev" value={stats.overdueCount} icon={<AlertTriangleIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <Card title="Dikkat Gerektiren Öğrenciler" className="bg-gradient-to-br from-yellow-400 to-orange-500 text-white dark:from-yellow-500 dark:to-orange-600">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 space-y-6">
+                     <Card title="Dikkat Gerektiren Öğrenciler">
                         {studentsWithAlerts.length > 0 ? (
                             <ul className="space-y-3">
                                 {studentsWithAlerts.slice(0, 5).map(s => (
-                                    <li key={s.id} onClick={() => setActivePage('students')} className="p-2 rounded-lg hover:bg-white/20 cursor-pointer">
+                                    <li key={s.id} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center">
                                                 <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
                                                 <span className="ml-3 font-medium">{s.name}</span>
+                                                 {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`} className="ml-2"><AlertTriangleIcon className="w-5 h-5 text-red-500" /></span>}
+                                                {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`} className="ml-2"><AlertTriangleIcon className="w-5 h-5 text-yellow-500" /></span>}
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`}><AlertTriangleIcon className="w-5 h-5" /></span>}
-                                                {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`}><AlertTriangleIcon className="w-5 h-5" /></span>}
+                                                 <button onClick={() => handleSendMessage(s.id)} className="text-xs font-semibold text-blue-500 hover:underline">Mesaj Gönder</button>
+                                                 <button onClick={() => setActivePage('students', { studentId: s.id })} className="text-xs font-semibold text-gray-500 hover:underline">Profili Görüntüle</button>
                                             </div>
                                         </div>
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center">
-                                 <CheckCircleIcon className="w-10 h-10 mb-2 text-white/80" />
+                            <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                                 <CheckCircleIcon className="w-10 h-10 mb-2 text-green-400" />
                                  <p className="text-sm font-semibold">Harika! Tüm öğrencileriniz yolunda görünüyor.</p>
                             </div>
                         )}
                     </Card>
                     <Card title="Ödev Durum Dağılımı">
-                         <div style={{ width: '100%', height: 250 }}>
+                         <div className="w-full h-64">
                             <ResponsiveContainer>
-                                <PieChart>
-                                    <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                <BarChart data={statusData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.2)" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
+                                    <Bar dataKey="value" name="Ödev Sayısı">
                                         {statusData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
-                                    <Legend />
-                                </PieChart>
+                                    </Bar>
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>
                 </div>
 
-                <div className="lg:col-span-1 space-y-8">
+                <div className="lg:col-span-4 space-y-6">
                     <QuickActionsCard onAnnounceClick={() => setAnnouncementModalOpen(true)} />
                     <AnnouncementsCard />
                 </div>

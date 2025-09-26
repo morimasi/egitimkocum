@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID } from '../types';
@@ -38,7 +40,7 @@ const getStatusChip = (status: AssignmentStatus) => {
 
 const StudentDetailModal = ({ student, onClose }: { student: User | null; onClose: () => void; }) => {
     const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal, updateStudentNotes, users, badges } = useDataContext();
-    const { addToast } = useUI();
+    const { addToast, setActivePage } = useUI();
     const [newGoalText, setNewGoalText] = useState('');
     const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
@@ -46,6 +48,8 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     
     useEffect(() => {
         setNotes(student?.notes || '');
+        // When modal opens for a new student, reset to the overview tab
+        setActiveTab('overview');
     }, [student]);
 
     useEffect(() => {
@@ -204,7 +208,7 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                         <h4 className="font-semibold mb-2">Ödev Listesi</h4>
                         <ul className="space-y-2 max-h-96 overflow-y-auto pr-2">
                             {assignments.length > 0 ? assignments.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()).map(a => (
-                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
+                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => { onClose(); setActivePage('assignments', { assignmentId: a.id }); }}>
                                     <div>
                                         <p className="font-semibold">{a.title}</p>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -313,6 +317,9 @@ const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student:
                  <div className="relative flex-shrink-0 mb-2">
                     <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" />
                     <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
+                     {overdueCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title={`${overdueCount} gecikmiş ödev`}></span>
+                    )}
                 </div>
                 <h4 className="text-sm font-bold leading-tight">{student.name}</h4>
                 <p className="text-xs text-gray-500 leading-tight">{student.email}</p>
@@ -354,10 +361,21 @@ const Students = () => {
     const [filterCoach, setFilterCoach] = useState('all');
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
+    const { initialFilters, setInitialFilters } = useUI();
 
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
     const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
+
+    useEffect(() => {
+        if (initialFilters.studentId) {
+            const studentToOpen = students.find(s => s.id === initialFilters.studentId);
+            if (studentToOpen) {
+                setSelectedStudent(studentToOpen);
+            }
+            setInitialFilters({});
+        }
+    }, [initialFilters, setInitialFilters, students]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {
