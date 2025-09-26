@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -30,7 +31,7 @@ const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
             className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
                 isActive
                     ? 'bg-primary-500 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600'
             }`}
         >
             <div className="flex items-center">
@@ -145,7 +146,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 <div className="flex items-center justify-between mb-4">
                      <button
                         onClick={toggleTheme}
-                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600"
                         >
                         {theme === 'light' ? <MoonIcon className="w-5 h-5 mr-3" /> : <SunIcon className="w-5 h-5 mr-3" />}
                         {theme === 'light' ? 'Koyu Mod' : 'Açık Mod'}
@@ -158,7 +159,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                         <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
                     </div>
-                     <button onClick={() => logout()} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Çıkış Yap">
+                     <button onClick={() => logout()} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 active:bg-red-200 dark:active:bg-red-900" aria-label="Çıkış Yap">
                         <LogoutIcon className="w-5 h-5" />
                     </button>
                 </div>

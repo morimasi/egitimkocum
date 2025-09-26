@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, UserRole, AssignmentStatus } from '../types';
@@ -103,15 +105,16 @@ const Calendar = () => {
             <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 border-t border-l border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {weekDays.map(day => (
                     <div key={day} className="py-2 text-center text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                        {day}
+                        <span className="sm:hidden">{day.slice(0, 3)}</span>
+                        <span className="hidden sm:inline">{day}</span>
                     </div>
                 ))}
 
                 {calendarGrid.map((cell, index) => {
                     const isToday = cell.isCurrentMonth && cell.day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
                     return (
-                        <div key={index} className={`relative p-2 h-28 sm:h-32 bg-white dark:bg-gray-800/50 overflow-y-auto ${!cell.isCurrentMonth ? 'opacity-50' : ''}`}>
-                            <span className={`absolute top-2 right-2 text-xs font-bold ${isToday ? 'bg-primary-500 text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
+                        <div key={index} className={`relative p-1 sm:p-2 h-20 sm:h-32 bg-white dark:bg-gray-800/50 overflow-y-auto ${!cell.isCurrentMonth ? 'opacity-50' : ''}`}>
+                            <span className={`absolute top-1 right-1 sm:top-2 sm:right-2 text-xs font-bold ${isToday ? 'bg-primary-500 text-white rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
                                 {cell.day}
                             </span>
                             <div className="space-y-1 mt-6">
@@ -119,7 +122,7 @@ const Calendar = () => {
                                     <div 
                                         key={event.id}
                                         onClick={() => handleEventClick(event)}
-                                        className={`p-1.5 rounded-md text-white text-xs cursor-pointer truncate transition-transform transform hover:scale-105 ${getStatusColor(event.status)}`}
+                                        className={`p-1 sm:p-1.5 rounded text-white text-[10px] sm:text-xs cursor-pointer truncate transition-transform transform hover:scale-105 ${getStatusColor(event.status)}`}
                                         title={event.title}
                                     >
                                         {event.title}

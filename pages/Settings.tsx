@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -218,9 +219,9 @@ const CoachSettings = () => {
             </div>
             <div className="lg:col-span-2 space-y-6">
                 <Card title="Hızlı Eylemler">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {quickActions.map(action => (
-                            <button key={action.label} onClick={action.action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105">
+                            <button key={action.label} onClick={action.action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-gray-200 dark:active:bg-gray-600">
                                 {action.icon}
                                 <span className="text-sm font-semibold text-center">{action.label}</span>
                             </button>

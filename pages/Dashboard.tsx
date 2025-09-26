@@ -71,7 +71,7 @@ const StudentWelcomeHeader = React.memo(() => {
                     <h1 className="text-2xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
                     <p className="text-sm text-white/80">Seviye: {currentLevel} | XP: {currentUser?.xp || 0}</p>
                 </div>
-                 <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-full transition-colors flex-shrink-0">
+                 <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0">
                     ✨ Günlük Tavsiyeni Al
                 </button>
             </div>
@@ -134,304 +134,237 @@ const ProgressOverview = React.memo(() => {
     );
 });
 
-
-const ToDoTabs = React.memo(() => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, updateGoal } = useDataContext();
-    const { setActivePage } = useUI();
-    const [activeTab, setActiveTab] = useState('assignments');
-
-    if(!currentUser) return null;
-
-    const upcomingAssignments = getAssignmentsForStudent(currentUser.id)
-        .filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) > new Date())
-        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 4);
-        
-    const goals = getGoalsForStudent(currentUser.id).slice(0, 5);
-     const handleToggleGoal = (goalId: string) => {
-        const goal = goals.find(g => g.id === goalId);
-        if(goal) updateGoal({...goal, isCompleted: !goal.isCompleted});
-    };
-
-    return (
-        <Card className="flex flex-col h-full">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="-mb-px flex space-x-6 px-6" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('assignments')} className={`${activeTab === 'assignments' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Yaklaşan Ödevler</button>
-                    <button onClick={() => setActiveTab('goals')} className={`${activeTab === 'goals' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Hedeflerim</button>
-                </nav>
-            </div>
-            <div className="p-6 flex-grow">
-                {activeTab === 'assignments' ? (
-                    <ul className="space-y-3">
-                        {upcomingAssignments.length > 0 ? upcomingAssignments.map(a => {
-                             const dueDate = new Date(a.dueDate);
-                             const now = new Date();
-                             const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-                             const isUrgent = diffDays <= 2;
-                            return (
-                                <li key={a.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div>
-                                        <p className="font-semibold">{a.title}</p>
-                                        <p className={`text-sm ${isUrgent ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>Son teslim: {dueDate.toLocaleDateString('tr-TR')}</p>
-                                    </div>
-                                    <button onClick={() => setActivePage('assignments', { assignmentId: a.id })} className="text-sm font-semibold text-primary-500 hover:underline">Detay</button>
-                                </li>
-                            )
-                        }) : (
-                             <p className="text-center text-gray-500 py-8">Harika iş! Yaklaşan bir ödevin yok.</p>
-                        )}
-                    </ul>
-                ) : (
-                    <ul className="space-y-3">
-                        {goals.length > 0 ? goals.map(goal => (
-                            <li key={goal.id} className="flex items-center">
-                                <input type="checkbox" id={`goal-${goal.id}`} checked={goal.isCompleted} onChange={() => handleToggleGoal(goal.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer" />
-                                <label htmlFor={`goal-${goal.id}`} className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{goal.text}</label>
-                            </li>
-                        )) : (
-                            <p className="text-sm text-gray-500 text-center py-8">Henüz bir hedef belirlemedin.</p>
-                        )}
-                    </ul>
-                )}
-            </div>
-        </Card>
-    );
-});
-
-
 const StudentDashboard = () => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent } = useDataContext();
+    const { currentUser, getAssignmentsForStudent } = useDataContext();
+    const { setActivePage } = useUI();
     if (!currentUser) return null;
     
     const assignments = getAssignmentsForStudent(currentUser.id);
-    const goals = getGoalsForStudent(currentUser.id);
 
-    const stats = useMemo(() => {
-        const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-        return {
-            pending: assignments.filter(a => a.status === AssignmentStatus.Pending).length,
-            avgGrade: graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A',
-            goalsCompleted: goals.filter(g => g.isCompleted).length
-        };
-    }, [assignments, goals]);
+    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
+    const gradedAssignments = assignments.filter(a => a.grade !== null);
+    const averageGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 'N/A';
+    const streak = currentUser.streak || 0;
     
+    const upcomingAssignments = useMemo(() => assignments
+        .filter(a => a.status === AssignmentStatus.Pending)
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 3), [assignments]);
+
     return (
         <div className="space-y-6">
             <StudentWelcomeHeader />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <StudentStatCard title="Bekleyen Ödev" value={stats.pending} icon={<AssignmentsIcon/>} color="text-yellow-500"/>
-                <StudentStatCard title="Not Ortalaması" value={stats.avgGrade} icon={<TrendingUpIcon/>} color="text-green-500"/>
-                <StudentStatCard title="Tamamlanan Hedef" value={stats.goalsCompleted} icon={<TargetIcon/>} color="text-blue-500"/>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
+                <StudentStatCard title="Bekleyen Ödev" value={pendingCount} icon={<AssignmentsIcon />} color="text-yellow-500"/>
+                <StudentStatCard title="Not Ortalaması" value={averageGrade} icon={<TrendingUpIcon />} color="text-green-500"/>
+                <StudentStatCard title="Günlük Seri" value={streak} icon={<TargetIcon />} color="text-red-500"/>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7">
-                    <ToDoTabs />
-                </div>
-                <div className="lg:col-span-5 space-y-6">
-                    <ProgressOverview />
-                    <AnnouncementsCard />
-                </div>
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title="Yaklaşan Ödevler" className="h-full">
+                     {upcomingAssignments.length > 0 ? (
+                        <ul className="space-y-3">
+                            {upcomingAssignments.map(a => (
+                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                    <div>
+                                        <p className="font-semibold">{a.title}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {new Date(a.dueDate).toLocaleDateString('tr-TR')}
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-bold text-yellow-600 dark:text-yellow-300">Bekliyor</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="text-center py-8">
+                            <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
+                            <p className="mt-2 font-semibold">Tebrikler!</p>
+                            <p className="text-sm text-gray-500">Bekleyen ödevin bulunmuyor.</p>
+                        </div>
+                    )}
+                </Card>
+                <ProgressOverview />
             </div>
+            <AnnouncementsCard />
         </div>
     );
 };
 
-
 // --- Coach Dashboard Components ---
-
 const CoachWelcomeHeader = React.memo(() => {
     const { currentUser, students, assignments } = useDataContext();
-    const [insights, setInsights] = useState('');
+    const [summary, setSummary] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const handleGenerateInsights = async () => {
+    
+     const handleGenerateSummary = async () => {
         if (!currentUser) return;
         setIsLoading(true);
         const result = await generatePersonalCoachSummary(currentUser.name, students, assignments);
-        setInsights(result);
+        setSummary(result);
         setIsLoading(false);
     };
 
     return (
-        <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
-             <h1 className="text-2xl font-bold text-white">Merhaba, {currentUser?.name}!</h1>
-             <p className="mt-1 text-white/80">Haftalık koçluk özetini ve tavsiyelerini görmek için butona tıkla.</p>
-             <div className="mt-3 p-3 bg-white/10 rounded-lg text-sm min-h-[72px]">
-                {isLoading ? (
-                    <SkeletonText className="h-full w-full bg-white/20" />
-                ) : insights ? (
-                    <p className="whitespace-pre-wrap">{insights}</p>
+         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Merhaba Koç {currentUser?.name}!</h1>
+                    <p className="text-sm text-white/80">İşte haftalık genel durumun.</p>
+                </div>
+                 <button onClick={handleGenerateSummary} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0">
+                    ✨ Haftalık Özeti Al
+                </button>
+            </div>
+             <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] text-sm whitespace-pre-wrap">
+                 {isLoading ? (
+                    <SkeletonText className="h-16 w-full bg-white/30" />
+                ) : summary ? (
+                    <p>{summary}</p>
                 ) : (
-                    <button onClick={handleGenerateInsights} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                        ✨ Haftalık Özeti Oluştur
-                    </button>
+                   <p className="opacity-80">Öğrencilerinin durumu hakkında hızlı bir özet almak için butona tıkla.</p>
                 )}
-             </div>
+            </div>
         </Card>
     );
 });
 
-const StatCard = React.memo(({ title, value, icon, onClick }: { title: string, value: string | number, icon: React.ReactNode, onClick?: () => void }) => (
-    <Card className="flex items-start justify-between p-5 transition-transform hover:-translate-y-1" onClick={onClick}>
-        <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
-        </div>
-        <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-primary-500">
+const CoachStatCard = ({ title, value, icon, color, onClick }: { title: string, value: string | number, icon: React.ReactNode, color:string, onClick?: () => void}) => (
+    <Card className="relative overflow-hidden" onClick={onClick}>
+        <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
         </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
     </Card>
-));
+);
 
-const QuickActionsCard = ({ onAnnounceClick }: { onAnnounceClick: () => void }) => {
+const QuickActions = () => {
     const { setActivePage } = useUI();
+    const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
+
     const actions = [
-        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6"/>, action: () => setActivePage('assignments', { openNewAssignmentModal: true }) },
-        { label: "Duyuru Yap", icon: <MegaphoneIcon className="w-6 h-6"/>, action: onAnnounceClick },
-        { label: "Kütüphane", icon: <LibraryIcon className="w-6 h-6"/>, action: () => setActivePage('library') },
-        { label: "Öğrenciler", icon: <StudentsIcon className="w-6 h-6"/>, action: () => setActivePage('students') },
+        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6 text-primary-500"/>, action: () => setActivePage('assignments', {openNewAssignmentModal: true})},
+        { label: "Mesajlar", icon: <MessagesIcon className="w-6 h-6 text-green-500"/>, action: () => setActivePage('messages')},
+        { label: "Duyuru Yap", icon: <MegaphoneIcon className="w-6 h-6 text-yellow-500"/>, action: () => setAnnouncementModalOpen(true)},
+        { label: "Kütüphane", icon: <LibraryIcon className="w-6 h-6 text-purple-500"/>, action: () => setActivePage('library')},
     ];
+
     return (
-        <Card title="Hızlı Eylemler">
-            <div className="grid grid-cols-2 gap-4">
-                {actions.map(action => (
-                     <button key={action.label} onClick={action.action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105">
-                        {action.icon}
-                        <span className="text-sm font-semibold text-center">{action.label}</span>
-                    </button>
-                ))}
-            </div>
-        </Card>
+        <>
+            <Card title="Hızlı Eylemler">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {actions.map(({ label, icon, action }) => (
+                        <button key={label} onClick={action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-gray-200 dark:active:bg-gray-600">
+                            {icon}
+                            <span className="text-sm font-semibold text-center">{label}</span>
+                        </button>
+                    ))}
+                </div>
+            </Card>
+            <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />
+        </>
     );
 };
 
-
 const CoachDashboard = () => {
-    const { students, assignments, findOrCreateConversation } = useDataContext();
+    const { students, assignments } = useDataContext();
     const { setActivePage } = useUI();
-    const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
+
+    const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
+    const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
     
-    const stats = useMemo(() => {
-        const studentIds = students.map(s => s.id);
-        const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
+    const recentActivity = useMemo(() => assignments
+        .filter(a => a.status === AssignmentStatus.Submitted)
+        .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime())
+        .slice(0, 5)
+    , [assignments]);
+
+    const studentPerformanceData = useMemo(() => students.map(student => {
+        const studentAssignments = assignments.filter(a => a.studentId === student.id && a.status === AssignmentStatus.Graded && a.grade !== null);
+        const avgGrade = studentAssignments.length > 0 ? Math.round(studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length) : 0;
         return {
-            pendingCount: coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length,
-            overdueCount: coachAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length,
+            name: student.name,
+            avgGrade,
         };
-    }, [students, assignments]);
-    
-    const studentsWithAlerts = useMemo(() => students.map(s => {
-        const studentAssignments = assignments.filter(a => a.studentId === s.id);
-        const graded = studentAssignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-        const avg = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
-        const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-        const showAlert = (avg < 60 && avg > 0) || overdue > 0;
-        return { ...s, showAlert, avg, overdue };
-    }).filter(s => s.showAlert)
-      .sort((a, b) => (b.overdue - a.overdue) || (a.avg - b.avg)), [students, assignments]);
-
-    const statusData = useMemo(() => {
-         const coachAssignments = assignments.filter(a => students.map(s => s.id).includes(a.studentId));
-        return [
-            { name: 'Bekliyor', value: coachAssignments.filter(a => a.status === AssignmentStatus.Pending).length, color: '#facc15' },
-            { name: 'Teslim Edildi', value: coachAssignments.filter(a => a.status === AssignmentStatus.Submitted).length, color: '#3b82f6' },
-            { name: 'Notlandırıldı', value: coachAssignments.filter(a => a.status === AssignmentStatus.Graded).length, color: '#22c55e' },
-        ];
-    }, [assignments, students]);
-
-    const handleSendMessage = async (studentId: string) => {
-        const convId = await findOrCreateConversation(studentId);
-        if (convId) {
-            setActivePage('messages', { contactId: convId });
-        }
-    };
+    }).sort((a,b) => b.avgGrade - a.avgGrade), [students, assignments]);
 
     return (
         <div className="space-y-6">
             <CoachWelcomeHeader />
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="tour-step-3">
-                <StatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('students')} />
-                <StatCard title="Değerlendirilecek Ödev" value={stats.pendingCount} icon={<AssignmentsIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Submitted })} />
-                <StatCard title="Gecikmiş Ödev" value={stats.overdueCount} icon={<AlertTriangleIcon className="w-6 h-6"/>} onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
+                <CoachStatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon />} color="text-green-500" onClick={() => setActivePage('students')} />
+                <CoachStatCard title="Değerlendirilecek" value={toGradeCount} icon={<AssignmentsIcon />} color="text-blue-500" onClick={() => setActivePage('assignments', {status: AssignmentStatus.Submitted})} />
+                <CoachStatCard title="Gecikmiş Ödev" value={overdueCount} icon={<AlertTriangleIcon />} color="text-red-500" onClick={() => setActivePage('assignments')} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8 space-y-6">
-                     <Card title="Dikkat Gerektiren Öğrenciler">
-                        {studentsWithAlerts.length > 0 ? (
-                            <ul className="space-y-3">
-                                {studentsWithAlerts.slice(0, 5).map(s => (
-                                    <li key={s.id} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center">
-                                                <img src={s.profilePicture} alt={s.name} className="w-8 h-8 rounded-full" />
-                                                <span className="ml-3 font-medium">{s.name}</span>
-                                                 {s.overdue > 0 && <span title={`${s.overdue} gecikmiş ödev`} className="ml-2"><AlertTriangleIcon className="w-5 h-5 text-red-500" /></span>}
-                                                {s.avg < 60 && s.avg > 0 && <span title={`Not ortalaması: ${s.avg}`} className="ml-2"><AlertTriangleIcon className="w-5 h-5 text-yellow-500" /></span>}
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                 <button onClick={() => handleSendMessage(s.id)} className="text-xs font-semibold text-blue-500 hover:underline">Mesaj Gönder</button>
-                                                 <button onClick={() => setActivePage('students', { studentId: s.id })} className="text-xs font-semibold text-gray-500 hover:underline">Profili Görüntüle</button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                                 <CheckCircleIcon className="w-10 h-10 mb-2 text-green-400" />
-                                 <p className="text-sm font-semibold">Harika! Tüm öğrencileriniz yolunda görünüyor.</p>
-                            </div>
-                        )}
-                    </Card>
-                    <Card title="Ödev Durum Dağılımı">
-                         <div className="w-full h-64">
-                            <ResponsiveContainer>
-                                <BarChart data={statusData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.2)" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
-                                    <Bar dataKey="value" name="Ödev Sayısı">
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+            <QuickActions />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 <Card title="Öğrenci Performans Sıralaması" className="lg:col-span-2 h-full">
+                     <div className="w-full h-80">
+                         <ResponsiveContainer>
+                            <BarChart data={studentPerformanceData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                <XAxis type="number" domain={[0, 100]}/>
+                                <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 12}} />
+                                <Tooltip />
+                                <Bar dataKey="avgGrade" name="Not Ort." barSize={20}>
+                                    {studentPerformanceData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.avgGrade >= 85 ? '#22c55e' : entry.avgGrade >= 60 ? '#3b82f6' : '#ef4444'}/>
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                 </Card>
+                 <Card title="Son Aktiviteler" className="h-full">
+                     {recentActivity.length > 0 ? (
+                        <ul className="space-y-3">
+                            {recentActivity.map(a => (
+                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                    <div>
+                                        <p className="font-semibold text-sm">{students.find(s=>s.id === a.studentId)?.name}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{a.title}</p>
+                                    </div>
+                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-300 flex-shrink-0">Teslim Edildi</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="text-center py-8">
+                            <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
+                            <p className="mt-2 font-semibold">Her şey güncel!</p>
+                            <p className="text-sm text-gray-500">Değerlendirilecek yeni ödev yok.</p>
                         </div>
-                    </Card>
-                </div>
-
-                <div className="lg:col-span-4 space-y-6">
-                    <QuickActionsCard onAnnounceClick={() => setAnnouncementModalOpen(true)} />
-                    <AnnouncementsCard />
-                </div>
+                    )}
+                 </Card>
             </div>
-            
-            <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />
+            <AnnouncementsCard />
         </div>
     );
 };
 
+
 const Dashboard = () => {
     const { currentUser, isLoading } = useDataContext();
-
+    
     if (isLoading) {
         return <DashboardSkeleton />;
     }
 
     if (!currentUser) {
-        return <div>Lütfen giriş yapın.</div>;
+        return null;
     }
 
-    if (currentUser.role === UserRole.Coach || currentUser.role === UserRole.SuperAdmin) {
-        return <CoachDashboard />;
+    switch (currentUser.role) {
+        case UserRole.Student:
+            return <StudentDashboard />;
+        case UserRole.Coach:
+        case UserRole.SuperAdmin:
+            return <CoachDashboard />;
+        default:
+            return <div>Bilinmeyen kullanıcı rolü.</div>;
     }
-    
-    return <StudentDashboard />;
 };
 
 export default Dashboard;

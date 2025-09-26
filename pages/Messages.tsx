@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
@@ -95,6 +96,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const repliedToMessage = msg.replyTo ? findMessageById(msg.replyTo) : null;
+    const sender = useMemo(() => users.find(u => u.id === msg.senderId), [users, msg.senderId]);
     
     if (msg.type === 'system') {
         return (
@@ -176,45 +178,54 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
 
     return (
         <div 
-            className={`flex items-end gap-2 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
-            onClick={() => {
-                setShowToolbar(prev => !prev);
-                if(showToolbar) setShowReactionPicker(false);
-            }}
+            className={`flex items-end gap-2.5 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
         >
-            <div className="relative">
-                <div className={`rounded-lg p-3 max-w-xs sm:max-w-md lg:max-w-lg relative ${msg.type === 'announcement' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 w-full' : (isOwnMessage ? 'bg-primary-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none')}`}>
-                    {repliedToMessage && (
-                        <div className="border-l-2 border-primary-300 dark:border-primary-500 pl-2 opacity-80 mb-2">
-                             <p className="text-xs font-semibold">{senderName}</p>
-                            <p className="text-xs truncate">{repliedToMessage.text}</p>
-                        </div>
-                    )}
-                    
-                    {msg.type === 'announcement' && <strong className="font-bold block mb-1">📢 Duyuru</strong>}
-                    
-                    {renderMessageContent()}
-                    
-                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div className="absolute -bottom-4 right-2 flex gap-1">
-                            {Object.entries(msg.reactions).map(([emoji, userIds]) => (
-                                <div key={emoji} className="bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center shadow">
-                                    <span>{emoji}</span>
-                                    <span className="ml-1 font-semibold">{userIds.length}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+            {!isOwnMessage && sender && (
+                <img src={sender.profilePicture} alt={sender.name} className="w-8 h-8 rounded-full flex-shrink-0" />
+            )}
+            <div className={`flex flex-col w-full max-w-xs sm:max-w-md ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                 <div 
+                    className="relative group"
+                    onClick={() => {
+                        if (msg.type !== 'announcement') {
+                            setShowToolbar(prev => !prev);
+                            if (showToolbar) setShowReactionPicker(false);
+                        }
+                    }}
+                >
+                    <div className={`rounded-2xl px-3 py-2 relative ${msg.type === 'announcement' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 w-full' : (isOwnMessage ? 'bg-primary-600 text-white rounded-br-lg' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-lg')}`}>
+                        {repliedToMessage && (
+                            <div className="border-l-2 border-primary-300 dark:border-primary-500 pl-2 opacity-80 mb-2">
+                                <p className="text-xs font-semibold">{senderName}</p>
+                                <p className="text-xs truncate">{repliedToMessage.text}</p>
+                            </div>
+                        )}
+                        
+                        {msg.type === 'announcement' && <strong className="font-bold block mb-1">📢 Duyuru</strong>}
+                        
+                        {renderMessageContent()}
+                        
+                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                            <div className="absolute -bottom-4 right-2 flex gap-1">
+                                {Object.entries(msg.reactions).map(([emoji, userIds]) => (
+                                    <div key={emoji} className="bg-white dark:bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center shadow">
+                                        <span>{emoji}</span>
+                                        <span className="ml-1 font-semibold">{userIds.length}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                     <div className={`absolute top-1/2 -translate-y-1/2 flex items-center bg-gray-100 dark:bg-gray-900 rounded-full shadow-md transition-opacity duration-200 ${isOwnMessage ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} ${showToolbar || showReactionPicker ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'}`}>
+                        {showReactionPicker && <ReactionPicker onSelect={handleReactionSelect} onClose={() => setShowReactionPicker(false)} />}
+                        <button onClick={(e) => { e.stopPropagation(); setShowReactionPicker(p => !p); }} className="p-1.5 text-gray-500 hover:text-primary-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><EmojiIcon className="w-5 h-5"/></button>
+                        <button onClick={(e) => { e.stopPropagation(); onReply(msg); }} className="p-1.5 text-gray-500 hover:text-primary-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><ReplyIcon className="w-5 h-5"/></button>
+                    </div>
                 </div>
-                 <div className={`absolute top-1/2 -translate-y-1/2 flex items-center bg-gray-100 dark:bg-gray-900 rounded-full shadow-md transition-opacity duration-200 ${isOwnMessage ? '-left-20' : '-right-20'} ${showToolbar && msg.type !== 'announcement' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    {showReactionPicker && <ReactionPicker onSelect={handleReactionSelect} onClose={() => setShowReactionPicker(false)} />}
-                    <button onClick={(e) => { e.stopPropagation(); setShowReactionPicker(p => !p); }} className="p-1.5 text-gray-500 hover:text-primary-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><EmojiIcon className="w-5 h-5"/></button>
-                    <button onClick={(e) => { e.stopPropagation(); onReply(msg); }} className="p-1.5 text-gray-500 hover:text-primary-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><ReplyIcon className="w-5 h-5"/></button>
+                <div className={`flex items-center gap-1 text-xs mt-1.5 ${isOwnMessage ? 'self-end' : 'self-start'}`}>
+                    <span className="text-gray-400">{new Date(msg.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isOwnMessage && <ReadReceipt />}
                 </div>
-            </div>
-            <div className={`flex items-center gap-1 text-xs ${isOwnMessage ? 'self-end' : 'self-start'}`}>
-                {isOwnMessage && <ReadReceipt />}
-                <span className="text-gray-400">{new Date(msg.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
         </div>
     );
@@ -510,10 +521,10 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
     const canSend = !isAnnouncement || (currentUser && currentUser.role !== UserRole.Student);
 
     return (
-        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-800">
+        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
             <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
                 <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
-                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full" />
+                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" />
                 <div className="ml-3">
                     <h2 className="font-semibold">{conversation.isGroup ? conversation.groupName : otherUser?.name}</h2>
                     {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}
@@ -529,7 +540,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
                 </div>
             </header>
             <main className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-6">
+                <div className="space-y-1">
                     {messages.map(msg => (
                         <MemoizedMessageBubble 
                             key={msg.id} 
