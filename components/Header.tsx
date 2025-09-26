@@ -98,7 +98,7 @@ const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (ope
     const unreadNotificationsCount = notifications.filter(n => n.userId === currentUser?.id && !n.isRead).length;
 
     return (
-        <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
+        <header className="relative z-30 flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between p-4 h-16">
                 <div className="flex items-center">
                     <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-500 dark:text-gray-400 mr-4" aria-label="Menüyü aç">
