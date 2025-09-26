@@ -505,8 +505,9 @@ export default function Students() {
     };
     
     const handleToggleSelect = (studentId: string) => {
+        // Fix: Corrected a reference error where `id` was used instead of `studentId`.
         setSelectedStudentIds(prev => 
-            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, id]
+            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
         );
     };
 
