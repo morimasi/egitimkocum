@@ -1,12 +1,13 @@
 
 
+
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon,
+    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon,
 } from './Icons';
 
 interface NavItemProps {
@@ -63,35 +64,46 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     );
 
     const navItems: NavItemProps[] = useMemo(() => {
-        const items: NavItemProps[] = [];
         if (!currentUser) return [];
 
-        if (currentUser.role === UserRole.Student) {
-            items.push(
-                { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
-                { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
-                { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
-                { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
-            );
-        } else { // Coach and SuperAdmin share these
-             items.push(
-                { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
-                { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
-                { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
-                { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
-                { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
-                { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> }
-            );
-        }
-        
-        if (currentUser.role === UserRole.SuperAdmin) {
-            items.push({ page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> });
-        }
-        
-        items.push({ page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> });
+        const studentItems: NavItemProps[] = [
+            { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
+            { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
+            { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
+            { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> },
+            { page: 'motivation', label: 'Motivasyon', icon: <FlameIcon className="w-5 h-5" /> },
+            { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-5 h-5" /> },
+            { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
+        ];
 
-        return items;
-
+        const coachItems: NavItemProps[] = [
+            ...studentItems.slice(0, 2), // Dashboard, Assignments
+            { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+            { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
+            { page: 'templates', label: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5" /> },
+            ...studentItems.slice(2, 4), // Messages, Analytics
+            ...studentItems.slice(5) // Calendar, Settings
+        ];
+    
+        switch (currentUser.role) {
+            case UserRole.Student:
+                return studentItems;
+            case UserRole.Coach:
+                return coachItems;
+            case UserRole.SuperAdmin:
+                return [
+                    ...coachItems.slice(0, -1), // All coach items except settings
+                    { page: 'superadmin', label: 'Süper Admin Paneli', icon: <AdminIcon className="w-5 h-5" /> },
+                    coachItems.slice(-1)[0], // Settings
+                ];
+            case UserRole.Parent:
+                return [
+                    { page: 'parent', label: 'Veli Portalı', icon: <ParentIcon className="w-5 h-5" /> },
+                    { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
+                ];
+            default:
+                return [];
+        }
     }, [currentUser, totalUnreadMessages]);
     
     const { login, users } = useDataContext();

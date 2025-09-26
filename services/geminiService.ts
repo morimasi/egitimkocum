@@ -78,15 +78,62 @@ export const generateAssignmentDescription = (title: string): Promise<string> =>
     );
 };
 
-export const generateSmartFeedback = (grade: number, assignmentTitle: string): Promise<string> => {
-    const prompt = `Bir öğrencinin "${assignmentTitle}" ödevinden 100 üzerinden ${grade} aldığını varsayarak, hem yapıcı hem de motive edici bir geri bildirim yaz.
-    - Eğer not yüksekse (85+): Öğrencinin güçlü yönlerini vurgula ve onu tebrik et. Gelecekte kendini nasıl daha da geliştirebileceğine dair bir ipucu ver.
-    - Eğer not ortalamaysa (60-84): Hem iyi yaptığı noktaları hem de geliştirmesi gereken alanları belirt. Cesaretlendirici bir dil kullan.
-    - Eğer not düşükse (<60): Öğrenciyi kırmadan, temel eksikliklere odaklan. Moralini bozmadan nasıl daha iyi olabileceğine dair somut adımlar öner ve yardım teklif et.
-    Geri bildirimin tonu destekleyici ve kişisel olmalı.`;
+export const generateSmartFeedback = (assignmentToGrade: Assignment, allStudentAssignments: Assignment[]): Promise<string> => {
+    const { title, grade } = assignmentToGrade;
+    const studentId = assignmentToGrade.studentId;
 
+    // Helper to find subject from title
+    const getSubject = (title: string) => {
+        const subjectKeywords: { [key: string]: string[] } = {
+            'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç'], 'Kimya': ['kimya', 'formül', 'organik'], 'Biyoloji': ['biyoloji', 'hücre', 'çizim'],
+            'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap'], 'Tarih': ['tarih', 'ihtilal', 'araştırma'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum'], 'İngilizce': ['ingilizce', 'kelime'], 'Felsefe': ['felsefe']
+        };
+        for (const subject in subjectKeywords) {
+            if (subjectKeywords[subject].some(keyword => title.toLowerCase().includes(keyword))) {
+                return subject;
+            }
+        }
+        return 'Genel';
+    };
+
+    const currentSubject = getSubject(title);
+    
+    // Calculate previous average for the same subject
+    const previousAssignmentsInSubject = allStudentAssignments.filter(a => 
+        a.id !== assignmentToGrade.id &&
+        getSubject(a.title) === currentSubject &&
+        a.status === AssignmentStatus.Graded && 
+        a.grade !== null
+    );
+
+    let subjectContext = "";
+    if (previousAssignmentsInSubject.length > 0) {
+        const previousAvg = Math.round(previousAssignmentsInSubject.reduce((sum, a) => sum + a.grade!, 0) / previousAssignmentsInSubject.length);
+        subjectContext = `Öğrencinin bu dersteki önceki not ortalaması yaklaşık ${previousAvg}.`;
+        if (grade! > previousAvg + 5) {
+            subjectContext += " Bu not, önceki performansına göre dikkate değer bir gelişim gösteriyor.";
+        } else if (grade! < previousAvg - 5) {
+            subjectContext += " Bu not, önceki performansına göre bir düşüş gösteriyor.";
+        } else {
+            subjectContext += " Bu not, önceki performansıyla tutarlı.";
+        }
+    } else {
+        subjectContext = "Bu, öğrencinin bu derste notlandırılan ilk ödevi gibi görünüyor.";
+    }
+
+    const prompt = `Bir öğrencinin "${title}" ödevinden 100 üzerinden ${grade} aldığını varsayarak, hem yapıcı hem de motive edici bir geri bildirim yaz.
+    
+    Ek Bilgi: ${subjectContext}
+    
+    Bu ek bilgiyi kullanarak geri bildirimini kişiselleştir:
+    - Eğer not yüksekse (85+): Öğrencinin güçlü yönlerini vurgula. Eğer bir gelişim varsa, bunu özellikle tebrik et. Gelecekte kendini nasıl daha da geliştirebileceğine dair bir ipucu ver.
+    - Eğer not ortalamaysa (60-84): Hem iyi yaptığı noktaları belirt hem de geliştirmesi gereken alanlara odaklan. Eğer notu öncekilere göre düşmüşse cesaretlendirici ol, yükselmişse bu ivmeyi nasıl koruyacağını anlat.
+    - Eğer not düşükse (<60): Öğrenciyi kırmadan, temel eksikliklere odaklan. Eğer bu bir düşüş ise, nedenlerini anlamaya yönelik bir adım at (örn: "Bu konuyu tekrar gözden geçirelim mi?"). Moralini bozmadan nasıl daha iyi olabileceğine dair somut adımlar öner ve yardım teklif et.
+    
+    Geri bildirimin tonu destekleyici, kişisel ve bağlama duyarlı olmalı.`;
+    
     return cachedGeminiCall(
-        `genFeedback_${assignmentTitle}_${grade}`,
+        `genFeedback_v2_${assignmentToGrade.id}`, // Use a more specific cache key
         ONE_HOUR,
         () => getAi().models.generateContent({
             model: 'gemini-2.5-flash',
@@ -97,6 +144,7 @@ export const generateSmartFeedback = (grade: number, assignmentTitle: string): P
         "Akıllı geri bildirim üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin."
     );
 };
+
 
 export const generateAssignmentChecklist = (title: string, description: string): Promise<{ text: string }[]> => {
     return cachedGeminiCall(

@@ -1,14 +1,16 @@
-import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation, AcademicTrack } from '../types';
+
+import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation, AcademicTrack, Badge, BadgeID } from '../types';
 
 export const getMockData = () => {
     const users: User[] = [
       { id: 'coach-1', name: 'Ayşe Yılmaz', email: 'ayse.yilmaz@koc.com', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=coach-1' },
-      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Sayisal },
-      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1', gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik },
-      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1', gradeLevel: 'mezun', academicTrack: AcademicTrack.Sayisal },
-      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1', gradeLevel: '10', academicTrack: AcademicTrack.Sozel },
-      { id: 'student-5', name: 'Selin Doğan', email: 'selin.dogan@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-5', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Dil },
+      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, parentIds: ['parent-1'], xp: 250, streak: 3, lastSubmissionDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
+      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1', gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 120, streak: 0, lastSubmissionDate: null, earnedBadgeIds: [BadgeID.FirstAssignment] },
+      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1', gradeLevel: 'mezun', academicTrack: AcademicTrack.Sayisal, xp: 480, streak: 7, lastSubmissionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter] },
+      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1', gradeLevel: '10', academicTrack: AcademicTrack.Sozel, xp: 100, streak: 1, lastSubmissionDate: new Date().toISOString(), earnedBadgeIds: [BadgeID.FirstAssignment] },
+      { id: 'student-5', name: 'Selin Doğan', email: 'selin.dogan@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-5', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Dil, xp: 50, streak: 0, lastSubmissionDate: null, earnedBadgeIds: [] },
       { id: 'superadmin-1', name: 'Admin User', email: 'admin@platform.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
+      { id: 'parent-1', name: 'Veli Hanım', email: 'veli.hanim@aile.com', role: UserRole.Parent, profilePicture: 'https://i.pravatar.cc/150?u=parent-1', childIds: ['student-1'] },
     ];
     
     const conversations: Conversation[] = [
@@ -78,5 +80,15 @@ export const getMockData = () => {
         {id: 'goal-5', studentId: 'student-5', text: 'Haftada en az 3 deneme çöz.', isCompleted: false},
     ];
 
-    return { users, assignments, messages, templates, resources, goals, conversations };
+    const badges: Badge[] = [
+      { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla teslim ettin!" },
+      { id: BadgeID.HighAchiever, name: "Yüksek Başarı", description: "Not ortalaman 85'in üzerinde." },
+      { id: BadgeID.PerfectScore, name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın." },
+      { id: BadgeID.GoalGetter, name: "Hedef Avcısı", description: "İlk hedefini tamamladın." },
+      { id: BadgeID.StreakStarter, name: "Seri Başlangıcı", description: "3 günlük ödev teslim serisi yakaladın." },
+      { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 günlük ödev teslim serisi yakaladın." },
+      { id: BadgeID.OnTimeSubmissions, name: "Dakik Kahraman", description: "5 ödevi zamanında teslim ettin." },
+    ];
+
+    return { users, assignments, messages, templates, resources, goals, conversations, badges };
 };

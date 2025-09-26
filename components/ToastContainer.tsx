@@ -1,9 +1,10 @@
 
 
+
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { ToastMessage } from '../types';
-import { CheckCircleIcon, AlertCircleIcon, InfoIcon, XIcon } from './Icons';
+import { CheckCircleIcon, AlertCircleIcon, InfoIcon, XIcon, SparklesIcon } from './Icons';
 
 interface ToastProps {
     toast: ToastMessage;
@@ -25,12 +26,14 @@ const Toast = ({ toast, onDismiss, ...props }: ToastProps) => {
         success: <CheckCircleIcon className="w-6 h-6 text-green-500" />,
         error: <AlertCircleIcon className="w-6 h-6 text-red-500" />,
         info: <InfoIcon className="w-6 h-6 text-blue-500" />,
+        xp: <SparklesIcon className="w-6 h-6 text-yellow-500" />,
     };
 
     const BG_COLORS = {
         success: 'bg-green-50 dark:bg-green-900/50 border-green-400',
         error: 'bg-red-50 dark:bg-red-900/50 border-red-400',
         info: 'bg-blue-50 dark:bg-blue-900/50 border-blue-400',
+        xp: 'bg-yellow-50 dark:bg-yellow-900/50 border-yellow-400',
     };
 
     return (

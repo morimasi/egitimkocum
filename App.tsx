@@ -1,5 +1,6 @@
 
 
+
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -25,9 +26,13 @@ const Messages = React.lazy(() => import('./pages/Messages'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Library = React.lazy(() => import('./pages/Library'));
+const Calendar = React.lazy(() => import('./pages/Calendar'));
+const ParentPortal = React.lazy(() => import('./pages/ParentPortal'));
+const TemplateManager = React.lazy(() => import('./pages/TemplateManager'));
 const SuperAdminDashboard = React.lazy(() => import('./pages/SuperAdminDashboard'));
 const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
 const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
+const Motivasyon = React.lazy(() => import('./pages/Motivasyon'));
 
 
 const AppSkeleton = () => (
@@ -109,6 +114,8 @@ const AppContent = () => {
                 case 'messages': return <Messages />;
                 case 'analytics': return <Analytics />;
                 case 'library': return <Library />;
+                case 'calendar': return <Calendar />;
+                case 'templates': return <TemplateManager />;
                 case 'settings': return <Settings />;
                 default: // Fallback to their own dashboard
                     setActivePage('superadmin');
@@ -118,6 +125,7 @@ const AppContent = () => {
         
         switch (activePage) {
             case 'dashboard':
+                if (currentUser?.role === UserRole.Parent) return <ParentPortal />;
                 return <Dashboard />;
             case 'assignments':
                 return <Assignments />;
@@ -129,6 +137,17 @@ const AppContent = () => {
                 return <Analytics />;
             case 'library':
                 return <Library />;
+            case 'calendar':
+                return <Calendar />;
+            case 'templates':
+                if (currentUser?.role === UserRole.Coach) return <TemplateManager />;
+                return <Dashboard />; // Fallback for others
+             case 'parent':
+                 if (currentUser?.role === UserRole.Parent) return <ParentPortal />;
+                 return <Dashboard />; // Fallback for others
+            case 'motivation':
+                if (currentUser?.role === UserRole.Student) return <Motivasyon />;
+                return <Dashboard />; // Fallback for others
             case 'settings':
                 return <Settings />;
             case 'superadmin':

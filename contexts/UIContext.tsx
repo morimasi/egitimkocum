@@ -11,6 +11,7 @@ interface InitialFilters {
     contactId?: string;
     status?: AssignmentStatus;
     openNewAssignmentModal?: boolean;
+    assignmentId?: string;
 }
 
 interface UIContextType {

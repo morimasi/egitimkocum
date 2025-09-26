@@ -245,7 +245,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
 
 
 const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (next: boolean) => void }) => {
-    const { currentUser, updateAssignment, uploadFile } = useDataContext();
+    const { currentUser, updateAssignment, uploadFile, getAssignmentsForStudent } = useDataContext();
     const { addToast } = useUI();
     const [grade, setGrade] = useState<string>('');
     const [feedback, setFeedback] = useState('');
@@ -345,7 +345,9 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         }
         setIsGenerating(true);
         try {
-            const generatedFeedback = await generateSmartFeedback(parseInt(grade, 10), assignment.title);
+            const allStudentAssignments = getAssignmentsForStudent(assignment.studentId);
+            const assignmentWithGrade = { ...assignment, grade: parseInt(grade, 10) };
+            const generatedFeedback = await generateSmartFeedback(assignmentWithGrade, allStudentAssignments);
             setFeedback(generatedFeedback);
         } catch (e) {
             addToast("Geri bildirim üretilemedi.", "error");
@@ -689,10 +691,18 @@ const Assignments = () => {
         if (initialFilters.status) {
             setFilterStatus(initialFilters.status);
         }
+        if (initialFilters.assignmentId) {
+            const assignmentToOpen = assignments.find(a => a.id === initialFilters.assignmentId);
+            if (assignmentToOpen) {
+                setSelectedAssignment(assignmentToOpen);
+            } else {
+                addToast("İstenen ödev bulunamadı.", "error");
+            }
+        }
         if (Object.keys(initialFilters).length > 0) {
             setInitialFilters({});
         }
-    }, [initialFilters, setInitialFilters]);
+    }, [initialFilters, setInitialFilters, assignments, addToast]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {

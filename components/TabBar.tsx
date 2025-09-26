@@ -6,7 +6,7 @@ import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
-    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon
+    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon
 } from './Icons';
 
 interface TabItemProps {
@@ -52,11 +52,17 @@ const TabBar = () => {
     const tabItems: TabItemProps[] = [];
 
     if (!currentUser) return null;
-
-    if (currentUser.role === UserRole.Student) {
+    
+    if (currentUser.role === UserRole.Parent) {
+        tabItems.push(
+            { page: 'parent', label: 'Portal', icon: <ParentIcon className="w-6 h-6" /> },
+            { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
+        );
+    } else if (currentUser.role === UserRole.Student) {
         tabItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-6 h-6" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
+            { page: 'motivation', label: 'Motivasyon', icon: <FlameIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
             { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
         );
@@ -66,14 +72,14 @@ const TabBar = () => {
             { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-6 h-6" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
-            { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
+            { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-6 h-6" /> }
         );
     }
 
     return (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-30">
             <div className="flex justify-around items-center h-full">
-                {tabItems.map(item => (
+                {tabItems.slice(0, 5).map(item => (
                     <TabItem key={item.page} {...item} />
                 ))}
             </div>

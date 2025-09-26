@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack } from '../types';
+import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, CheckIcon } from '../components/Icons';
+// @FIX: Imported TrophyIcon to be used in the student detail modal.
+import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, CheckIcon, FlameIcon, TrophyIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
 import EmptyState from '../components/EmptyState';
@@ -37,7 +38,7 @@ const getStatusChip = (status: AssignmentStatus) => {
 
 
 const StudentDetailModal = ({ student, onClose }: { student: User | null; onClose: () => void; }) => {
-    const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal, updateStudentNotes, users } = useDataContext();
+    const { getAssignmentsForStudent, getGoalsForStudent, updateGoal, addGoal, updateStudentNotes, users, badges } = useDataContext();
     const { addToast } = useUI();
     const [newGoalText, setNewGoalText] = useState('');
     const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
@@ -112,28 +113,16 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
             setIsGeneratingGoal(false);
         }
     };
-
-    const renderAssignments = () => (
-        <div className="animate-fade-in">
-            <h4 className="font-semibold mb-2">Ödev Listesi</h4>
-            <ul className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                {assignments.length > 0 ? assignments.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()).map(a => (
-                    <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">{a.title}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Teslim: {new Date(a.dueDate).toLocaleDateString('tr-TR')}
-                            </p>
-                        </div>
-                        <div className="text-right flex items-center gap-4">
-                           {getStatusChip(a.status)}
-                           <p className="text-sm font-semibold w-12 text-center">Not: {a.grade ?? '-'}</p>
-                        </div>
-                    </li>
-                )) : <p className="text-sm text-gray-500 text-center py-4">Bu öğrenciye atanmış ödev bulunmuyor.</p>}
-            </ul>
-        </div>
-    );
+    
+    const xpToNextLevel = (level: number) => (level * level) * 100;
+    const currentLevel = useMemo(() => student.xp ? Math.floor(Math.sqrt(student.xp / 100)) + 1 : 1, [student.xp]);
+    const xpForCurrentLevel = useMemo(() => xpToNextLevel(currentLevel - 1), [currentLevel]);
+    const xpForNextLevel = useMemo(() => xpToNextLevel(currentLevel), [currentLevel]);
+    const levelProgress = useMemo(() => {
+        const totalXpForLevel = xpForNextLevel - xpForCurrentLevel;
+        const currentXpInLevel = (student.xp || 0) - xpForCurrentLevel;
+        return totalXpForLevel > 0 ? (currentXpInLevel / totalXpForLevel) * 100 : 0;
+    }, [student.xp, xpForCurrentLevel, xpForNextLevel]);
 
     return (
         <Modal isOpen={!!student} onClose={onClose} title={`${student.name} - Performans Detayları`} size="lg">
@@ -165,6 +154,7 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                     <button onClick={() => setActiveTab('overview')} className={`${activeTab === 'overview' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Genel Bakış</button>
                     <button onClick={() => setActiveTab('assignments')} className={`${activeTab === 'assignments' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Ödevler</button>
+                    <button onClick={() => setActiveTab('motivation')} className={`${activeTab === 'motivation' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Motivasyon</button>
                     <button onClick={() => setActiveTab('notes')} className={`${activeTab === 'notes' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Notlar</button>
                 </nav>
             </div>
@@ -210,7 +200,64 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                         </div>
                     </div>
                 )}
-                {activeTab === 'assignments' && renderAssignments()}
+                {activeTab === 'assignments' && (
+                    <div className="animate-fade-in">
+                        <h4 className="font-semibold mb-2">Ödev Listesi</h4>
+                        <ul className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                            {assignments.length > 0 ? assignments.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()).map(a => (
+                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p className="font-semibold">{a.title}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Teslim: {new Date(a.dueDate).toLocaleDateString('tr-TR')}
+                                        </p>
+                                    </div>
+                                    <div className="text-right flex items-center gap-4">
+                                       {getStatusChip(a.status)}
+                                       <p className="text-sm font-semibold w-12 text-center">Not: {a.grade ?? '-'}</p>
+                                    </div>
+                                </li>
+                            )) : <p className="text-sm text-gray-500 text-center py-4">Bu öğrenciye atanmış ödev bulunmuyor.</p>}
+                        </ul>
+                    </div>
+                )}
+                 {activeTab === 'motivation' && (
+                    <div className="animate-fade-in space-y-4">
+                        <Card>
+                            <h4 className="font-semibold mb-2">Seviye ve Tecrübe Puanı (XP)</h4>
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-primary-500 text-white rounded-full flex flex-col items-center justify-center font-bold">
+                                    <span className="text-xs">SEVİYE</span>
+                                    <span className="text-3xl">{currentLevel}</span>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>{student.xp || 0} XP</span>
+                                        <span className="text-gray-500">{xpForNextLevel} XP</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                                        <div className="bg-primary-500 h-4 rounded-full" style={{ width: `${levelProgress}%` }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                        <Card title="Kazanılan Rozetler">
+                            <div className="flex flex-wrap gap-4">
+                                {badges.map(badge => {
+                                    const isEarned = student.earnedBadgeIds?.includes(badge.id);
+                                    return (
+                                        <div key={badge.id} title={`${badge.name}: ${badge.description}`} className={`text-center transition-opacity ${!isEarned && 'opacity-30'}`}>
+                                            <div className={`p-3 rounded-full ${isEarned ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                                                <TrophyIcon className={`w-8 h-8 ${isEarned ? 'text-yellow-500' : 'text-gray-400'}`} />
+                                            </div>
+                                            <p className="text-xs mt-1 w-20 truncate">{badge.name}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+                    </div>
+                )}
                 {activeTab === 'notes' && (
                     <div className="animate-fade-in">
                         <h4 className="font-semibold mb-2">Özel Notlar</h4>
@@ -264,61 +311,65 @@ const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student:
         e.stopPropagation();
         setActivePage('assignments', { studentId: student.id, openNewAssignmentModal: true });
     };
+    
+    const currentLevel = useMemo(() => student.xp ? Math.floor(Math.sqrt(student.xp / 100)) + 1 : 1, [student.xp]);
 
     return (
-        <Card className="flex flex-col p-4 cursor-pointer transition-shadow duration-300 h-full hover:shadow-lg" onClick={() => onSelect(student)}>
-            <div className="flex items-center gap-4 flex-grow">
-                <img src={student.profilePicture} alt={student.name} className="w-16 h-16 rounded-full flex-shrink-0" />
+        <Card className="flex flex-col p-3 cursor-pointer transition-shadow duration-300 h-full hover:shadow-lg" onClick={() => onSelect(student)}>
+            <div className="flex items-center gap-3 flex-grow">
+                <div className="relative">
+                    <img src={student.profilePicture} alt={student.name} className="w-12 h-12 rounded-full flex-shrink-0" />
+                    <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
+                </div>
                 <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center gap-2">
-                        <h4 className="text-lg font-bold truncate">{student.name}</h4>
+                    <div className="flex items-center gap-1.5">
+                        <h4 className="text-base font-bold truncate">{student.name}</h4>
                         {hasAlert && (
                             <div title={alertTitle.trim()}>
-                                <AlertTriangleIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                                <AlertTriangleIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
                             </div>
                         )}
                     </div>
-                    <p className="text-sm text-gray-500 truncate">{student.email}</p>
-                    <p className={`text-xs font-medium mt-1 inline-block px-2 py-0.5 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>{assignedCoach?.name || 'Atanmamış'}</p>
+                    <p className="text-xs text-gray-500 truncate">{student.email}</p>
                 </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t dark:border-gray-700">
+            <div className="mt-3 pt-2 border-t dark:border-gray-700">
                 <div className="flex justify-around items-center">
                     <div className="text-center">
-                        <p className="font-bold text-base">{assignments.length}</p>
+                        <p className="font-bold text-sm">{assignments.length}</p>
                         <p className="text-xs text-gray-500">Ödev</p>
                     </div>
                      <div className="text-center">
-                        <p className="font-bold text-base text-primary-500">{averageGrade}</p>
+                        <p className="font-bold text-sm text-primary-500">{averageGrade}</p>
                         <p className="text-xs text-gray-500">Not Ort.</p>
                     </div>
                 </div>
-                <div className="flex justify-center gap-4 w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-                     <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Bekleyen Ödevler">
+                <div className="flex justify-center gap-3 w-full mt-2 pt-1 border-t border-gray-100 dark:border-gray-700/50">
+                     <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Bekleyen Ödevler">
                         <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
                         <span className="font-semibold">{pendingCount}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Teslim Edilmiş Ödevler">
+                    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Teslim Edilmiş Ödevler">
                         <div className="w-2 h-2 rounded-full bg-blue-400"></div>
                         <span className="font-semibold">{submittedCount}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" title="Notlandırılmış Ödevler">
+                    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Notlandırılmış Ödevler">
                         <div className="w-2 h-2 rounded-full bg-green-400"></div>
                         <span className="font-semibold">{gradedCount}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex justify-around items-center mt-3 pt-3 border-t dark:border-gray-700">
-                <button onClick={handleAssignTask} title="Ödev Ver" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
-                    <AssignmentsIcon className="w-5 h-5" />
+            <div className="flex justify-around items-center mt-2 pt-2 border-t dark:border-gray-700">
+                <button onClick={handleAssignTask} title="Ödev Ver" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <AssignmentsIcon className="w-4 h-4" />
                 </button>
-                <button onClick={handleAssignResource} title="Kaynak Gönder" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
-                    <LibraryIcon className="w-5 h-5" />
+                <button onClick={handleAssignResource} title="Kaynak Gönder" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <LibraryIcon className="w-4 h-4" />
                 </button>
-                <button onClick={handleSendMessage} title="Mesaj At" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
-                    <MessagesIcon className="w-5 h-5" />
+                <button onClick={handleSendMessage} title="Mesaj At" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <MessagesIcon className="w-4 h-4" />
                 </button>
             </div>
         </Card>
@@ -410,7 +461,7 @@ const Students = () => {
                     description="Arama kriterlerinizi değiştirmeyi deneyin veya tüm öğrencileri görmek için aramayı temizleyin."
                  />
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     {filteredStudents.map(student => (
                         <MemoizedStudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
                     ))}

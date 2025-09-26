@@ -1,7 +1,9 @@
+
 export enum UserRole {
   Coach = 'coach',
   Student = 'student',
   SuperAdmin = 'superadmin',
+  Parent = 'parent',
 }
 
 export enum AcademicTrack {
@@ -9,6 +11,22 @@ export enum AcademicTrack {
   EsitAgirlik = 'esit-agirlik',
   Sozel = 'sozel',
   Dil = 'dil',
+}
+
+export enum BadgeID {
+  FirstAssignment = 'first-assignment',
+  HighAchiever = 'high-achiever',
+  PerfectScore = 'perfect-score',
+  GoalGetter = 'goal-getter',
+  StreakStarter = 'streak-starter',
+  StreakMaster = 'streak-master',
+  OnTimeSubmissions = 'on-time-submissions',
+}
+
+export interface Badge {
+  id: BadgeID;
+  name: string;
+  description: string;
 }
 
 export interface User {
@@ -21,6 +39,12 @@ export interface User {
   assignedCoachId?: string | null; // ID of the assigned coach for a student
   gradeLevel?: string;
   academicTrack?: AcademicTrack;
+  childIds?: string[]; // For parents
+  parentIds?: string[]; // For students
+  xp?: number;
+  streak?: number;
+  lastSubmissionDate?: string | null;
+  earnedBadgeIds?: BadgeID[];
 }
 
 export enum AssignmentStatus {
@@ -107,9 +131,9 @@ export interface Message {
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'xp';
 
 export interface ToastMessage {
   id: number;

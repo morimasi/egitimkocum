@@ -1,10 +1,6 @@
 
-
-
-
-
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge } from '../types';
 import { getMockData } from '../hooks/useMockData';
 
 export const getInitialDataForSeeding = () => {
@@ -21,6 +17,7 @@ const getInitialState = (): AppState => ({
     templates: [],
     resources: [],
     goals: [],
+    badges: [],
     currentUser: null,
     isLoading: true,
     typingStatus: {},
@@ -35,6 +32,7 @@ type AppState = {
     templates: AssignmentTemplate[];
     resources: Resource[];
     goals: Goal[];
+    badges: Badge[];
     currentUser: User | null;
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
@@ -62,6 +60,9 @@ type Action =
     | { type: 'TOGGLE_RESOURCE_ASSIGNMENT'; payload: { resourceId: string; studentId: string } }
     | { type: 'ADD_RESOURCE'; payload: Resource }
     | { type: 'DELETE_RESOURCE'; payload: string }
+    | { type: 'ADD_TEMPLATE'; payload: AssignmentTemplate }
+    | { type: 'UPDATE_TEMPLATE'; payload: AssignmentTemplate }
+    | { type: 'DELETE_TEMPLATE'; payload: string }
     | { type: 'ADD_CONVERSATION'; payload: Conversation }
     | { type: 'UPDATE_CONVERSATION'; payload: Conversation };
 
@@ -188,6 +189,12 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, resources: [...state.resources, action.payload] };
         case 'DELETE_RESOURCE':
             return { ...state, resources: state.resources.filter(r => r.id !== action.payload) };
+        case 'ADD_TEMPLATE':
+            return { ...state, templates: [...state.templates, action.payload] };
+        case 'UPDATE_TEMPLATE':
+            return { ...state, templates: state.templates.map(t => t.id === action.payload.id ? action.payload : t) };
+        case 'DELETE_TEMPLATE':
+            return { ...state, templates: state.templates.filter(t => t.id !== action.payload) };
          case 'ADD_CONVERSATION':
             return { ...state, conversations: [...state.conversations, action.payload] };
         case 'UPDATE_CONVERSATION':
@@ -209,6 +216,7 @@ interface DataContextType {
     templates: AssignmentTemplate[];
     resources: Resource[];
     goals: Goal[];
+    badges: Badge[];
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
     login: (email: string, pass: string) => Promise<User | null>;
@@ -234,6 +242,9 @@ interface DataContextType {
     toggleResourceAssignment: (resourceId: string, studentId: string) => Promise<void>;
     addResource: (newResource: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => Promise<void>;
     deleteResource: (resourceId: string) => Promise<void>;
+    addTemplate: (templateData: Omit<AssignmentTemplate, 'id'>) => Promise<void>;
+    updateTemplate: (template: AssignmentTemplate) => Promise<void>;
+    deleteTemplate: (templateId: string) => Promise<void>;
     uploadFile: (file: File, path: string) => Promise<string>;
     updateStudentNotes: (studentId: string, notes: string) => Promise<void>;
     unreadCounts: Map<string, number>;
@@ -259,14 +270,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const loadData = () => {
             dispatch({ type: 'SET_LOADING', payload: true });
             
-            const { users, assignments, messages, templates, resources, goals, conversations } = getMockData();
+// @FIX: Destructure `badges` from `getMockData` to make it available in the app state.
+            const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
             
             const defaultUser = users.find(u => u.role === UserRole.Coach) || users[0];
             sessionStorage.setItem('currentUser', JSON.stringify(defaultUser));
             
             dispatch({
                 type: 'SET_INITIAL_DATA',
-                payload: { users, assignments, messages, templates, resources, goals, conversations, notifications: [
+// @FIX: Include `badges` in the initial data payload.
+                payload: { users, assignments, messages, templates, resources, goals, conversations, badges, notifications: [
                      { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false, link: { page: 'assignments' } },
                      { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false, link: { page: 'assignments' } },
                 ] }
@@ -277,8 +290,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         
         const persistedUser = sessionStorage.getItem('currentUser');
         if (persistedUser) {
-             const { users, assignments, messages, templates, resources, goals, conversations } = getMockData();
-             dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations } });
+// @FIX: Destructure `badges` from `getMockData` for persisted sessions.
+             const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
+// @FIX: Include `badges` in the initial data payload for persisted sessions.
+             dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations, badges } });
              dispatch({ type: 'SET_CURRENT_USER', payload: JSON.parse(persistedUser) });
              dispatch({ type: 'SET_LOADING', payload: false });
         } else {
@@ -549,6 +564,22 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteResource = useCallback(async (resourceId: string) => {
         dispatch({ type: 'DELETE_RESOURCE', payload: resourceId });
     }, []);
+
+    const addTemplate = useCallback(async (templateData: Omit<AssignmentTemplate, 'id'>) => {
+        const newTemplate: AssignmentTemplate = {
+            ...templateData,
+            id: `temp-${Date.now()}`
+        };
+        dispatch({ type: 'ADD_TEMPLATE', payload: newTemplate });
+    }, []);
+
+    const updateTemplate = useCallback(async (template: AssignmentTemplate) => {
+        dispatch({ type: 'UPDATE_TEMPLATE', payload: template });
+    }, []);
+
+    const deleteTemplate = useCallback(async (templateId: string) => {
+        dispatch({ type: 'DELETE_TEMPLATE', payload: templateId });
+    }, []);
     
     const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -661,6 +692,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         templates: state.templates,
         resources: state.resources,
         goals: state.goals,
+        badges: state.badges,
         isLoading: state.isLoading,
         typingStatus: state.typingStatus,
         coach,
@@ -688,6 +720,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         toggleResourceAssignment,
         addResource,
         deleteResource,
+        addTemplate,
+        updateTemplate,
+        deleteTemplate,
         uploadFile,
         updateStudentNotes,
         unreadCounts,
@@ -705,7 +740,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
         markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,
         updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
-        addResource, deleteResource, uploadFile, updateStudentNotes, startGroupChat,
+        addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
         findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
         seedDatabase
     ]);

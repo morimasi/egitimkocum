@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';
 import { Page, User, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon
+    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon
 } from './Icons';
 
 interface Command {
@@ -29,12 +30,18 @@ const CommandPalette = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         { id: 'page-assignments', type: 'page', title: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('assignments'), keywords: 'ödevler görevler' },
         { id: 'page-messages', type: 'page', title: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('messages'), keywords: 'mesajlar sohbet' },
         { id: 'page-analytics', type: 'page', title: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('analytics'), keywords: 'analitik raporlar istatistik' },
+        { id: 'page-calendar', type: 'page', title: 'Takvim', icon: <CalendarIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('calendar'), keywords: 'takvim ajanda program' },
         { id: 'page-library', type: 'page', title: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('library'), keywords: 'kütüphane kaynaklar şablonlar' },
         { id: 'page-settings', type: 'page', title: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('settings'), keywords: 'ayarlar profil' },
     ];
+    
+    if (currentUser?.role === UserRole.Student) {
+         commands.push({ id: 'page-motivation', type: 'page', title: 'Motivasyon', icon: <FlameIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('motivation'), keywords: 'motivasyon seviye puan rozet' });
+    }
 
-    if (currentUser?.role === UserRole.Coach) {
+    if (currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin) {
         commands.push({ id: 'page-students', type: 'page', title: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('students'), keywords: 'öğrenciler liste' });
+        commands.push({ id: 'page-templates', type: 'page', title: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('templates'), keywords: 'şablonlar ödev şablonu' });
         students.forEach(student => {
             commands.push({
                 id: `student-${student.id}`,
@@ -48,6 +55,9 @@ const CommandPalette = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     }
      if (currentUser?.role === UserRole.SuperAdmin) {
         commands.push({ id: 'page-superadmin', type: 'page', title: 'Süper Admin', icon: <AdminIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('superadmin'), keywords: 'admin panel kullanıcı yönetimi' });
+    }
+    if (currentUser?.role === UserRole.Parent) {
+        commands.push({ id: 'page-parent', type: 'page', title: 'Veli Portalı', icon: <ParentIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('parent'), keywords: 'veli portalı çocuğum öğrenci' });
     }
 
     const filteredCommands = query ? commands.filter(cmd =>
