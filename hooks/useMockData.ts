@@ -1,5 +1,3 @@
-
-
 import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation, AcademicTrack, Badge, BadgeID, CalendarEvent } from '../types';
 
 export const getMockData = () => {
@@ -42,7 +40,6 @@ export const getMockData = () => {
     
     const messages: Message[] = [
         { id: 'msg-1', senderId: 'student-1', conversationId: 'conv-1', text: 'Hocam merhaba, matematik ödevindeki 5. soruda takıldım. Yardımcı olabilir misiniz?', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['coach-1', 'student-1'] },
-        // FIX: Cast the 'type' property to Message['type'] to prevent TypeScript from widening the type to a generic string.
         ...Array.from({ length: 30 }, (_, i) => ({ id: `msg-hist-${i}`, senderId: (i % 2 === 0 ? 'student-1' : 'coach-1'), conversationId: 'conv-1', text: `Bu ${30 - i}. eski mesaj...`, timestamp: new Date(Date.now() - (i + 3) * 60 * 60 * 1000).toISOString(), type: 'text' as Message['type'], readBy: ['coach-1', 'student-1'] })).reverse(),
         { id: 'msg-2', senderId: 'coach-1', conversationId: 'conv-1', text: 'Merhaba Ali, tabii ki. Hangi adımı anlamadığını söylersen oradan devam edelim.', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: 'text', readBy: ['student-1', 'coach-1'], reactions: {'👍': ['student-1']} },
         { id: 'msg-3', senderId: 'student-1', conversationId: 'conv-1', type: 'file', text: 'Türev alma kuralını uyguladıktan sonraki kısım hocam.', fileUrl: '#', fileName: 'soru_ekran_goruntusu.png', imageUrl: 'https://via.placeholder.com/300x200.png?text=Soru+Ekran+Görüntüsü', timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(), readBy: ['coach-1', 'student-1'] },

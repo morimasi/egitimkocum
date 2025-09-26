@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MicIcon, VideoIcon, StopIcon, PlayIcon, PauseIcon, XIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';
@@ -65,7 +66,19 @@ const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPa
             setStatus('recording');
         } catch (err) {
             console.error("Error starting video recording:", err);
-            addToast("Kamera veya mikrofon erişimi reddedildi.", "error");
+            if (err instanceof DOMException) {
+                if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    addToast("Kullanılabilir bir kamera veya mikrofon bulunamadı.", "error");
+                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    addToast("Kamera ve mikrofon erişimi reddedildi. Lütfen tarayıcı ayarlarından izin verin.", "error");
+                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                    addToast("Kamera veya mikrofon donanımınız tarafından kullanılıyor olabilir.", "error");
+                } else {
+                    addToast(`Kamera/mikrofon başlatılırken bir hata oluştu: ${err.message}`, "error");
+                }
+            } else {
+                addToast("Kamera/mikrofon başlatılırken bilinmeyen bir hata oluştu.", "error");
+            }
         }
     };
 

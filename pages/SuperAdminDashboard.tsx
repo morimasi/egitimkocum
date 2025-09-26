@@ -212,7 +212,8 @@ const SuperAdminDashboard = () => {
                 return newChanges;
             });
         } catch (error: any) {
-            addToast(error.message || "Rol güncellenirken bir hata oluştu.", "error");
+            const message = error instanceof Error ? error.message : "Rol güncellenirken bir hata oluştu.";
+            addToast(message, "error");
         } finally {
             setSavingStates(prev => ({ ...prev, [user.id]: false }));
         }
@@ -229,7 +230,8 @@ const SuperAdminDashboard = () => {
                 return newChanges;
             });
         } catch (error: any) {
-            addToast(error.message || "Koç atanırken bir hata oluştu.", "error");
+            const message = error instanceof Error ? error.message : "Koç atanırken bir hata oluştu.";
+            addToast(message, "error");
         } finally {
              setSavingStates(prev => ({ ...prev, [user.id]: false }));
         }

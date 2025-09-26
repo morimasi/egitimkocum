@@ -1,13 +1,11 @@
 
-
-
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon,
+    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon,
 } from './Icons';
 
 interface NavItemProps {
@@ -72,6 +70,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
             { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> },
             { page: 'motivation', label: 'Motivasyon', icon: <FlameIcon className="w-5 h-5" /> },
+            { page: 'odak', label: 'Odak Modu', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-5 h-5" /> },
             { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
         ];
@@ -82,7 +81,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
             { page: 'templates', label: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5" /> },
             ...studentItems.slice(2, 4), // Messages, Analytics
-            ...studentItems.slice(5) // Calendar, Settings
+            ...studentItems.slice(6) // Calendar, Settings
         ];
     
         switch (currentUser.role) {

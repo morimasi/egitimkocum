@@ -5,7 +5,7 @@ import { useUI } from '../contexts/UIContext';
 import { Page, User, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon
+    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon
 } from './Icons';
 
 interface Command {
@@ -37,6 +37,7 @@ const CommandPalette = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     
     if (currentUser?.role === UserRole.Student) {
          commands.push({ id: 'page-motivation', type: 'page', title: 'Motivasyon', icon: <FlameIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('motivation'), keywords: 'motivasyon seviye puan rozet' });
+         commands.push({ id: 'page-odak', type: 'page', title: 'Odak Modu', icon: <TargetIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('odak'), keywords: 'odaklanma pomodoro zamanlayıcı' });
     }
 
     if (currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin) {

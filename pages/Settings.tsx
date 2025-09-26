@@ -315,5 +315,4 @@ const Settings = () => {
     );
 };
 
-// FIX: Add default export to resolve React.lazy import error.
 export default Settings;

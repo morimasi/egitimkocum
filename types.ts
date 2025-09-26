@@ -1,5 +1,4 @@
 
-
 export enum UserRole {
   Coach = 'coach',
   Student = 'student',
@@ -135,7 +134,7 @@ export interface Message {
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak';
 
 export type ToastType = 'success' | 'error' | 'info' | 'xp';
 

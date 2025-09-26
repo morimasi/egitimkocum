@@ -1,6 +1,4 @@
 
-
-
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -33,6 +31,7 @@ const SuperAdminDashboard = React.lazy(() => import('./pages/SuperAdminDashboard
 const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
 const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
 const Motivasyon = React.lazy(() => import('./pages/Motivasyon'));
+const OdakModu = React.lazy(() => import('./pages/OdakModu'));
 
 
 const AppSkeleton = () => (
@@ -148,6 +147,9 @@ const AppContent = () => {
             case 'motivation':
                 if (currentUser?.role === UserRole.Student) return <Motivasyon />;
                 return <Dashboard />; // Fallback for others
+            case 'odak':
+                if (currentUser?.role === UserRole.Student) return <OdakModu />;
+                return <Dashboard />; // Fallback for others
             case 'settings':
                 return <Settings />;
             case 'superadmin':
@@ -181,7 +183,7 @@ const AppContent = () => {
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6 lg:p-8 pb-20 lg:pb-8 animate-fade-in">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-3 sm:p-6 animate-fade-in pb-20 lg:pb-8">
                     <div className="max-w-7xl mx-auto">
                         <Suspense fallback={<PageSkeleton />}>
                             {renderPage()}

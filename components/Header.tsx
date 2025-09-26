@@ -104,7 +104,7 @@ const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (ope
                     <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-500 dark:text-gray-400 mr-4" aria-label="Menüyü aç">
                         <MenuIcon className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-4">
                    <button onClick={onOpenCommandPalette} aria-label="Hızlı Erişim" className="flex items-center gap-2 p-2 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">

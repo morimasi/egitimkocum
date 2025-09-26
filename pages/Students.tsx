@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID } from '../types';
@@ -302,17 +301,7 @@ const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student:
     const currentLevel = useMemo(() => student.xp ? Math.floor(Math.sqrt(student.xp / 100)) + 1 : 1, [student.xp]);
 
     return (
-        <Card className="flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full group" onClick={() => onSelect(student)}>
-            {/* Hover Popup */}
-            <div className="hidden group-hover:block absolute top-2 -right-2 translate-x-full w-48 p-3 bg-white dark:bg-gray-900 rounded-lg shadow-xl border dark:border-gray-700 z-10 pointer-events-none animate-fade-in-right">
-                <h5 className="font-bold text-sm mb-2">{student.name}</h5>
-                <ul className="text-xs space-y-1 text-gray-600 dark:text-gray-400">
-                    <li><strong>Sınıf:</strong> {student.gradeLevel ? (student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`) : 'N/A'}</li>
-                    <li><strong>Bölüm:</strong> {student.academicTrack ? getAcademicTrackLabel(student.academicTrack) : 'N/A'}</li>
-                    <li className={overdueCount > 0 ? 'text-red-500 font-semibold' : ''}><strong>Gecikmiş Ödev:</strong> {overdueCount}</li>
-                </ul>
-            </div>
-            
+        <Card className="flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full" onClick={() => onSelect(student)}>
             <div className="flex flex-col items-center flex-grow p-3 text-center">
                  <div className="relative flex-shrink-0 mb-2">
                     <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" />

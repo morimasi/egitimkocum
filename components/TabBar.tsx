@@ -1,12 +1,10 @@
 
-
-
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
-    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon
+    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon
 } from './Icons';
 
 interface TabItemProps {
@@ -62,9 +60,9 @@ const TabBar = () => {
         tabItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-6 h-6" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
-            { page: 'motivation', label: 'Motivasyon', icon: <FlameIcon className="w-6 h-6" /> },
+            { page: 'odak', label: 'Odak', icon: <TargetIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
-            { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
+            { page: 'motivation', label: 'Motive', icon: <FlameIcon className="w-6 h-6" /> }
         );
     } else { // Coach and SuperAdmin
         tabItems.push(
