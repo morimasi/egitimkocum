@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';
-import { UserRole, User } from '../types';
+import { UserRole, User, AcademicTrack } from '../types';
 import { ImageIcon } from './Icons';
 
 const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
@@ -10,6 +10,9 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [gradeLevel, setGradeLevel] = useState('');
+    const [academicTrack, setAcademicTrack] = useState<AcademicTrack | ''>('');
     const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [assignedCoachId, setAssignedCoachId] = useState<string | null>(currentUser?.role === UserRole.Coach ? currentUser.id : '');
@@ -19,6 +22,13 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const coaches = users.filter(u => u.role === UserRole.Coach);
 
+    const academicTrackLabels: Record<AcademicTrack, string> = {
+        [AcademicTrack.Sayisal]: 'Sayısal',
+        [AcademicTrack.EsitAgirlik]: 'Eşit Ağırlık',
+        [AcademicTrack.Sozel]: 'Sözel',
+        [AcademicTrack.Dil]: 'Dil',
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -27,15 +37,14 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
             reader.onloadend = () => {
                 setPreviewUrl(reader.result as string);
             };
-            // @FIX: Corrected typo from `readDataAsURL` to `readAsDataURL`.
             reader.readAsDataURL(file);
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email) {
-            addToast("Ad ve e-posta alanları zorunludur.", "error");
+        if (!name || !email || !password || !gradeLevel || !academicTrack) {
+            addToast("Lütfen tüm zorunlu alanları doldurun.", "error");
             return;
         }
         if (currentUser?.role === UserRole.SuperAdmin && !assignedCoachId) {
@@ -56,6 +65,8 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
                 role: UserRole.Student,
                 profilePicture: profilePictureUrl,
                 assignedCoachId,
+                gradeLevel,
+                academicTrack,
             };
 
             await addUser(newUser);
@@ -94,28 +105,77 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
                 />
             </div>
 
-            <div>
-                <label htmlFor="student-name" className="block text-sm font-medium mb-1">Ad Soyad</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                    <label htmlFor="student-name" className="block text-sm font-medium mb-1">Ad Soyad</label>
+                    <input
+                        id="student-name"
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="student-email" className="block text-sm font-medium mb-1">E-posta</label>
+                    <input
+                        id="student-email"
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    />
+                </div>
+            </div>
+             <div>
+                <label htmlFor="student-password" className="block text-sm font-medium mb-1">Başlangıç Şifresi</label>
                 <input
-                    id="student-name"
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
+                    id="student-password"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
                     className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
                     required
                 />
             </div>
-            <div>
-                <label htmlFor="student-email" className="block text-sm font-medium mb-1">E-posta</label>
-                <input
-                    id="student-email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                    required
-                />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="grade-level" className="block text-sm font-medium mb-1">Sınıf</label>
+                    <select
+                        id="grade-level"
+                        value={gradeLevel}
+                        onChange={e => setGradeLevel(e.target.value)}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    >
+                        <option value="" disabled>Sınıf seçin</option>
+                        <option value="9">9. Sınıf</option>
+                        <option value="10">10. Sınıf</option>
+                        <option value="11">11. Sınıf</option>
+                        <option value="12">12. Sınıf</option>
+                        <option value="mezun">Mezun</option>
+                    </select>
+                </div>
+                 <div>
+                    <label htmlFor="academic-track" className="block text-sm font-medium mb-1">Bölüm</label>
+                    <select
+                        id="academic-track"
+                        value={academicTrack}
+                        onChange={e => setAcademicTrack(e.target.value as AcademicTrack)}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    >
+                        <option value="" disabled>Bölüm seçin</option>
+                        {Object.values(AcademicTrack).map(track => (
+                            <option key={track} value={track}>{academicTrackLabels[track]}</option>
+                         ))}
+                    </select>
+                </div>
             </div>
+
             {currentUser?.role === UserRole.SuperAdmin && (
                  <div>
                     <label htmlFor="assigned-coach" className="block text-sm font-medium mb-1">Koç Ata</label>

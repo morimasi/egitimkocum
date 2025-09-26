@@ -1,13 +1,13 @@
-import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation } from '../types';
+import { User, Assignment, Message, UserRole, AssignmentTemplate, Resource, Goal, AssignmentStatus, Conversation, AcademicTrack } from '../types';
 
 export const getMockData = () => {
     const users: User[] = [
       { id: 'coach-1', name: 'Ayşe Yılmaz', email: 'ayse.yilmaz@koc.com', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=coach-1' },
-      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1', assignedCoachId: 'coach-1' },
-      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1' },
-      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1' },
-      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1' },
-      { id: 'student-5', name: 'Selin Doğan', email: 'selin.dogan@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-5', assignedCoachId: 'coach-1' },
+      { id: 'student-1', name: 'Ali Veli', email: 'ali.veli@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-1', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Sayisal },
+      { id: 'student-2', name: 'Zeynep Kaya', email: 'zeynep.kaya@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-2', assignedCoachId: 'coach-1', gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik },
+      { id: 'student-3', name: 'Mehmet Öztürk', email: 'mehmet.ozturk@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-3', assignedCoachId: 'coach-1', gradeLevel: 'mezun', academicTrack: AcademicTrack.Sayisal },
+      { id: 'student-4', name: 'Fatma Demir', email: 'fatma.demir@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-4', assignedCoachId: 'coach-1', gradeLevel: '10', academicTrack: AcademicTrack.Sozel },
+      { id: 'student-5', name: 'Selin Doğan', email: 'selin.dogan@ogrenci.com', role: UserRole.Student, profilePicture: 'https://i.pravatar.cc/150?u=student-5', assignedCoachId: 'coach-1', gradeLevel: '12', academicTrack: AcademicTrack.Dil },
       { id: 'superadmin-1', name: 'Admin User', email: 'admin@platform.com', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=superadmin-1' },
     ];
     

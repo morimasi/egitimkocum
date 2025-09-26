@@ -4,6 +4,13 @@ export enum UserRole {
   SuperAdmin = 'superadmin',
 }
 
+export enum AcademicTrack {
+  Sayisal = 'sayisal',
+  EsitAgirlik = 'esit-agirlik',
+  Sozel = 'sozel',
+  Dil = 'dil',
+}
+
 export interface User {
   id: string;
   name: string;
@@ -12,6 +19,8 @@ export interface User {
   profilePicture: string;
   notes?: string; // Coach's private notes about a student
   assignedCoachId?: string | null; // ID of the assigned coach for a student
+  gradeLevel?: string;
+  academicTrack?: AcademicTrack;
 }
 
 export enum AssignmentStatus {

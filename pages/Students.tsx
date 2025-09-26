@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus, UserRole } from '../types';
+import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
@@ -9,6 +9,17 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { suggestStudentGoal } from '../services/geminiService';
 import EmptyState from '../components/EmptyState';
 import AddStudentForm from '../components/AddStudentForm';
+
+// Helper function to get display name for academic track
+const getAcademicTrackLabel = (track: AcademicTrack): string => {
+    switch (track) {
+        case AcademicTrack.Sayisal: return 'Sayısal';
+        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
+        case AcademicTrack.Sozel: return 'Sözel';
+        case AcademicTrack.Dil: return 'Dil';
+        default: return '';
+    }
+};
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -131,6 +142,18 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                 <div>
                     <h3 className="text-2xl font-bold">{student.name}</h3>
                     <p className="text-gray-500">{student.email}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {student.gradeLevel && (
+                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                                {student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`}
+                            </span>
+                        )}
+                         {student.academicTrack && (
+                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                                {getAcademicTrackLabel(student.academicTrack)}
+                            </span>
+                        )}
+                    </div>
                     <div className="mt-2">
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>
                             Koç: {assignedCoach?.name || 'Atanmamış'}
