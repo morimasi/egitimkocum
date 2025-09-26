@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } from '../types';
 
@@ -130,7 +131,6 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         setCallConversation(null);
     }, []);
 
-    // FIX: The context value should be an object, not an array, to match the UIContextType interface.
     const value = useMemo(() => ({
         theme,
         toggleTheme,

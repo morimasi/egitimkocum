@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Assignment, AssignmentStatus, UserRole } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, CheckIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
 import EmptyState from '../components/EmptyState';
@@ -32,11 +32,32 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     const [activeTab, setActiveTab] = useState('overview');
     const [notes, setNotes] = useState(student?.notes || '');
     const [isSavingNotes, setIsSavingNotes] = useState(false);
-    const notesTimeoutRef = useRef<number | null>(null);
-
+    
     useEffect(() => {
         setNotes(student?.notes || '');
     }, [student]);
+
+    useEffect(() => {
+        if (!student) return;
+
+        const handleSaveNotes = async () => {
+            if (notes !== student.notes) {
+                setIsSavingNotes(true);
+                await updateStudentNotes(student.id, notes);
+                setIsSavingNotes(false);
+                addToast("Notlar kaydedildi.", "success");
+            }
+        };
+
+        const timerId = setTimeout(() => {
+            handleSaveNotes();
+        }, 1500); // Auto-save after 1.5 seconds of inactivity
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [notes, student, updateStudentNotes, addToast]);
+
 
     if (!student) return null;
     
@@ -44,19 +65,6 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     
     const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setNotes(e.target.value);
-        if (notesTimeoutRef.current) {
-            clearTimeout(notesTimeoutRef.current);
-        }
-        notesTimeoutRef.current = window.setTimeout(() => {
-            handleSaveNotes(e.target.value);
-        }, 1500); // Auto-save after 1.5 seconds of inactivity
-    };
-
-    const handleSaveNotes = async (currentNotes: string) => {
-        setIsSavingNotes(true);
-        await updateStudentNotes(student.id, currentNotes);
-        setIsSavingNotes(false);
-        addToast("Notlar kaydedildi.", "success");
     };
 
     const assignments = getAssignmentsForStudent(student.id);
@@ -161,7 +169,23 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                             <h4 className="font-semibold mb-2">Hedefler</h4>
                             <Card>
                                 <ul className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-3">
-                                     {goals.length > 0 ? goals.map(goal => (<li key={goal.id} className="flex items-center"><input type="checkbox" checked={goal.isCompleted} onChange={() => updateGoal({...goal, isCompleted: !goal.isCompleted})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" /><label className={`ml-3 text-sm ${goal.isCompleted ? 'line-through text-gray-500' : ''}`}>{goal.text}</label></li>)) : <p className="text-sm text-gray-500">Bu öğrenci için henüz hedef belirlenmedi.</p>}
+                                     {goals.length > 0 ? goals.map(goal => (
+                                         <li key={goal.id} className="flex items-center group cursor-pointer" onClick={() => updateGoal({...goal, isCompleted: !goal.isCompleted})}>
+                                            <button
+                                                type="button"
+                                                role="checkbox"
+                                                aria-checked={goal.isCompleted}
+                                                className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-200 group-hover:border-primary-500 ${
+                                                    goal.isCompleted
+                                                        ? 'bg-primary-500 border-primary-500'
+                                                        : 'bg-transparent border-gray-400 dark:border-gray-500'
+                                                }`}
+                                            >
+                                                {goal.isCompleted && <CheckIcon className="w-3.5 h-3.5 text-white" />}
+                                            </button>
+                                            <label className={`ml-3 text-sm cursor-pointer ${goal.isCompleted ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{goal.text}</label>
+                                        </li>
+                                     )) : <p className="text-sm text-gray-500">Bu öğrenci için henüz hedef belirlenmedi.</p>}
                                 </ul>
                                 <div className="flex gap-2"><input type="text" value={newGoalText} onChange={(e) => setNewGoalText(e.target.value)} placeholder="Yeni hedef ekle..." className="flex-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /><button onClick={handleAddGoal} className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Ekle</button></div>
                                 <button onClick={handleSuggestGoal} disabled={isGeneratingGoal} className="mt-2 flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50"><SparklesIcon className={`w-4 h-4 mr-1 ${isGeneratingGoal ? 'animate-spin' : ''}`} />{isGeneratingGoal ? 'Öneriliyor...' : '✨ Akıllı Hedef Öner'}</button>
@@ -317,6 +341,10 @@ const Students = () => {
             return matchesSearch && matchesCoach;
         });
     }, [students, debouncedSearchTerm, isSuperAdmin, filterCoach]);
+    
+    const handleSelectStudent = useCallback((student: User) => {
+        setSelectedStudent(student);
+    }, []);
 
     return (
         <>
@@ -360,7 +388,7 @@ const Students = () => {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredStudents.map(student => (
-                        <StudentCard key={student.id} student={student} onSelect={setSelectedStudent} />
+                        <StudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
                     ))}
                 </div>
             )}

@@ -100,10 +100,17 @@ const SuperAdminDashboard = () => {
     const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
     const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
 
+    // Confirmation Modal State
+    const [confirmationState, setConfirmationState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
     const coaches = users.filter(u => u.role === UserRole.Coach);
     const students = users.filter(u => u.role === UserRole.Student);
     const totalAssignments = assignments.length;
-    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded).length;
 
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -125,17 +132,17 @@ const SuperAdminDashboard = () => {
             addToast("Kendinizi silemezsiniz.", "error");
             return;
         }
-        setUserToDelete(user);
-        setIsConfirmModalOpen(true);
+        setConfirmationState({
+            isOpen: true,
+            title: "Kullanıcıyı Sil",
+            message: `'${user.name}' adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu kullanıcıya ait tüm veriler de silinecektir. Bu işlem geri alınamaz.`,
+            onConfirm: () => handleConfirmDelete(user.id),
+        });
     };
 
-    const handleConfirmDelete = () => {
-        if (userToDelete) {
-            deleteUser(userToDelete.id);
-            addToast("Kullanıcı başarıyla silindi.", "success");
-        }
-        setIsConfirmModalOpen(false);
-        setUserToDelete(null);
+    const handleConfirmDelete = (userId: string) => {
+        deleteUser(userId);
+        addToast("Kullanıcı başarıyla silindi.", "success");
     };
 
     const handleRoleChange = (userId: string, newRole: UserRole) => {
@@ -146,39 +153,51 @@ const SuperAdminDashboard = () => {
         setCoachChanges(prev => ({ ...prev, [studentId]: coachId === '' ? null : coachId }));
     };
 
-    const handleSaveRole = async (user: User) => {
+    const handleSaveRoleRequest = (user: User) => {
         const newRole = roleChanges[user.id];
         if (!newRole) return;
+        setConfirmationState({
+            isOpen: true,
+            title: "Rol Değişikliğini Onayla",
+            message: `'${user.name}' kullanıcısının rolünü '${newRole}' olarak değiştirmek istediğinizden emin misiniz?`,
+            onConfirm: () => handleSaveRole(user, newRole),
+        });
+    };
+    
+    const handleSaveCoachRequest = (user: User) => {
+        const newCoachId = coachChanges[user.id];
+        if (newCoachId === undefined) return;
+        const coachName = coaches.find(c => c.id === newCoachId)?.name || 'atanmamış';
+        setConfirmationState({
+            isOpen: true,
+            title: "Koç Atamasını Onayla",
+            message: `'${user.name}' kullanıcısını '${coachName}' olarak atamak istediğinizden emin misiniz?`,
+            onConfirm: () => handleSaveCoachAssignment(user, newCoachId),
+        });
+    };
 
+    const handleSaveRole = async (user: User, newRole: UserRole) => {
         setSavingStates(prev => ({ ...prev, [user.id]: true }));
         try {
             await updateUser({ ...user, role: newRole });
-            addToast(`'${user.name}' kullanıcısının rolü '${newRole}' olarak güncellendi.`, "success");
-            
+            addToast(`Rol güncellendi.`, "success");
             setRoleChanges(prev => {
                 const newChanges = { ...prev };
                 delete newChanges[user.id];
                 return newChanges;
             });
-
         } catch (error: any) {
-            console.error("Error updating role:", error);
             addToast(error.message || "Rol güncellenirken bir hata oluştu.", "error");
         } finally {
             setSavingStates(prev => ({ ...prev, [user.id]: false }));
         }
     };
     
-    const handleSaveCoachAssignment = async (user: User) => {
-        const newCoachId = coachChanges[user.id];
-        if (newCoachId === undefined) return;
-
+    const handleSaveCoachAssignment = async (user: User, newCoachId: string | null) => {
         setSavingStates(prev => ({...prev, [user.id]: true}));
         try {
             await updateUser({...user, assignedCoachId: newCoachId});
-            const coachName = coaches.find(c => c.id === newCoachId)?.name || 'atanmamış';
-            addToast(`'${user.name}' kullanıcısı '${coachName}' koçuna atandı.`, "success");
-
+            addToast(`Koç ataması güncellendi.`, "success");
             setCoachChanges(prev => {
                 const newChanges = {...prev};
                 delete newChanges[user.id];
@@ -190,7 +209,6 @@ const SuperAdminDashboard = () => {
              setSavingStates(prev => ({ ...prev, [user.id]: false }));
         }
     };
-
 
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
@@ -205,7 +223,6 @@ const SuperAdminDashboard = () => {
         const handleSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
             setIsLoading(true);
-            
             try {
                 if (user && user.name !== name) {
                     await updateUser({ ...user, name });
@@ -294,7 +311,7 @@ const SuperAdminDashboard = () => {
                                             <option value={UserRole.Coach}>Koç</option>
                                             <option value={UserRole.SuperAdmin}>Süper Admin</option>
                                         </select>
-                                        {roleChanges[user.id] && (<button onClick={() => handleSaveRole(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
+                                        {roleChanges[user.id] && (<button onClick={() => handleSaveRoleRequest(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
                                     </div>
                                 </div>
                                 {(roleChanges[user.id] || user.role) === UserRole.Student && (
@@ -305,7 +322,7 @@ const SuperAdminDashboard = () => {
                                         <option value="">Atanmamış</option>
                                         {coaches.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
-                                    {coachChanges[user.id] !== undefined && (<button onClick={() => handleSaveCoachAssignment(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
+                                    {coachChanges[user.id] !== undefined && (<button onClick={() => handleSaveCoachRequest(user)} className="text-green-600 hover:underline text-sm font-semibold disabled:text-gray-400" disabled={savingStates[user.id]}>{savingStates[user.id] ? '...' : 'Kaydet'}</button>)}
                                     </div>
                                 </div>
                                 )}
@@ -350,7 +367,7 @@ const SuperAdminDashboard = () => {
                                             </select>
                                             {roleChanges[user.id] && (
                                                  <button 
-                                                    onClick={() => handleSaveRole(user)}
+                                                    onClick={() => handleSaveRoleRequest(user)}
                                                     className="text-green-600 hover:underline text-xs font-semibold disabled:text-gray-400 disabled:no-underline"
                                                     disabled={savingStates[user.id]}
                                                 >
@@ -373,7 +390,7 @@ const SuperAdminDashboard = () => {
                                                 </select>
                                                 {coachChanges[user.id] !== undefined && (
                                                      <button 
-                                                        onClick={() => handleSaveCoachAssignment(user)}
+                                                        onClick={() => handleSaveCoachRequest(user)}
                                                         className="text-green-600 hover:underline text-xs font-semibold disabled:text-gray-400 disabled:no-underline"
                                                         disabled={savingStates[user.id]}
                                                     >
@@ -400,14 +417,14 @@ const SuperAdminDashboard = () => {
 
             {isEditModalOpen && <UserEditModal user={editingUser} onClose={() => setIsEditModalOpen(false)} />}
             {isNewUserModalOpen && <NewUserModal onClose={() => setIsNewUserModalOpen(false)} />}
-            {isConfirmModalOpen && userToDelete && (
+            {confirmationState.isOpen && (
                 <ConfirmationModal
-                    isOpen={isConfirmModalOpen}
-                    onClose={() => setIsConfirmModalOpen(false)}
-                    onConfirm={handleConfirmDelete}
-                    title="Kullanıcıyı Sil"
-                    message={`'${userToDelete.name}' adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu kullanıcıya ait tüm ödevler ve mesajlar da silinecektir. Bu işlem geri alınamaz.`}
-                    confirmText="Evet, Sil"
+                    isOpen={confirmationState.isOpen}
+                    onClose={() => setConfirmationState({ ...confirmationState, isOpen: false })}
+                    onConfirm={confirmationState.onConfirm}
+                    title={confirmationState.title}
+                    message={confirmationState.message}
+                    confirmText="Evet, Onayla"
                 />
             )}
         </div>

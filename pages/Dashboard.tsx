@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
@@ -349,15 +349,15 @@ const CoachDashboard = () => {
                     <Card title="Ödev Durum Dağılımı">
                          <div style={{ width: '100%', height: 250 }}>
                             <ResponsiveContainer>
-                                <BarChart data={statusData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(128, 128, 128, 0.2)"/>
-                                    <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} />
-                                    <Tooltip cursor={{fill: 'rgba(243, 244, 246, 0.5)'}} contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }}/>
-                                    <Bar dataKey="value" barSize={30} radius={[0, 8, 8, 0]}>
-                                        {statusData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                    </Bar>
-                                </BarChart>
+                                <PieChart>
+                                    <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                        {statusData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
+                                    <Legend />
+                                </PieChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>

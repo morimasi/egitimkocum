@@ -3,7 +3,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -450,16 +450,21 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                         <strong className="font-semibold block mb-2">Kontrol Listesi:</strong>
                         <ul className="space-y-2">
                            {assignment.checklist.map(item => (
-                                <li key={item.id} className="flex items-center">
-                                    <input 
-                                        type="checkbox" 
-                                        id={item.id}
-                                        checked={item.isCompleted} 
-                                        onChange={() => isCoach ? null : handleChecklistToggle(item.id)}
+                                <li key={item.id} className="flex items-center cursor-pointer group" onClick={() => isCoach ? null : handleChecklistToggle(item.id)}>
+                                    <button
+                                        type="button"
+                                        role="checkbox"
+                                        aria-checked={item.isCompleted}
                                         disabled={isCoach}
-                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed"
-                                    />
-                                    <label htmlFor={item.id} className={`ml-2 text-sm ${item.isCompleted ? 'line-through text-gray-500' : ''}`}>{item.text}</label>
+                                        className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-200 group-hover:border-primary-500 ${
+                                            item.isCompleted
+                                                ? 'bg-primary-500 border-primary-500'
+                                                : 'bg-transparent border-gray-400 dark:border-gray-500'
+                                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                                    >
+                                        {item.isCompleted && <CheckIcon className="w-3.5 h-3.5 text-white" />}
+                                    </button>
+                                    <label className={`ml-3 text-sm cursor-pointer ${item.isCompleted ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{item.text}</label>
                                 </li>
                            ))}
                         </ul>
@@ -761,6 +766,10 @@ const Assignments = () => {
             addToast("Tüm ödevler değerlendirildi!", "success");
         }
     };
+    
+    const handleSelectAssignment = useCallback((assignment: Assignment) => {
+        setSelectedAssignment(assignment);
+    }, []);
 
     return (
         <>
@@ -795,7 +804,7 @@ const Assignments = () => {
                             <AssignmentCard 
                                 key={a.id} 
                                 assignment={a} 
-                                onSelect={setSelectedAssignment} 
+                                onSelect={handleSelectAssignment} 
                                 studentName={getUserName(a.studentId)}
                                 isCoach={isCoach}
                             />

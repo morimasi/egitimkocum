@@ -31,123 +31,109 @@ const setInCache = <T>(key: string, data: T) => {
 const ONE_HOUR = 60 * 60 * 1000;
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
-// Ensure API_KEY is available in the environment.
-if (!process.env.API_KEY) {
-    console.error("API_KEY environment variable not set.");
+// Centralized AI instance and error handling
+let ai: GoogleGenAI | null = null;
+const getAi = () => {
+    if (ai) return ai;
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY environment variable not set.");
+    }
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return ai;
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-
-export const generateAssignmentDescription = async (title: string): Promise<string> => {
-  const cacheKey = `genDesc_${title}`;
-  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
-  if (cached) return cached;
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Bir eğitim koçu olarak, "${title}" başlıklı bir ödev için öğrencilere yol gösterecek, motive edici ve net bir açıklama metni oluştur. Açıklama, ödevin amacını, beklentileri ve teslimat kriterlerini içermeli.`,
-      config: {
-        temperature: 0.7,
-      },
-    });
-    setInCache(cacheKey, response.text);
-    return response.text;
-  } catch (error) {
-    console.error("Error generating assignment description:", error);
-    return "Açıklama üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
-  }
+// Higher-order function for caching Gemini calls
+const cachedGeminiCall = async <T>(
+    cacheKey: string,
+    ttl: number,
+    apiCall: () => Promise<any>,
+    processResponse: (response: any) => T,
+    fallback: T
+): Promise<T> => {
+    const cached = getFromCache<T>(cacheKey, ttl);
+    if (cached) return cached;
+    try {
+        const aiInstance = getAi();
+        const response = await apiCall();
+        const result = processResponse(response);
+        setInCache(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.error(`Error during cached Gemini call for key "${cacheKey}":`, error);
+        return fallback;
+    }
 };
 
-export const generateSmartFeedback = async (grade: number, assignmentTitle: string): Promise<string> => {
-  const cacheKey = `genFeedback_${assignmentTitle}_${grade}`;
-  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
-  if (cached) return cached;
-  try {
+export const generateAssignmentDescription = (title: string): Promise<string> => {
+    return cachedGeminiCall(
+        `genDesc_${title}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Bir eğitim koçu olarak, "${title}" başlıklı bir ödev için öğrencilere yol gösterecek, motive edici ve net bir açıklama metni oluştur. Açıklama, ödevin amacını, beklentileri ve teslimat kriterlerini içermeli.`,
+            config: { temperature: 0.7 },
+        }),
+        (response) => response.text,
+        "Açıklama üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin."
+    );
+};
+
+export const generateSmartFeedback = (grade: number, assignmentTitle: string): Promise<string> => {
     const prompt = `Bir öğrencinin "${assignmentTitle}" ödevinden 100 üzerinden ${grade} aldığını varsayarak, hem yapıcı hem de motive edici bir geri bildirim yaz.
     - Eğer not yüksekse (85+): Öğrencinin güçlü yönlerini vurgula ve onu tebrik et. Gelecekte kendini nasıl daha da geliştirebileceğine dair bir ipucu ver.
     - Eğer not ortalamaysa (60-84): Hem iyi yaptığı noktaları hem de geliştirmesi gereken alanları belirt. Cesaretlendirici bir dil kullan.
     - Eğer not düşükse (<60): Öğrenciyi kırmadan, temel eksikliklere odaklan. Moralini bozmadan nasıl daha iyi olabileceğine dair somut adımlar öner ve yardım teklif et.
     Geri bildirimin tonu destekleyici ve kişisel olmalı.`;
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-       config: {
-        temperature: 0.8,
-      },
-    });
-    setInCache(cacheKey, response.text);
-    return response.text;
-  } catch (error) {
-    console.error("Error generating smart feedback:", error);
-    return "Akıllı geri bildirim üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
-  }
+
+    return cachedGeminiCall(
+        `genFeedback_${assignmentTitle}_${grade}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { temperature: 0.8 },
+        }),
+        (response) => response.text,
+        "Akıllı geri bildirim üretilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin."
+    );
 };
 
-export const generateAssignmentChecklist = async (title: string, description: string): Promise<{ text: string }[]> => {
-  const cacheKey = `genChecklist_${title}_${description.substring(0, 50)}`;
-  const cached = getFromCache<{ text: string }[]>(cacheKey, ONE_HOUR);
-  if (cached) return cached;
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Bir eğitim koçu olarak, "${title}" başlıklı ve "${description}" açıklamalı bir ödev için öğrencilerin takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi oluştur.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              text: {
-                type: Type.STRING,
-                description: 'Kontrol listesi maddesinin metni.',
-              },
+export const generateAssignmentChecklist = (title: string, description: string): Promise<{ text: string }[]> => {
+    return cachedGeminiCall(
+        `genChecklist_${title}_${description.substring(0, 50)}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Bir eğitim koçu olarak, "${title}" başlıklı ve "${description}" açıklamalı bir ödev için öğrencilerin takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi oluştur.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: { text: { type: Type.STRING } },
+                        required: ['text'],
+                    },
+                },
             },
-            propertyOrdering: ["text"],
-            required: ['text'],
-          },
-        },
-      },
-    });
-
-    const jsonString = response.text.trim();
-    const result = JSON.parse(jsonString);
-    setInCache(cacheKey, result);
-    return result;
-  } catch (error) {
-    console.error("Error generating assignment checklist:", error);
-    return [];
-  }
+        }),
+        (response) => JSON.parse(response.text.trim()),
+        []
+    );
 };
 
-export const suggestStudentGoal = async (studentName: string, averageGrade: number, overdueAssignments: number): Promise<string> => {
-  const cacheKey = `suggestGoal_${studentName}_${averageGrade}_${overdueAssignments}`;
-  const cached = getFromCache<string>(cacheKey, ONE_HOUR);
-  if (cached) return cached;
-  try {
+export const suggestStudentGoal = (studentName: string, averageGrade: number, overdueAssignments: number): Promise<string> => {
     const prompt = `Öğrenci ${studentName}'in mevcut durumu: Not ortalaması 100 üzerinden ${averageGrade} ve vadesi geçmiş ${overdueAssignments} ödevi var. Bu öğrenci için S.M.A.R.T. (Spesifik, Ölçülebilir, Ulaşılabilir, İlgili, Zaman-sınırlı) bir hedef öner. Hedef, öğrenciyi motive etmeli ve performansını artırmaya yönelik olmalı. Sadece tek cümlelik hedefin metnini döndür.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        temperature: 0.8,
-      },
-    });
-    setInCache(cacheKey, response.text);
-    return response.text;
-  } catch (error) {
-    console.error("Error suggesting student goal:", error);
-    return "Hedef önerisi üretilirken bir hata oluştu.";
-  }
+    return cachedGeminiCall(
+        `suggestGoal_${studentName}_${averageGrade}_${overdueAssignments}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } }),
+        (response) => response.text,
+        "Hedef önerisi üretilirken bir hata oluştu."
+    );
 };
 
-export const generateWeeklySummary = async (studentName: string, stats: { completed: number, avgGrade: number | string, goals: number }): Promise<string> => {
-    const cacheKey = `weeklySummary_${studentName}_${stats.completed}_${stats.avgGrade}_${stats.goals}`;
-    const cached = getFromCache<string>(cacheKey, ONE_HOUR);
-    if(cached) return cached;
-  try {
+export const generateWeeklySummary = (studentName: string, stats: { completed: number, avgGrade: number | string, goals: number }): Promise<string> => {
     const prompt = `Sen bir eğitim koçusun. Öğrencin ${studentName} için geçen haftaki performansına dayanarak kısa, pozitif ve motive edici bir özet yaz.
     Geçen haftanın verileri:
     - Tamamlanan ödev sayısı: ${stats.completed}
@@ -160,73 +146,47 @@ export const generateWeeklySummary = async (studentName: string, stats: { comple
     3.  Gelecek hafta için küçük ve yapıcı bir teşvikte bulun.
     
     Tonun samimi ve cesaretlendirici olsun. Sadece özet metnini döndür.`;
-    
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            temperature: 0.7,
-        },
-    });
-
-    setInCache(cacheKey, response.text);
-    return response.text;
-  } catch(error) {
-    console.error("Error generating weekly summary:", error);
-    return "Haftalık özet oluşturulurken bir hata oluştu.";
-  }
+    return cachedGeminiCall(
+        `weeklySummary_${studentName}_${stats.completed}_${stats.avgGrade}_${stats.goals}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } }),
+        (response) => response.text,
+        "Haftalık özet oluşturulurken bir hata oluştu."
+    );
 };
 
-export const generateStudentFocusSuggestion = async (studentName: string, assignments: Assignment[]): Promise<string> => {
+export const generateStudentFocusSuggestion = (studentName: string, assignments: Assignment[]): Promise<string> => {
     const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
     const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
     const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 'N/A';
+    const prompt = `Öğrenci ${studentName}'in güncel durumu: ${pendingCount} bekleyen ödevi var ve not ortalaması ${avgGrade}. Bu öğrencinin başarılı olmak için bir sonraki adımda neye odaklanması gerektiği konusunda kısa (1-2 cümle), eyleme geçirilebilir ve motive edici bir tavsiye ver.`;
 
-    const cacheKey = `studentFocus_${studentName}_${pendingCount}_${avgGrade}`;
-    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
-    if(cached) return cached;
-
-    try {
-        const prompt = `Öğrenci ${studentName}'in güncel durumu: ${pendingCount} bekleyen ödevi var ve not ortalaması ${avgGrade}. Bu öğrencinin başarılı olmak için bir sonraki adımda neye odaklanması gerektiği konusunda kısa (1-2 cümle), eyleme geçirilebilir ve motive edici bir tavsiye ver.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { temperature: 0.7 },
-        });
-        setInCache(cacheKey, response.text);
-        return response.text;
-    } catch (error) {
-        console.error("Error generating student focus suggestion:", error);
-        return "Önceliklerini belirlemeye ve ödevlerini zamanında yapmaya odaklanarak harika bir hafta geçirebilirsin!";
-    }
+    return cachedGeminiCall(
+        `studentFocus_${studentName}_${pendingCount}_${avgGrade}`,
+        FIFTEEN_MINUTES,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } }),
+        (response) => response.text,
+        "Önceliklerini belirlemeye ve ödevlerini zamanında yapmaya odaklanarak harika bir hafta geçirebilirsin!"
+    );
 };
 
-export const generatePersonalCoachSummary = async (coachName: string, students: User[], assignments: Assignment[]): Promise<string> => {
+export const generatePersonalCoachSummary = (coachName: string, students: User[], assignments: Assignment[]): Promise<string> => {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
     const submittedThisWeek = assignments.filter(a => a.submittedAt && new Date(a.submittedAt) > oneWeekAgo).length;
     const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-
     const highPerformersCount = students.filter(s => {
         const studentAssignments = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Graded && a.grade !== null);
         if (studentAssignments.length === 0) return false;
         const avg = studentAssignments.reduce((sum, a) => sum + a.grade!, 0) / studentAssignments.length;
         return avg >= 90;
     }).length;
-
     const needsAttentionCount = students.filter(s => {
          const overdueCount = assignments.filter(a => a.studentId === s.id && a.status === AssignmentStatus.Pending && new Date(a.dueDate) < now).length;
          return overdueCount > 1;
     }).length;
     
-    const cacheKey = `coachSummary_${coachName}_${submittedThisWeek}_${toGradeCount}_${needsAttentionCount}_${highPerformersCount}`;
-    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
-    if (cached) return cached;
-
-    try {
-        const prompt = `Merhaba ${coachName}, sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen ve sana özel eyleme geçirilebilir tavsiyeler sunan kısa bir analiz yaz. Öğrenci isimlerini KESİNLİKLE kullanma. Genel trendlere ve sayılara odaklan.
+    const prompt = `Merhaba ${coachName}, sen bir eğitim koçusun. Öğrencilerinin bu haftaki performansını özetleyen ve sana özel eyleme geçirilebilir tavsiyeler sunan kısa bir analiz yaz. Öğrenci isimlerini KESİNLİKLE kullanma. Genel trendlere ve sayılara odaklan.
         
         İşte bu haftanın verileri:
         - Bu hafta teslim edilen toplam ödev: ${submittedThisWeek}
@@ -240,27 +200,17 @@ export const generatePersonalCoachSummary = async (coachName: string, students: 
         3. Öğrenci gruplarına yönelik genel stratejiler (örn: "Yüksek performans gösteren öğrencilere ek kaynaklar önerebilirsin." veya "Gecikmesi olan öğrencilerle birebir görüşmek faydalı olabilir.").
         
         Tonun profesyonel, destekleyici ve kişisel asistanın gibi olmalı.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { temperature: 0.7 },
-        });
-
-        setInCache(cacheKey, response.text);
-        return response.text;
-    } catch (error) {
-        console.error("Error generating personal coach summary:", error);
-        return "Bu haftaki koçluk özetin analiz edilirken bir sorun oluştu. Lütfen öğrenci detaylarını manuel olarak kontrol edin.";
-    }
+    
+    return cachedGeminiCall(
+        `coachSummary_${coachName}_${submittedThisWeek}_${toGradeCount}_${needsAttentionCount}_${highPerformersCount}`,
+        FIFTEEN_MINUTES,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } }),
+        (response) => response.text,
+        "Bu haftaki koçluk özetin analiz edilirken bir sorun oluştu. Lütfen öğrenci detaylarını manuel olarak kontrol edin."
+    );
 };
 
-
-export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
-  const cacheKey = `suggestGrade_${assignment.id}`;
-  const cached = getFromCache<{ suggestedGrade: number, rationale: string }>(cacheKey, ONE_HOUR);
-  if (cached) return cached;
-  try {
+export const suggestGrade = (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
     let submissionContent = '';
     if (assignment.submissionType === 'text' && assignment.textSubmission) {
       submissionContent = `Öğrencinin metin cevabı aşağıdadır:\n\n"${assignment.textSubmission}"`;
@@ -277,40 +227,33 @@ export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedG
     Öğrenci Teslimatı: ${submissionContent}
     
     Cevabını JSON formatında, 'suggestedGrade' (bir sayı) ve 'rationale' (bir string) anahtarlarıyla ver.`;
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            suggestedGrade: { type: Type.INTEGER },
-            rationale: { type: Type.STRING },
-          },
-          required: ['suggestedGrade', 'rationale'],
-        },
-        temperature: 0.5,
-      },
-    });
 
-    const jsonString = response.text.trim();
-    const result = JSON.parse(jsonString);
-    setInCache(cacheKey, result);
-    return result;
-  } catch (error) {
-    console.error("Error suggesting grade:", error);
-    return null;
-  }
+    return cachedGeminiCall(
+        `suggestGrade_${assignment.id}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        suggestedGrade: { type: Type.INTEGER },
+                        rationale: { type: Type.STRING },
+                    },
+                    required: ['suggestedGrade', 'rationale'],
+                },
+                temperature: 0.5,
+            },
+        }),
+        (response) => JSON.parse(response.text.trim()),
+        null
+    );
 };
 
-export const generateStudentAnalyticsInsight = async (studentName: string, data: { avgGrade: number | string; completionRate: number; topSubject: string; lowSubject: string }): Promise<string> => {
-    const cacheKey = `studentInsight_${studentName}_${data.avgGrade}_${data.completionRate}`;
-    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
-    if (cached) return cached;
-    try {
-        const prompt = `Sen bir motive edici ve eğlenceli bir oyun koçusun. Öğrencin ${studentName} için aşağıdaki performans verilerini analiz et ve ona özel, oyunlaştırılmış bir dille kısa bir analiz ve teşvik mesajı yaz.
+export const generateStudentAnalyticsInsight = (studentName: string, data: { avgGrade: number | string; completionRate: number; topSubject: string; lowSubject: string }): Promise<string> => {
+    const prompt = `Sen bir motive edici ve eğlenceli bir oyun koçusun. Öğrencin ${studentName} için aşağıdaki performans verilerini analiz et ve ona özel, oyunlaştırılmış bir dille kısa bir analiz ve teşvik mesajı yaz.
 
         Veriler:
         - Genel Not Ortalaması: ${data.avgGrade}/100
@@ -325,33 +268,22 @@ export const generateStudentAnalyticsInsight = async (studentName: string, data:
         4.  Gelecek hafta için motive edici bir "bonus görev" vererek bitir.
 
         Tonun pozitif, enerjik ve cesaretlendirici olsun. Sadece metni döndür.`;
-        
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { temperature: 0.8 },
-        });
-
-        setInCache(cacheKey, response.text);
-        return response.text;
-    } catch (error) {
-        console.error("Error generating student analytics insight:", error);
-        return "Bu hafta harika bir ilerleme kaydettin! Potansiyelini en üst seviyeye çıkarmak için sıkı çalışmaya devam et!";
-    }
+    
+    return cachedGeminiCall(
+        `studentInsight_${studentName}_${data.avgGrade}_${data.completionRate}`,
+        FIFTEEN_MINUTES,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } }),
+        (response) => response.text,
+        "Bu hafta harika bir ilerleme kaydettin! Potansiyelini en üst seviyeye çıkarmak için sıkı çalışmaya devam et!"
+    );
 };
 
-
-export const generateCoachAnalyticsInsight = async (studentsData: { name: string, avgGrade: number, completionRate: number, overdue: number }[]): Promise<string> => {
-    const cacheKey = `coachInsight_${studentsData.length}_${studentsData.reduce((acc, s) => acc + s.avgGrade, 0)}`;
-    const cached = getFromCache<string>(cacheKey, FIFTEEN_MINUTES);
-    if(cached) return cached;
-    try {
-        const classAvgGrade = studentsData.reduce((sum, s) => sum + s.avgGrade, 0) / (studentsData.length || 1);
-        const highPerformers = studentsData.filter(s => s.avgGrade >= 90).length;
-        const needsAttention = studentsData.filter(s => s.avgGrade < 70 || s.overdue > 1).length;
-        const totalStudents = studentsData.length;
-
-        const prompt = `Sen profesyonel bir eğitim analistisin. Bir koç için aşağıdaki sınıf verilerini analiz ederek kısa, net ve eyleme geçirilebilir bir stratejik özet raporu hazırla. Raporda öğrenci isimleri KESİNLİKLE KULLANILMAMALIDIR.
+export const generateCoachAnalyticsInsight = (studentsData: { name: string, avgGrade: number, completionRate: number, overdue: number }[]): Promise<string> => {
+    const classAvgGrade = studentsData.reduce((sum, s) => sum + s.avgGrade, 0) / (studentsData.length || 1);
+    const highPerformers = studentsData.filter(s => s.avgGrade >= 90).length;
+    const needsAttention = studentsData.filter(s => s.avgGrade < 70 || s.overdue > 1).length;
+    const totalStudents = studentsData.length;
+    const prompt = `Sen profesyonel bir eğitim analistisin. Bir koç için aşağıdaki sınıf verilerini analiz ederek kısa, net ve eyleme geçirilebilir bir stratejik özet raporu hazırla. Raporda öğrenci isimleri KESİNLİKLE KULLANILMAMALIDIR.
 
         Sınıf Verileri:
         - Toplam Öğrenci Sayısı: ${totalStudents}
@@ -365,17 +297,12 @@ export const generateCoachAnalyticsInsight = async (studentsData: { name: string
         3.  **Stratejik Öneriler:** Koçun bu hafta odaklanabileceği 1-2 somut eylem önerisi sun. (Örn: "Düşük ortalamalı öğrenci grubuyla birebir görüşmeler planlayarak temel eksiklikleri tespit edebilirsin." veya "Yüksek performanslı gruba ek kaynaklar sunarak onları daha da ileri taşıyabilirsin.")
 
         Tonun profesyonel,sıcak,samimi, birazdaespirili ama gerçekçi, veri odaklı ve destekleyici olsun. Sadece rapor metnini döndür.`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { temperature: 0.6 },
-        });
-
-        setInCache(cacheKey, response.text);
-        return response.text;
-    } catch (error) {
-        console.error("Error generating coach analytics insight:", error);
-        return "Sınıf verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci performansını manuel olarak gözden geçirin ve ihtiyaç duyan öğrencilerle iletişime geçin.";
-    }
+    
+    return cachedGeminiCall(
+        `coachInsight_${studentsData.length}_${studentsData.reduce((acc, s) => acc + s.avgGrade, 0)}`,
+        FIFTEEN_MINUTES,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.6 } }),
+        (response) => response.text,
+        "Sınıf verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci performansını manuel olarak gözden geçirin ve ihtiyaç duyan öğrencilerle iletişime geçin."
+    );
 };

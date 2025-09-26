@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation } from '../types';
 import { getMockData } from '../hooks/useMockData';
@@ -338,285 +336,311 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return map;
     }, [state.messages]);
 
-    const value = useMemo(() => {
-        
-        const login = async (email: string, pass: string): Promise<User | null> => {
-            const user = state.users.find(u => u.email === email);
-            if (user) {
-                dispatch({ type: 'SET_CURRENT_USER', payload: user });
-                sessionStorage.setItem('currentUser', JSON.stringify(user));
-                return user;
-            }
-            return null;
-        };
-
-        const logout = async () => {
-            dispatch({ type: 'SET_CURRENT_USER', payload: null });
-            sessionStorage.removeItem('currentUser');
-        };
-
-        const register = async (name: string, email: string, pass: string) => {
-             if (state.users.some(u => u.email === email)) {
-                const error = new Error("Bu e-posta adresi zaten kullanılıyor.");
-                (error as any).code = 'auth/email-already-in-use';
-                throw error;
-            }
-            const newUser: User = {
-                id: `user-${Date.now()}`,
-                name,
-                email,
-                role: state.users.length === 0 ? UserRole.SuperAdmin : UserRole.Student,
-                profilePicture: `https://i.pravatar.cc/150?u=${email}`,
-            };
-            dispatch({ type: 'ADD_USER', payload: newUser });
-            dispatch({ type: 'SET_CURRENT_USER', payload: newUser });
-            sessionStorage.setItem('currentUser', JSON.stringify(newUser));
-        };
-        
-        const sendMessage = async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
-            if(!state.currentUser) return;
-            const newMessage: Message = {
-                ...messageData,
-                id: `msg-${Date.now()}`,
-                timestamp: new Date().toISOString(),
-                readBy: [messageData.senderId],
-            };
-            dispatch({ type: 'ADD_MESSAGE', payload: newMessage });
-        };
-
-        const addAssignment = async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
-            const newAssignments: Assignment[] = studentIds.map(studentId => ({
-                ...assignmentData,
-                id: `asg-${Date.now()}-${studentId}`,
-                studentId,
-            }));
-            dispatch({ type: 'ADD_ASSIGNMENTS', payload: newAssignments });
-        };
-
-        const updateAssignment = async (updatedAssignment: Assignment) => {
-            dispatch({ type: 'UPDATE_ASSIGNMENT', payload: updatedAssignment });
-        };
-        
-        const updateUser = async (updatedUser: User) => {
-            dispatch({ type: 'UPDATE_USER', payload: updatedUser });
-        };
-
-        const deleteUser = async (userId: string) => {
-             dispatch({ type: 'DELETE_USER', payload: userId });
-        };
-
-        const addUser = async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-            const user: User = { ...newUser, id: `user-${Date.now()}`};
-            dispatch({ type: 'ADD_USER', payload: user });
+     // --- Memoized Functions ---
+    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
+        const user = state.users.find(u => u.email === email);
+        if (user) {
+            dispatch({ type: 'SET_CURRENT_USER', payload: user });
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
             return user;
-        };
+        }
+        return null;
+    }, [state.users]);
 
-        const markMessagesAsRead = async (conversationId: string) => {
-            if (state.currentUser) {
-                dispatch({ type: 'MARK_MESSAGES_AS_READ', payload: { conversationId, currentUserId: state.currentUser.id } });
-            }
-        };
+    const logout = useCallback(async () => {
+        dispatch({ type: 'SET_CURRENT_USER', payload: null });
+        sessionStorage.removeItem('currentUser');
+    }, []);
 
-        const markNotificationsAsRead = async () => {
-             if (state.currentUser) {
-                dispatch({ type: 'MARK_NOTIFICATIONS_AS_READ', payload: { userId: state.currentUser.id } });
-             }
+    const register = useCallback(async (name: string, email: string, pass: string) => {
+         if (state.users.some(u => u.email === email)) {
+            const error = new Error("Bu e-posta adresi zaten kullanılıyor.");
+            (error as any).code = 'auth/email-already-in-use';
+            throw error;
+        }
+        const newUser: User = {
+            id: `user-${Date.now()}`,
+            name,
+            email,
+            role: state.users.length === 0 ? UserRole.SuperAdmin : UserRole.Student,
+            profilePicture: `https://i.pravatar.cc/150?u=${email}`,
         };
+        dispatch({ type: 'ADD_USER', payload: newUser });
+        dispatch({ type: 'SET_CURRENT_USER', payload: newUser });
+        sessionStorage.setItem('currentUser', JSON.stringify(newUser));
+    }, [state.users]);
+    
+    const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
+        if(!state.currentUser) return;
+        const newMessage: Message = {
+            ...messageData,
+            id: `msg-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            readBy: [messageData.senderId],
+        };
+        dispatch({ type: 'ADD_MESSAGE', payload: newMessage });
 
-        const updateTypingStatus = async (isTyping: boolean) => {};
-        
-        const updateGoal = async (updatedGoal: Goal) => { 
-            dispatch({ type: 'UPDATE_GOAL', payload: updatedGoal });
-        };
-        const addGoal = async (newGoal: Omit<Goal, 'id'>) => { 
-            const goal: Goal = { ...newGoal, id: `goal-${Date.now()}` };
-            dispatch({ type: 'ADD_GOAL', payload: goal });
-        };
-        const addReaction = async (messageId: string, emoji: string) => {
-             if (state.currentUser) {
-                dispatch({ type: 'ADD_REACTION', payload: { messageId, emoji, userId: state.currentUser.id } });
-             }
-        };
-        const voteOnPoll = async (messageId: string, optionIndex: number) => {
-            if (state.currentUser) {
-                dispatch({ type: 'VOTE_ON_POLL', payload: { messageId, optionIndex, userId: state.currentUser.id } });
-            }
-        };
-        
-        const toggleResourceAssignment = async (resourceId: string, studentId: string) => {
-            dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
-        };
+        // Notify recipients
+        const conversation = state.conversations.find(c => c.id === messageData.conversationId);
+        if (conversation) {
+            const recipients = conversation.participantIds.filter(id => id !== state.currentUser!.id);
+            const notificationsToAdd: AppNotification[] = recipients.map(recipientId => ({
+                id: `notif-${Date.now()}-${recipientId}`,
+                userId: recipientId,
+                message: `${state.currentUser!.name} size yeni bir mesaj gönderdi.`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                link: { page: 'messages', filter: { contactId: conversation.id } }
+            }));
+            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
+        }
+    }, [state.currentUser, state.conversations]);
 
-        const addResource = async (resourceData: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => {
-            if (!state.currentUser) return;
-            const newResource: Resource = {
-                name: resourceData.name,
-                type: resourceData.type,
-                url: resourceData.url,
-                isPublic: resourceData.isPublic,
-                id: `res-${Date.now()}`,
-                uploaderId: state.currentUser.id,
-                assignedTo: resourceData.assignedTo || []
-            };
-            dispatch({ type: 'ADD_RESOURCE', payload: newResource });
+    const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
+        const newAssignments: Assignment[] = studentIds.map(studentId => ({
+            ...assignmentData,
+            id: `asg-${Date.now()}-${studentId}`,
+            studentId,
+        }));
+        dispatch({ type: 'ADD_ASSIGNMENTS', payload: newAssignments });
+    }, []);
 
-            if (!newResource.isPublic && newResource.assignedTo && newResource.assignedTo.length > 0) {
-                const notificationsToAdd: AppNotification[] = newResource.assignedTo.map(studentId => ({
-                    id: `notif-${Date.now()}-${studentId}`,
-                    userId: studentId,
-                    message: `${state.currentUser?.name} sizinle yeni bir kaynak paylaştı: "${newResource.name}"`,
-                    timestamp: new Date().toISOString(),
-                    isRead: false,
-                    link: { page: 'library' }
-                }));
-                dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
-            }
-        };
+    const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
+        dispatch({ type: 'UPDATE_ASSIGNMENT', payload: updatedAssignment });
+    }, []);
+    
+    const updateUser = useCallback(async (updatedUser: User) => {
+        dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+    }, []);
 
-        const deleteResource = async (resourceId: string) => {
-            dispatch({ type: 'DELETE_RESOURCE', payload: resourceId });
-        };
-        
-        const uploadFile = async (file: File, path: string): Promise<string> => {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return URL.createObjectURL(file);
-        };
+    const deleteUser = useCallback(async (userId: string) => {
+         dispatch({ type: 'DELETE_USER', payload: userId });
+    }, []);
 
-        const updateStudentNotes = async (studentId: string, notes: string) => {
-            const student = state.users.find(u => u.id === studentId);
-            if (student) {
-                dispatch({ type: 'UPDATE_USER', payload: { ...student, notes } });
-            }
-        };
+    const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
+        const user: User = { ...newUser, id: `user-${Date.now()}`};
+        dispatch({ type: 'ADD_USER', payload: user });
+        return user;
+    }, []);
 
-        const startGroupChat = async (participantIds: string[], groupName: string) => {
-            if (!state.currentUser) return;
-            const newConversation: Conversation = {
-                id: `conv-${Date.now()}`,
-                participantIds,
-                isGroup: true,
-                groupName,
-                adminId: state.currentUser.id,
-            };
-            dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
+    const markMessagesAsRead = useCallback(async (conversationId: string) => {
+        if (state.currentUser) {
+            dispatch({ type: 'MARK_MESSAGES_AS_READ', payload: { conversationId, currentUserId: state.currentUser.id } });
+        }
+    }, [state.currentUser]);
+
+    const markNotificationsAsRead = useCallback(async () => {
+         if (state.currentUser) {
+            dispatch({ type: 'MARK_NOTIFICATIONS_AS_READ', payload: { userId: state.currentUser.id } });
+         }
+    }, [state.currentUser]);
+
+    const updateTypingStatus = useCallback(async (isTyping: boolean) => {}, []);
+    
+    const updateGoal = useCallback(async (updatedGoal: Goal) => { 
+        dispatch({ type: 'UPDATE_GOAL', payload: updatedGoal });
+    }, []);
+
+    const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => { 
+        const goal: Goal = { ...newGoal, id: `goal-${Date.now()}` };
+        dispatch({ type: 'ADD_GOAL', payload: goal });
+    }, []);
+
+    const addReaction = useCallback(async (messageId: string, emoji: string) => {
+         if (state.currentUser) {
+            dispatch({ type: 'ADD_REACTION', payload: { messageId, emoji, userId: state.currentUser.id } });
+         }
+    }, [state.currentUser]);
+
+    const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
+        if (state.currentUser) {
+            dispatch({ type: 'VOTE_ON_POLL', payload: { messageId, optionIndex, userId: state.currentUser.id } });
+        }
+    }, [state.currentUser]);
+    
+    const toggleResourceAssignment = useCallback(async (resourceId: string, studentId: string) => {
+        dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
+    }, []);
+
+    const addResource = useCallback(async (resourceData: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => {
+        if (!state.currentUser) return;
+        const newResource: Resource = {
+            name: resourceData.name,
+            type: resourceData.type,
+            url: resourceData.url,
+            isPublic: resourceData.isPublic,
+            id: `res-${Date.now()}`,
+            uploaderId: state.currentUser.id,
+            assignedTo: resourceData.assignedTo || []
+        };
+        dispatch({ type: 'ADD_RESOURCE', payload: newResource });
+
+        if (!newResource.isPublic && newResource.assignedTo && newResource.assignedTo.length > 0) {
+            const notificationsToAdd: AppNotification[] = newResource.assignedTo.map(studentId => ({
+                id: `notif-${Date.now()}-${studentId}`,
+                userId: studentId,
+                message: `${state.currentUser?.name} sizinle yeni bir kaynak paylaştı: "${newResource.name}"`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                link: { page: 'library' }
+            }));
+            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
+        }
+    }, [state.currentUser]);
+
+    const deleteResource = useCallback(async (resourceId: string) => {
+        dispatch({ type: 'DELETE_RESOURCE', payload: resourceId });
+    }, []);
+    
+    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return URL.createObjectURL(file);
+    }, []);
+
+    const updateStudentNotes = useCallback(async (studentId: string, notes: string) => {
+        const student = state.users.find(u => u.id === studentId);
+        if (student) {
+            dispatch({ type: 'UPDATE_USER', payload: { ...student, notes } });
+        }
+    }, [state.users]);
+
+    const startGroupChat = useCallback(async (participantIds: string[], groupName: string) => {
+        if (!state.currentUser) return;
+        const newConversation: Conversation = {
+            id: `conv-${Date.now()}`,
+            participantIds,
+            isGroup: true,
+            groupName,
+            adminId: state.currentUser.id,
+        };
+        dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
+        sendMessage({
+            senderId: state.currentUser.id,
+            conversationId: newConversation.id,
+            text: `${state.currentUser.name}, ${groupName} grubunu oluşturdu.`,
+            type: 'system',
+        });
+        return newConversation.id;
+    }, [state.currentUser, sendMessage]);
+    
+    const findOrCreateConversation = useCallback(async (otherParticipantId: string) => {
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+
+        const existingConversation = state.conversations.find(c =>
+            !c.isGroup &&
+            c.participantIds.length === 2 &&
+            c.participantIds.includes(currentUserId) &&
+            c.participantIds.includes(otherParticipantId)
+        );
+
+        if (existingConversation) {
+            return existingConversation.id;
+        }
+
+        const newConversation: Conversation = {
+            id: `conv-${Date.now()}`,
+            participantIds: [currentUserId, otherParticipantId],
+            isGroup: false,
+        };
+        dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
+        return newConversation.id;
+    }, [state.currentUser, state.conversations]);
+
+
+    const addUserToConversation = useCallback(async (conversationId: string, userId: string) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        const user = state.users.find(u => u.id === userId);
+        if (conversation && user && !conversation.participantIds.includes(userId)) {
+            const updatedConversation = { ...conversation, participantIds: [...conversation.participantIds, userId] };
+            dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
             sendMessage({
-                senderId: state.currentUser.id,
-                conversationId: newConversation.id,
-                text: `${state.currentUser.name}, ${groupName} grubunu oluşturdu.`,
+                senderId: state.currentUser!.id,
+                conversationId: conversationId,
+                text: `${state.currentUser!.name}, ${user.name} kişisini gruba ekledi.`,
                 type: 'system',
             });
-            return newConversation.id;
-        };
-        
-        const findOrCreateConversation = async (otherParticipantId: string) => {
-            if (!state.currentUser) return;
-            const currentUserId = state.currentUser.id;
+        }
+    }, [state.conversations, state.users, state.currentUser, sendMessage]);
 
-            const existingConversation = state.conversations.find(c =>
-                !c.isGroup &&
-                c.participantIds.length === 2 &&
-                c.participantIds.includes(currentUserId) &&
-                c.participantIds.includes(otherParticipantId)
-            );
+    const removeUserFromConversation = useCallback(async (conversationId: string, userId: string) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        const user = state.users.find(u => u.id === userId);
+        if (conversation && user && conversation.participantIds.includes(userId)) {
+            const updatedConversation = { ...conversation, participantIds: conversation.participantIds.filter(id => id !== userId) };
+            dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
+            sendMessage({
+                senderId: state.currentUser!.id,
+                conversationId: conversationId,
+                text: `${state.currentUser!.name}, ${user.name} kişisini gruptan çıkardı.`,
+                type: 'system',
+            });
+        }
+    }, [state.conversations, state.users, state.currentUser, sendMessage]);
 
-            if (existingConversation) {
-                return existingConversation.id;
-            }
+    const endConversation = useCallback(async (conversationId: string) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        if (conversation && state.currentUser) {
+            dispatch({ type: 'UPDATE_CONVERSATION', payload: { ...conversation, isArchived: true } });
+             sendMessage({
+                senderId: state.currentUser.id,
+                conversationId: conversationId,
+                text: `${state.currentUser.name}, grubu sonlandırdı.`,
+                type: 'system',
+            });
+        }
+    }, [state.conversations, state.currentUser, sendMessage]);
 
-            const newConversation: Conversation = {
-                id: `conv-${Date.now()}`,
-                participantIds: [currentUserId, otherParticipantId],
-                isGroup: false,
-            };
-            dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
-            return newConversation.id;
-        };
+    const seedDatabase = useCallback(async (uids: Record<string, string>) => {}, []);
 
+    const value = useMemo(() => ({
+        ...state,
+        coach,
+        students,
+        login,
+        logout,
+        register,
+        getAssignmentsForStudent,
+        getMessagesForConversation,
+        sendMessage,
+        addAssignment,
+        updateAssignment,
+        updateUser,
+        deleteUser,
+        addUser,
+        markMessagesAsRead,
+        markNotificationsAsRead,
+        updateTypingStatus,
+        getGoalsForStudent,
+        updateGoal,
+        addGoal,
+        addReaction,
+        voteOnPoll,
+        findMessageById,
+        toggleResourceAssignment,
+        addResource,
+        deleteResource,
+        uploadFile,
+        updateStudentNotes,
+        unreadCounts,
+        lastMessagesMap,
+        startGroupChat,
+        findOrCreateConversation,
+        addUserToConversation,
+        removeUserFromConversation,
+        endConversation,
+        seedDatabase,
+    }), [
+        state, coach, students, unreadCounts, lastMessagesMap,
+        login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
+        sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
+        markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,
+        updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
+        addResource, deleteResource, uploadFile, updateStudentNotes, startGroupChat,
+        findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
+        seedDatabase
+    ]);
 
-        const addUserToConversation = async (conversationId: string, userId: string) => {
-            const conversation = state.conversations.find(c => c.id === conversationId);
-            const user = state.users.find(u => u.id === userId);
-            if (conversation && user && !conversation.participantIds.includes(userId)) {
-                const updatedConversation = { ...conversation, participantIds: [...conversation.participantIds, userId] };
-                dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
-                sendMessage({
-                    senderId: state.currentUser!.id,
-                    conversationId: conversationId,
-                    text: `${state.currentUser!.name}, ${user.name} kişisini gruba ekledi.`,
-                    type: 'system',
-                });
-            }
-        };
-
-        const removeUserFromConversation = async (conversationId: string, userId: string) => {
-            const conversation = state.conversations.find(c => c.id === conversationId);
-            const user = state.users.find(u => u.id === userId);
-            if (conversation && user && conversation.participantIds.includes(userId)) {
-                const updatedConversation = { ...conversation, participantIds: conversation.participantIds.filter(id => id !== userId) };
-                dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
-                sendMessage({
-                    senderId: state.currentUser!.id,
-                    conversationId: conversationId,
-                    text: `${state.currentUser!.name}, ${user.name} kişisini gruptan çıkardı.`,
-                    type: 'system',
-                });
-            }
-        };
-
-        const endConversation = async (conversationId: string) => {
-            const conversation = state.conversations.find(c => c.id === conversationId);
-            if (conversation) {
-                dispatch({ type: 'UPDATE_CONVERSATION', payload: { ...conversation, isArchived: true } });
-                 sendMessage({
-                    senderId: state.currentUser!.id,
-                    conversationId: conversationId,
-                    text: `${state.currentUser!.name}, grubu sonlandırdı.`,
-                    type: 'system',
-                });
-            }
-        };
-
-        const seedDatabase = async (uids: Record<string, string>) => {};
-
-        return {
-            ...state,
-            coach,
-            students,
-            login,
-            logout,
-            register,
-            getAssignmentsForStudent,
-            getMessagesForConversation,
-            sendMessage,
-            addAssignment,
-            updateAssignment,
-            updateUser,
-            deleteUser,
-            addUser,
-            markMessagesAsRead,
-            markNotificationsAsRead,
-            updateTypingStatus,
-            getGoalsForStudent,
-            updateGoal,
-            addGoal,
-            addReaction,
-            voteOnPoll,
-            findMessageById,
-            toggleResourceAssignment,
-            addResource,
-            deleteResource,
-            uploadFile,
-            updateStudentNotes,
-            unreadCounts,
-            lastMessagesMap,
-            startGroupChat,
-            findOrCreateConversation,
-            addUserToConversation,
-            removeUserFromConversation,
-            endConversation,
-            seedDatabase,
-        };
-    }, [state, coach, students, getAssignmentsForStudent, getMessagesForConversation, getGoalsForStudent, findMessageById, unreadCounts, lastMessagesMap]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
