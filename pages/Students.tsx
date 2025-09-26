@@ -8,6 +8,7 @@ import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTria
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
 import EmptyState from '../components/EmptyState';
+import AddStudentForm from '../components/AddStudentForm';
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -308,6 +309,7 @@ const Students = () => {
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
     const [filterCoach, setFilterCoach] = useState('all');
+    const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
     const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
@@ -342,7 +344,7 @@ const Students = () => {
     return (
         <>
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-end gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 {isSuperAdmin && (
                     <select
                         value={filterCoach}
@@ -362,8 +364,14 @@ const Students = () => {
                     placeholder="Öğrenci ara..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-64"
+                    className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-auto flex-grow"
                 />
+                 <button
+                    onClick={() => setIsAddStudentModalOpen(true)}
+                    className="w-full sm:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 font-semibold flex-shrink-0"
+                >
+                    + Yeni Öğrenci Ekle
+                </button>
             </div>
 
             {students.length === 0 ? (
@@ -387,6 +395,11 @@ const Students = () => {
             )}
         </div>
         {selectedStudent && <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />}
+        {isAddStudentModalOpen && (
+            <Modal isOpen={isAddStudentModalOpen} onClose={() => setIsAddStudentModalOpen(false)} title="Yeni Öğrenci Ekle">
+                <AddStudentForm onClose={() => setIsAddStudentModalOpen(false)} />
+            </Modal>
+        )}
         </>
     );
 };
