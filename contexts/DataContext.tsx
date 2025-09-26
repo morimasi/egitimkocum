@@ -1,7 +1,8 @@
 
 
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus } from '../types';
 import { getMockData } from '../hooks/useMockData';
 
 export const getInitialDataForSeeding = () => {
@@ -264,8 +265,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             dispatch({
                 type: 'SET_INITIAL_DATA',
                 payload: { users, assignments, messages, templates, resources, goals, conversations, notifications: [
-                     { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false },
-                     { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false },
+                     { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false, link: { page: 'assignments' } },
+                     { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false, link: { page: 'assignments' } },
                 ] }
             });
             dispatch({ type: 'SET_CURRENT_USER', payload: defaultUser });
@@ -405,11 +406,64 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             studentId,
         }));
         dispatch({ type: 'ADD_ASSIGNMENTS', payload: newAssignments });
-    }, []);
+
+        if (state.currentUser) {
+            const notificationsToAdd: AppNotification[] = studentIds.map(studentId => ({
+                 id: `notif-${Date.now()}-${studentId}`,
+                 userId: studentId,
+                 message: `${state.currentUser!.name} size yeni bir ödev atadı: "${assignmentData.title}"`,
+                 timestamp: new Date().toISOString(),
+                 isRead: false,
+                 link: { page: 'assignments' }
+            }));
+            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
+        }
+    }, [state.currentUser]);
 
     const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
+        const oldAssignment = state.assignments.find(a => a.id === updatedAssignment.id);
+
+        // Dispatch the main update first
         dispatch({ type: 'UPDATE_ASSIGNMENT', payload: updatedAssignment });
-    }, []);
+    
+        // Now handle notifications based on the state change
+        if (!oldAssignment || !state.currentUser) {
+            return;
+        }
+    
+        let notificationsToAdd: AppNotification[] = [];
+    
+        // Student submits an assignment -> Notify coach
+        if (oldAssignment.status === AssignmentStatus.Pending && updatedAssignment.status === AssignmentStatus.Submitted) {
+            const student = state.users.find(u => u.id === updatedAssignment.studentId);
+            if (student) {
+                notificationsToAdd.push({
+                    id: `notif-${Date.now()}-${updatedAssignment.coachId}`,
+                    userId: updatedAssignment.coachId,
+                    message: `${student.name}, "${updatedAssignment.title}" ödevini teslim etti.`,
+                    timestamp: new Date().toISOString(),
+                    isRead: false,
+                    link: { page: 'assignments', filter: { status: AssignmentStatus.Submitted, studentId: student.id } }
+                });
+            }
+        }
+        
+        // Coach grades an assignment -> Notify student
+        if (oldAssignment.status === AssignmentStatus.Submitted && updatedAssignment.status === AssignmentStatus.Graded) {
+            notificationsToAdd.push({
+                id: `notif-${Date.now()}-${updatedAssignment.studentId}`,
+                userId: updatedAssignment.studentId,
+                message: `"${updatedAssignment.title}" ödeviniz notlandırıldı: ${updatedAssignment.grade}`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                link: { page: 'assignments' }
+            });
+        }
+    
+        if (notificationsToAdd.length > 0) {
+            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
+        }
+    }, [state.assignments, state.currentUser, state.users]);
     
     const updateUser = useCallback(async (updatedUser: User) => {
         dispatch({ type: 'UPDATE_USER', payload: updatedUser });
