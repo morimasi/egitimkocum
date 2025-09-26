@@ -1,3 +1,5 @@
+
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation } from '../types';
 import { getMockData } from '../hooks/useMockData';
@@ -594,7 +596,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const seedDatabase = useCallback(async (uids: Record<string, string>) => {}, []);
 
     const value = useMemo(() => ({
-        ...state,
+        currentUser: state.currentUser,
+        users: state.users,
+        assignments: state.assignments,
+        messages: state.messages,
+        conversations: state.conversations,
+        notifications: state.notifications,
+        templates: state.templates,
+        resources: state.resources,
+        goals: state.goals,
+        isLoading: state.isLoading,
+        typingStatus: state.typingStatus,
         coach,
         students,
         login,
@@ -631,7 +643,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         endConversation,
         seedDatabase,
     }), [
-        state, coach, students, unreadCounts, lastMessagesMap,
+        state.currentUser, state.users, state.assignments, state.messages, state.conversations, state.notifications, state.templates, state.resources, state.goals, state.isLoading, state.typingStatus,
+        coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
         sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
         markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,

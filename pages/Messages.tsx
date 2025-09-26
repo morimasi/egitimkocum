@@ -8,6 +8,7 @@ import AudioRecorder from '../components/AudioRecorder';
 import AnnouncementModal from '../components/AnnouncementModal';
 import VideoRecorder from '../components/VideoRecorder';
 
+const MESSAGE_PAGE_SIZE = 50;
 
 const TypingIndicator = () => (
     <div className="flex items-center space-x-1 p-3">
@@ -422,6 +423,8 @@ const Messages = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isListCollapsed, setIsListCollapsed] = useState(false);
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+    const [visibleMessagesCount, setVisibleMessagesCount] = useState(MESSAGE_PAGE_SIZE);
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -486,19 +489,32 @@ const Messages = () => {
         }
     }, [userConversations, initialFilters, setInitialFilters]);
     
+    const allConversationMessages = useMemo(() => {
+        return selectedConversationId ? getMessagesForConversation(selectedConversationId) : [];
+    }, [selectedConversationId, getMessagesForConversation]);
+
+    const conversationMessages = useMemo(() => {
+        return allConversationMessages.slice(-visibleMessagesCount);
+    }, [allConversationMessages, visibleMessagesCount]);
+
+    const hasMoreMessages = allConversationMessages.length > visibleMessagesCount;
+
+    const loadMoreMessages = () => {
+        setVisibleMessagesCount(prev => prev + MESSAGE_PAGE_SIZE);
+    };
+
     useEffect(() => {
         if (selectedConversationId) {
             markMessagesAsRead(selectedConversationId);
+            setVisibleMessagesCount(MESSAGE_PAGE_SIZE); // Reset message count on conversation change
         }
-    }, [selectedConversationId, getMessagesForConversation, markMessagesAsRead]);
-    
-    const conversationMessages = selectedConversationId ? getMessagesForConversation(selectedConversationId) : [];
-    
+    }, [selectedConversationId, markMessagesAsRead]);
+        
     useEffect(() => {
         if (!showScrollToBottom) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [conversationMessages, typingStatus, showScrollToBottom]);
+    }, [conversationMessages.length, typingStatus, showScrollToBottom]);
 
     const handleScroll = () => {
         const container = chatContainerRef.current;
@@ -724,6 +740,13 @@ const Messages = () => {
                                 </div>
                             </div>
                             <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 space-y-4 relative">
+                                {hasMoreMessages && (
+                                    <div className="text-center">
+                                        <button onClick={loadMoreMessages} className="text-sm text-primary-500 font-semibold hover:underline">
+                                            Daha Eski Mesajları Yükle
+                                        </button>
+                                    </div>
+                                )}
                                 {conversationMessages.map(msg => <MessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} conversation={selectedConversation} />)}
                                 <div ref={messagesEndRef} />
                                 {showScrollToBottom && <button onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })} className="absolute bottom-4 right-4 bg-primary-500 text-white w-10 h-10 rounded-full shadow-lg animate-bounce">↓</button>}

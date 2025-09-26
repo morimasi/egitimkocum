@@ -45,16 +45,18 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                 setIsSavingNotes(true);
                 await updateStudentNotes(student.id, notes);
                 setIsSavingNotes(false);
-                addToast("Notlar kaydedildi.", "success");
+                addToast("Notlar otomatik kaydedildi.", "success");
             }
         };
 
-        const timerId = setTimeout(() => {
+        // Set a new timeout
+        const timeoutId = window.setTimeout(() => {
             handleSaveNotes();
         }, 1500); // Auto-save after 1.5 seconds of inactivity
 
+        // Cleanup function to clear the timeout when the component unmounts or dependencies change
         return () => {
-            clearTimeout(timerId);
+            clearTimeout(timeoutId);
         };
     }, [notes, student, updateStudentNotes, addToast]);
 
