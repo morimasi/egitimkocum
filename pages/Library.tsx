@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { Resource, UserRole } from '../types';
+import { Resource, UserRole, AcademicTrack } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';
@@ -9,6 +9,15 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
 
+const getAcademicTrackLabel = (track: AcademicTrack): string => {
+    switch (track) {
+        case AcademicTrack.Sayisal: return 'Sayısal';
+        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
+        case AcademicTrack.Sozel: return 'Sözel';
+        case AcademicTrack.Dil: return 'Dil';
+        default: return '';
+    }
+};
 
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     const { addResource, uploadFile, currentUser, students } = useDataContext();
@@ -20,6 +29,13 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     const [file, setFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [assignedTo, setAssignedTo] = useState<string[]>([]);
+    const [filterGrade, setFilterGrade] = useState('all');
+
+    const availableStudents = useMemo(() => {
+        if (filterGrade === 'all') return students;
+        return students.filter(s => s.gradeLevel === filterGrade);
+    }, [students, filterGrade]);
+
 
     const handleTypeChange = (newType: Resource['type']) => {
         setType(newType);
@@ -137,12 +153,32 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 </p>
 
                 {!isPublic && (
-                     <div>
-                        <label className="block text-sm font-medium mb-1">Öğrencileri Ata</label>
-                        <select multiple value={assignedTo} onChange={e => setAssignedTo(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                         <p className="text-xs text-gray-500 mt-1">Birden çok öğrenci seçmek için Ctrl (veya Mac'te Cmd) tuşunu basılı tutun.</p>
+                     <div className="space-y-2">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
+                            <select
+                                value={filterGrade}
+                                onChange={e => {
+                                    setFilterGrade(e.target.value);
+                                    setAssignedTo([]);
+                                }}
+                                className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                            >
+                                <option value="all">Tüm Sınıflar</option>
+                                <option value="9">9. Sınıf</option>
+                                <option value="10">10. Sınıf</option>
+                                <option value="11">11. Sınıf</option>
+                                <option value="12">12. Sınıf</option>
+                                <option value="mezun">Mezun</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Öğrencileri Ata</label>
+                            <select multiple value={assignedTo} onChange={e => setAssignedTo(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                {availableStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                             <p className="text-xs text-gray-500 mt-1">Birden çok öğrenci seçmek için Ctrl (veya Mac'te Cmd) tuşunu basılı tutun.</p>
+                        </div>
                     </div>
                 )}
 
@@ -159,13 +195,53 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
 
 const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClose: () => void }) => {
     const { students, toggleResourceAssignment } = useDataContext();
+    const [filterGrade, setFilterGrade] = useState('all');
+    const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
+
+    const academicTrackLabels: Record<AcademicTrack, string> = {
+        [AcademicTrack.Sayisal]: 'Sayısal',
+        [AcademicTrack.EsitAgirlik]: 'Eşit Ağırlık',
+        [AcademicTrack.Sozel]: 'Sözel',
+        [AcademicTrack.Dil]: 'Dil',
+    };
+
+    const availableStudents = useMemo(() => {
+        return students.filter(s => 
+            (filterGrade === 'all' || s.gradeLevel === filterGrade) &&
+            (filterTrack === 'all' || s.academicTrack === filterTrack)
+        );
+    }, [students, filterGrade, filterTrack]);
 
     return (
         <Modal isOpen={true} onClose={onClose} title={`"${resource.name}" Kaynağını Ata`}>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <select
+                    value={filterGrade}
+                    onChange={e => setFilterGrade(e.target.value)}
+                    className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                >
+                    <option value="all">Tüm Sınıflar</option>
+                    <option value="9">9. Sınıf</option>
+                    <option value="10">10. Sınıf</option>
+                    <option value="11">11. Sınıf</option>
+                    <option value="12">12. Sınıf</option>
+                    <option value="mezun">Mezun</option>
+                </select>
+                 <select
+                    value={filterTrack}
+                    onChange={e => setFilterTrack(e.target.value as any)}
+                    className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                >
+                    <option value="all">Tüm Bölümler</option>
+                    {Object.entries(academicTrackLabels).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                    ))}
+                </select>
+            </div>
             <div className="max-h-80 overflow-y-auto">
                 <p className="text-sm text-gray-500 mb-4">Bu özel kaynağı atamak istediğiniz öğrencileri seçin.</p>
                 <ul className="space-y-2">
-                    {students.map(student => {
+                    {availableStudents.map(student => {
                         const isAssigned = resource.assignedTo?.includes(student.id);
                         return (
                             <li key={student.id}>

@@ -3,14 +3,15 @@
 
 
 
+
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon, AwardIcon, StarIcon, ZapIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon } from '../components/Icons';
-import SetupWizard from '../components/SetupWizard';
+import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon, AwardIcon, StarIcon, ZapIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon, AlertTriangleIcon } from '../components/Icons';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }) => {
     const { updateUser, uploadFile } = useDataContext();
@@ -250,52 +251,50 @@ const CoachSettings = () => {
 };
 
 const AdminSettings = () => {
-    const { setActivePage } = useUI();
-    const quickActions = useMemo(() => [
-        {
-            label: "Yeni Ödev Oluştur",
-            icon: <PlusCircleIcon className="w-6 h-6 text-blue-500" />,
-            action: () => setActivePage('assignments')
-        },
-        {
-            label: "Duyuru Yap",
-            icon: <MegaphoneIcon className="w-6 h-6 text-yellow-500" />,
-            action: () => setActivePage('messages')
-        },
-        {
-            label: "Öğrencileri Görüntüle",
-            icon: <StudentsIcon className="w-6 h-6 text-green-500" />,
-            action: () => setActivePage('students')
-        },
-        {
-            label: "Kütüphaneyi Yönet",
-            icon: <LibraryIcon className="w-6 h-6 text-purple-500" />,
-            action: () => setActivePage('library')
-        }
-    ], [setActivePage]);
+    const { addToast } = useUI();
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+    const handleResetData = () => {
+        // In a real app, this would trigger a backend process.
+        // Here, we'll just reload the page to reset the mock data.
+        addToast("Demo verileri sıfırlanıyor...", "info");
+        setTimeout(() => window.location.reload(), 1500);
+    };
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto pt-8">
-             <Card title="Hızlı Eylemler">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {quickActions.map(action => (
-                        <button key={action.label} onClick={action.action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105">
-                            {action.icon}
-                            <span className="text-sm font-semibold text-center">{action.label}</span>
-                        </button>
-                    ))}
+        <div className="space-y-6 max-w-2xl mx-auto pt-8">
+             <Card title="Platform Ayarları">
+                <div className="text-center">
+                    <h4 className="font-semibold">Uygulama Bilgisi</h4>
+                    <p className="text-sm text-gray-500 mt-2">
+                        Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. Yaptığınız değişiklikler sayfa yenilendiğinde kaybolacaktır. Yönetimsel işlemler için Süper Admin Paneli'ni kullanabilirsiniz.
+                    </p>
                 </div>
             </Card>
-             <SetupWizard 
-                title="Veritabanı Kurulumu ve Demo Verileri"
-                description="Platformun tüm özelliklerini test etmek için demo verilerini veritabanınıza ekleyebilirsiniz. Bu işlem yalnızca veritabanınız boşsa önerilir."
-            />
-            <Card title="Uygulama Bilgisi">
-                 <div className="text-center">
-                    <h4 className="font-semibold">Uygulama Yerel Modda Çalışıyor</h4>
-                    <p className="text-sm text-gray-500 mt-2">Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. 'Kurulumu Tamamla' butonu bu demo ortamında bir veritabanına veri yazmayacaktır, ancak gerçek bir Firebase projesinde nasıl çalışacağını göstermektedir.</p>
+            <Card title="Tehlikeli Alan">
+                <div className="flex flex-col md:flex-row justify-between items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg">
+                    <div>
+                        <h4 className="font-semibold text-red-800 dark:text-red-200">Demo Verilerini Sıfırla</h4>
+                        <p className="text-sm text-red-600 dark:text-red-300 mt-1">Bu işlem, tüm kullanıcıları, ödevleri ve mesajları orijinal demo durumuna geri yükler. Bu işlem geri alınamaz.</p>
+                    </div>
+                     <button 
+                        onClick={() => setIsConfirmModalOpen(true)}
+                        className="mt-4 md:mt-0 md:ml-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold flex-shrink-0"
+                    >
+                       Verileri Sıfırla
+                    </button>
                 </div>
             </Card>
+            {isConfirmModalOpen && (
+                 <ConfirmationModal
+                    isOpen={isConfirmModalOpen}
+                    onClose={() => setIsConfirmModalOpen(false)}
+                    onConfirm={handleResetData}
+                    title="Verileri Sıfırla"
+                    message="Tüm demo verilerini sıfırlamak istediğinizden emin misiniz? Bu işlem, yapılan tüm değişiklikleri geri alacaktır."
+                    confirmText="Evet, Sıfırla"
+                />
+            )}
         </div>
     );
 };
@@ -308,6 +307,7 @@ const Settings = () => {
         [UserRole.SuperAdmin]: <AdminSettings />,
         [UserRole.Coach]: <CoachSettings />,
         [UserRole.Student]: <StudentSettings />,
+        [UserRole.Parent]: <CoachSettings />, // Parents can use a simplified version of coach settings for profile management
     };
 
     return (

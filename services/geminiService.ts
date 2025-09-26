@@ -354,3 +354,53 @@ export const generateCoachAnalyticsInsight = (studentsData: { name: string, avgG
         "Sınıf verileri analiz edilirken bir sorun oluştu. Lütfen öğrenci performansını manuel olarak gözden geçirin ve ihtiyaç duyan öğrencilerle iletişime geçin."
     );
 };
+
+export const generateAiTemplate = async (topic: string, level: string, duration: string): Promise<{ title: string; description: string; checklist: { text: string }[] } | null> => {
+    const prompt = `Bir eğitim koçu olarak, YKS/AYT sınavına hazırlanan öğrenciler için bir ödev şablonu taslağı oluştur.
+    
+    Konu: "${topic}"
+    Seviye: "${level}"
+    Önerilen Tamamlanma Süresi: "${duration}"
+
+    Bu bilgilere dayanarak, aşağıdaki JSON formatında bir yanıt oluştur:
+    - title: Konuyla ilgili, dikkat çekici bir başlık. Örneğin: "Matematik: Türev Alma Kuralları".
+    - description: Ödevin amacını, kapsamını ve beklentileri açıklayan detaylı bir metin.
+    - checklist: Öğrencinin ödevi tamamlarken takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi. Her adım "text" anahtarına sahip bir obje olmalıdır.
+    
+    Cevabın sadece JSON objesi içermelidir. Başka hiçbir metin ekleme.`;
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            checklist: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        text: { type: Type.STRING }
+                    },
+                    required: ['text']
+                }
+            }
+        },
+        required: ['title', 'description', 'checklist']
+    };
+    
+    return cachedGeminiCall(
+        `genTemplate_${topic}_${level}_${duration}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.7,
+            },
+        }),
+        (response) => JSON.parse(response.text.trim()),
+        null
+    );
+};

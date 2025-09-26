@@ -4,7 +4,6 @@ import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, Bad
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-// @FIX: Imported TrophyIcon to be used in the student detail modal.
 import { AssignmentsIcon, CheckCircleIcon, MessagesIcon, SparklesIcon, AlertTriangleIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, CheckIcon, FlameIcon, TrophyIcon } from '../components/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { suggestStudentGoal } from '../services/geminiService';
@@ -271,28 +270,12 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
 };
 
 const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
-    const { getAssignmentsForStudent, users, findOrCreateConversation } = useDataContext();
+    const { getAssignmentsForStudent, findOrCreateConversation } = useDataContext();
     const { setActivePage, addToast } = useUI();
 
     const assignments = getAssignmentsForStudent(student.id);
-    const gradedAssignments = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
-    const averageGrade: number | string = gradedAssignments.length > 0
-        ? Math.round(gradedAssignments.reduce((acc, curr) => acc + curr.grade!, 0) / gradedAssignments.length)
-        : 'N/A';
-
     const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-    const hasAlert = (typeof averageGrade === 'number' && averageGrade > 0 && averageGrade < 60) || overdueCount > 0;
     
-    let alertTitle = '';
-    if (overdueCount > 0) alertTitle += `${overdueCount} gecikmiş ödev. `;
-    if (typeof averageGrade === 'number' && averageGrade > 0 && averageGrade < 60) alertTitle += `Not ortalaması: ${averageGrade}.`;
-    
-    const assignedCoach = users.find(u => u.id === student.assignedCoachId);
-        
-    const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
-    const submittedCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-    const gradedCount = assignments.filter(a => a.status === AssignmentStatus.Graded).length;
-
     const handleSendMessage = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const convId = await findOrCreateConversation(student.id);
@@ -301,75 +284,61 @@ const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student:
         }
     };
 
-    const handleAssignResource = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setActivePage('library');
-        addToast(`${student.name} için bir kaynak seçip atayabilirsiniz.`, 'info');
-    };
-
     const handleAssignTask = (e: React.MouseEvent) => {
         e.stopPropagation();
         setActivePage('assignments', { studentId: student.id, openNewAssignmentModal: true });
+    };
+
+    const handleAssignResource = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setActivePage('library');
+        addToast(`${student.name} için bir kaynak seçin.`, 'info');
     };
     
     const currentLevel = useMemo(() => student.xp ? Math.floor(Math.sqrt(student.xp / 100)) + 1 : 1, [student.xp]);
 
     return (
-        <Card className="flex flex-col p-3 cursor-pointer transition-shadow duration-300 h-full hover:shadow-lg" onClick={() => onSelect(student)}>
-            <div className="flex items-center gap-3 flex-grow">
-                <div className="relative">
-                    <img src={student.profilePicture} alt={student.name} className="w-12 h-12 rounded-full flex-shrink-0" />
-                    <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
+        <Card className="flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full group" onClick={() => onSelect(student)}>
+            {/* Hover Popup */}
+            <div className="hidden group-hover:block absolute top-2 -right-2 translate-x-full w-48 p-3 bg-white dark:bg-gray-900 rounded-lg shadow-xl border dark:border-gray-700 z-10 pointer-events-none animate-fade-in-right">
+                <h5 className="font-bold text-sm mb-2">{student.name}</h5>
+                <ul className="text-xs space-y-1 text-gray-600 dark:text-gray-400">
+                    <li><strong>Sınıf:</strong> {student.gradeLevel ? (student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`) : 'N/A'}</li>
+                    <li><strong>Bölüm:</strong> {student.academicTrack ? getAcademicTrackLabel(student.academicTrack) : 'N/A'}</li>
+                    <li className={overdueCount > 0 ? 'text-red-500 font-semibold' : ''}><strong>Gecikmiş Ödev:</strong> {overdueCount}</li>
+                </ul>
+            </div>
+            
+            <div className="flex flex-col items-center flex-grow p-3 text-center">
+                 <div className="relative flex-shrink-0 mb-2">
+                    <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" />
+                    <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
                 </div>
-                <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center gap-1.5">
-                        <h4 className="text-base font-bold truncate">{student.name}</h4>
-                        {hasAlert && (
-                            <div title={alertTitle.trim()}>
-                                <AlertTriangleIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                            </div>
-                        )}
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                <h4 className="text-sm font-bold leading-tight">{student.name}</h4>
+                <p className="text-xs text-gray-500 leading-tight">{student.email}</p>
+                <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {student.gradeLevel && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 whitespace-nowrap">
+                            {student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`}
+                        </span>
+                    )}
+                    {student.academicTrack && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 whitespace-nowrap">
+                            {getAcademicTrackLabel(student.academicTrack)}
+                        </span>
+                    )}
                 </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t dark:border-gray-700">
-                <div className="flex justify-around items-center">
-                    <div className="text-center">
-                        <p className="font-bold text-sm">{assignments.length}</p>
-                        <p className="text-xs text-gray-500">Ödev</p>
-                    </div>
-                     <div className="text-center">
-                        <p className="font-bold text-sm text-primary-500">{averageGrade}</p>
-                        <p className="text-xs text-gray-500">Not Ort.</p>
-                    </div>
-                </div>
-                <div className="flex justify-center gap-3 w-full mt-2 pt-1 border-t border-gray-100 dark:border-gray-700/50">
-                     <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Bekleyen Ödevler">
-                        <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-                        <span className="font-semibold">{pendingCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Teslim Edilmiş Ödevler">
-                        <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-                        <span className="font-semibold">{submittedCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" title="Notlandırılmış Ödevler">
-                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                        <span className="font-semibold">{gradedCount}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-around items-center mt-2 pt-2 border-t dark:border-gray-700">
+            <div className="flex justify-around items-center w-full px-1 py-1 border-t dark:border-gray-700 mt-auto">
                 <button onClick={handleAssignTask} title="Ödev Ver" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
                     <AssignmentsIcon className="w-4 h-4" />
                 </button>
-                <button onClick={handleAssignResource} title="Kaynak Gönder" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
-                    <LibraryIcon className="w-4 h-4" />
-                </button>
                 <button onClick={handleSendMessage} title="Mesaj At" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
                     <MessagesIcon className="w-4 h-4" />
+                </button>
+                 <button onClick={handleAssignResource} title="Kaynak Ekle" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <LibraryIcon className="w-4 h-4" />
                 </button>
             </div>
         </Card>
@@ -384,6 +353,8 @@ const Students = () => {
     const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
     const [filterCoach, setFilterCoach] = useState('all');
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+    const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
+
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
     const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
@@ -398,19 +369,42 @@ const Students = () => {
         };
     }, [searchTerm]);
 
-    const filteredStudents = useMemo(() => {
-        return students.filter(student => {
-            const matchesSearch = student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            if (!isSuperAdmin) {
-                return matchesSearch;
-            }
-            const matchesCoach = filterCoach === 'all' || 
-                                (filterCoach === 'null' && !student.assignedCoachId) ||
-                                student.assignedCoachId === filterCoach;
-            return matchesSearch && matchesCoach;
-        });
-    }, [students, debouncedSearchTerm, isSuperAdmin, filterCoach]);
-    
+    const academicTrackLabels: Record<AcademicTrack, string> = {
+        [AcademicTrack.Sayisal]: 'Sayısal',
+        [AcademicTrack.EsitAgirlik]: 'Eşit Ağırlık',
+        [AcademicTrack.Sozel]: 'Sözel',
+        [AcademicTrack.Dil]: 'Dil',
+    };
+
+    const groupedStudents = useMemo(() => {
+        const gradeKeys = ['9', '10', '11', '12', 'mezun'];
+        const groups: Record<string, User[]> = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {});
+        groups['Diğer'] = [];
+
+        students
+            .filter(student => {
+                const matchesSearch = student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+                const matchesCoach = !isSuperAdmin || filterCoach === 'all' || 
+                                    (filterCoach === 'null' && !student.assignedCoachId) ||
+                                    student.assignedCoachId === filterCoach;
+                const matchesTrack = filterTrack === 'all' || student.academicTrack === filterTrack;
+                return matchesSearch && matchesCoach && matchesTrack;
+            })
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .forEach(student => {
+                const grade = student.gradeLevel;
+                if (grade && gradeKeys.includes(grade)) {
+                    groups[grade].push(student);
+                } else {
+                    groups['Diğer'].push(student);
+                }
+            });
+
+        return groups;
+    }, [students, debouncedSearchTerm, isSuperAdmin, filterCoach, filterTrack]);
+
+    const gradeOrder: (keyof typeof groupedStudents)[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
+
     const handleSelectStudent = useCallback((student: User) => {
         setSelectedStudent(student);
     }, []);
@@ -418,21 +412,7 @@ const Students = () => {
     return (
         <>
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                {isSuperAdmin && (
-                    <select
-                        value={filterCoach}
-                        onChange={e => setFilterCoach(e.target.value)}
-                        className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-auto"
-                        aria-label="Koça göre filtrele"
-                    >
-                        <option value="all">Tüm Öğrenciler</option>
-                        {coaches.map(coach => (
-                            <option key={coach.id} value={coach.id}>{coach.name}</option>
-                        ))}
-                         <option value="null">Atanmamış Öğrenciler</option>
-                    </select>
-                )}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 flex-wrap">
                 <input
                     type="text"
                     placeholder="Öğrenci ara..."
@@ -440,6 +420,34 @@ const Students = () => {
                     onChange={e => setSearchTerm(e.target.value)}
                     className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-auto flex-grow"
                 />
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <select
+                        value={filterTrack}
+                        onChange={e => setFilterTrack(e.target.value as any)}
+                        className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full"
+                        aria-label="Bölüme göre filtrele"
+                    >
+                        <option value="all">Tüm Bölümler</option>
+                        {Object.entries(academicTrackLabels).map(([key, label]) => (
+                            <option key={key} value={key}>{label}</option>
+                        ))}
+                    </select>
+
+                    {isSuperAdmin && (
+                        <select
+                            value={filterCoach}
+                            onChange={e => setFilterCoach(e.target.value)}
+                            className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full"
+                            aria-label="Koça göre filtrele"
+                        >
+                            <option value="all">Tüm Koçlar</option>
+                            {coaches.map(coach => (
+                                <option key={coach.id} value={coach.id}>{coach.name}</option>
+                            ))}
+                            <option value="null">Atanmamış</option>
+                        </select>
+                    )}
+                </div>
                  <button
                     onClick={() => setIsAddStudentModalOpen(true)}
                     className="w-full sm:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 font-semibold flex-shrink-0"
@@ -454,17 +462,31 @@ const Students = () => {
                     title={isSuperAdmin ? "Platformda Öğrenci Yok" : "Henüz Öğrenciniz Yok"}
                     description={isSuperAdmin ? "Süper Admin panelinden yeni kullanıcılar oluşturarak öğrenci ekleyebilirsiniz." : "Size yeni öğrenciler atandığında burada görünecekler."}
                  />
-            ) : filteredStudents.length === 0 ? (
+            ) : Object.values(groupedStudents).every(group => group.length === 0) ? (
                  <EmptyState
                     icon={<NoStudentsIcon className="w-10 h-10"/>}
                     title="Öğrenci Bulunamadı"
                     description="Arama kriterlerinizi değiştirmeyi deneyin veya tüm öğrencileri görmek için aramayı temizleyin."
                  />
             ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                    {filteredStudents.map(student => (
-                        <MemoizedStudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
-                    ))}
+                <div className="space-y-8">
+                    {gradeOrder.map(grade => {
+                        const studentGroup = groupedStudents[grade];
+                        if (studentGroup && studentGroup.length > 0) {
+                            const gradeLabel = grade === 'mezun' ? 'Mezunlar' : grade === 'Diğer' ? 'Diğer' : `${grade}. Sınıf`;
+                            return (
+                                <section key={grade}>
+                                    <h2 className="text-xl font-bold border-b-2 border-primary-500 pb-2 mb-4">{gradeLabel}</h2>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                        {studentGroup.map(student => (
+                                            <MemoizedStudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+                        }
+                        return null;
+                    })}
                 </div>
             )}
         </div>

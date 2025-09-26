@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType } from '../types';
+import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon } from '../components/Icons';
@@ -59,6 +59,15 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach }: { assign
 };
 const MemoizedAssignmentCard = React.memo(AssignmentCard);
 
+const getAcademicTrackLabel = (track: AcademicTrack): string => {
+    switch (track) {
+        case AcademicTrack.Sayisal: return 'Sayısal';
+        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
+        case AcademicTrack.Sozel: return 'Sözel';
+        case AcademicTrack.Dil: return 'Dil';
+        default: return '';
+    }
+};
 
 const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen: boolean; onClose: () => void; preselectedStudentId?: string | null; }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
@@ -73,12 +82,41 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
     const [checklist, setChecklist] = useState<Omit<ChecklistItem, 'id'|'isCompleted'>[]>([]);
     const [submissionType, setSubmissionType] = useState<SubmissionType>('file');
     const [videoDescriptionUrl, setVideoDescriptionUrl] = useState<string | null>(null);
+    const [filterGrade, setFilterGrade] = useState<string>('all');
 
     useEffect(() => {
         if (isOpen && preselectedStudentId) {
             setSelectedStudents([preselectedStudentId]);
+            const student = students.find(s => s.id === preselectedStudentId);
+            if (student?.gradeLevel) {
+                setFilterGrade(student.gradeLevel);
+            }
         }
-    }, [isOpen, preselectedStudentId]);
+    }, [isOpen, preselectedStudentId, students]);
+
+    const availableStudents = useMemo(() => {
+        const gradeFiltered = filterGrade === 'all'
+            ? students
+            : students.filter(s => s.gradeLevel === filterGrade);
+
+        return gradeFiltered.reduce((acc, student) => {
+            const track = student.academicTrack ? getAcademicTrackLabel(student.academicTrack) : 'Diğer';
+            if (!acc[track]) {
+                acc[track] = [];
+            }
+            acc[track].push(student);
+            return acc;
+        }, {} as Record<string, User[]>);
+    }, [students, filterGrade]);
+
+    const handleSelectAll = () => {
+        const allStudentIdsInView = Object.values(availableStudents).flat().map(s => s.id);
+        if (selectedStudents.length === allStudentIdsInView.length) {
+            setSelectedStudents([]);
+        } else {
+            setSelectedStudents(allStudentIdsInView);
+        }
+    };
 
 
     const handleGenerateDescription = async () => {
@@ -162,6 +200,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
         setChecklist([]);
         setSubmissionType('file');
         setVideoDescriptionUrl(null);
+        setFilterGrade('all');
     };
 
     return (
@@ -228,10 +267,37 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
                 </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
+                    <select
+                        value={filterGrade}
+                        onChange={e => {
+                            setFilterGrade(e.target.value);
+                            setSelectedStudents([]); // Reset selection when filter changes
+                        }}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                    >
+                        <option value="all">Tüm Sınıflar</option>
+                        <option value="9">9. Sınıf</option>
+                        <option value="10">10. Sınıf</option>
+                        <option value="11">11. Sınıf</option>
+                        <option value="12">12. Sınıf</option>
+                        <option value="mezun">Mezun</option>
+                    </select>
+                </div>
                 <div>
-                    <label className="block text-sm font-medium mb-1">Öğrenciler</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium">Öğrenciler</label>
+                        <button type="button" onClick={handleSelectAll} className="text-sm font-medium text-primary-600 hover:text-primary-800">
+                            {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
+                        </button>
+                    </div>
                     <select multiple value={selectedStudents} onChange={e => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                        {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        {Object.entries(availableStudents).map(([track, studentGroup]) => (
+                            <optgroup key={track} label={track}>
+                                {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </optgroup>
+                        ))}
                     </select>
                 </div>
                 <div className="flex justify-end pt-4">

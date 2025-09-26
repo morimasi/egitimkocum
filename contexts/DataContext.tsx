@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge } from '../types';
 import { getMockData } from '../hooks/useMockData';
@@ -64,7 +65,8 @@ type Action =
     | { type: 'UPDATE_TEMPLATE'; payload: AssignmentTemplate }
     | { type: 'DELETE_TEMPLATE'; payload: string }
     | { type: 'ADD_CONVERSATION'; payload: Conversation }
-    | { type: 'UPDATE_CONVERSATION'; payload: Conversation };
+    | { type: 'UPDATE_CONVERSATION'; payload: Conversation }
+    | { type: 'UPDATE_BADGE'; payload: Badge };
 
 const dataReducer = (state: AppState, action: Action): AppState => {
     switch (action.type) {
@@ -199,6 +201,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, conversations: [...state.conversations, action.payload] };
         case 'UPDATE_CONVERSATION':
             return { ...state, conversations: state.conversations.map(c => c.id === action.payload.id ? action.payload : c) };
+        case 'UPDATE_BADGE':
+            return { ...state, badges: state.badges.map(b => b.id === action.payload.id ? action.payload : b) };
         default:
             return state;
     }
@@ -255,6 +259,7 @@ interface DataContextType {
     removeUserFromConversation: (conversationId: string, userId: string) => Promise<void>;
     endConversation: (conversationId: string) => Promise<void>;
     seedDatabase: (uids: Record<string, string>) => Promise<void>;
+    updateBadge: (updatedBadge: Badge) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -270,7 +275,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const loadData = () => {
             dispatch({ type: 'SET_LOADING', payload: true });
             
-// @FIX: Destructure `badges` from `getMockData` to make it available in the app state.
             const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
             
             const defaultUser = users.find(u => u.role === UserRole.Coach) || users[0];
@@ -278,7 +282,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             
             dispatch({
                 type: 'SET_INITIAL_DATA',
-// @FIX: Include `badges` in the initial data payload.
                 payload: { users, assignments, messages, templates, resources, goals, conversations, badges, notifications: [
                      { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false, link: { page: 'assignments' } },
                      { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false, link: { page: 'assignments' } },
@@ -290,9 +293,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         
         const persistedUser = sessionStorage.getItem('currentUser');
         if (persistedUser) {
-// @FIX: Destructure `badges` from `getMockData` for persisted sessions.
              const { users, assignments, messages, templates, resources, goals, conversations, badges } = getMockData();
-// @FIX: Include `badges` in the initial data payload for persisted sessions.
              dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations, badges } });
              dispatch({ type: 'SET_CURRENT_USER', payload: JSON.parse(persistedUser) });
              dispatch({ type: 'SET_LOADING', payload: false });
@@ -679,6 +680,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             });
         }
     }, [state.conversations, state.currentUser, sendMessage]);
+    
+    const updateBadge = useCallback(async (updatedBadge: Badge) => {
+        dispatch({ type: 'UPDATE_BADGE', payload: updatedBadge });
+    }, []);
 
     const seedDatabase = useCallback(async (uids: Record<string, string>) => {}, []);
 
@@ -733,7 +738,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         removeUserFromConversation,
         endConversation,
         seedDatabase,
-// @FIX: Corrected useMemo syntax by closing the factory function before the dependency array.
+        updateBadge,
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
@@ -742,7 +747,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
         addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
         findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
-        seedDatabase
+        seedDatabase, updateBadge
     ]);
 
 
