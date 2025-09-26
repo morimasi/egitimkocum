@@ -25,7 +25,7 @@ const getStatusChip = (status: AssignmentStatus) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{text[status]}</span>;
 };
 
-const AssignmentCard = React.memo(({ assignment, onSelect, studentName, isCoach }: { assignment: Assignment; onSelect: (assignment: Assignment) => void; studentName: string; isCoach: boolean; }) => {
+const AssignmentCard = ({ assignment, onSelect, studentName, isCoach }: { assignment: Assignment; onSelect: (assignment: Assignment) => void; studentName: string; isCoach: boolean; }) => {
     const isOverdue = new Date(assignment.dueDate) < new Date() && assignment.status === AssignmentStatus.Pending;
 
     return (
@@ -56,7 +56,8 @@ const AssignmentCard = React.memo(({ assignment, onSelect, studentName, isCoach 
             </div>
         </div>
     );
-});
+};
+const MemoizedAssignmentCard = React.memo(AssignmentCard);
 
 
 const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen: boolean; onClose: () => void; preselectedStudentId?: string | null; }) => {
@@ -801,7 +802,7 @@ const Assignments = () => {
                 {filteredAssignments.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredAssignments.map(a => (
-                            <AssignmentCard 
+                            <MemoizedAssignmentCard 
                                 key={a.id} 
                                 assignment={a} 
                                 onSelect={handleSelectAssignment} 

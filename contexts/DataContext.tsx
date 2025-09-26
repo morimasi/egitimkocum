@@ -643,8 +643,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         endConversation,
         seedDatabase,
     }), [
-        state.currentUser, state.users, state.assignments, state.messages, state.conversations, state.notifications, state.templates, state.resources, state.goals, state.isLoading, state.typingStatus,
-        coach, students, unreadCounts, lastMessagesMap,
+        state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
         sendMessage, addAssignment, updateAssignment, updateUser, deleteUser, addUser,
         markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,

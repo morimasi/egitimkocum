@@ -87,7 +87,7 @@ const ReactionPicker = ({ onSelect, onClose }: { onSelect: (emoji: string) => vo
     );
 };
 
-const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, conversation }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void, conversation: Conversation }) => {
+const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { msg: Message, isOwnMessage: boolean, onReply: (msg: Message) => void, onReact: (msg: Message, emoji: string) => void, conversation: Conversation }) => {
     const { findMessageById, voteOnPoll, currentUser, users } = useDataContext();
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -216,6 +216,7 @@ const MessageBubble = React.memo(({ msg, isOwnMessage, onReply, onReact, convers
         </div>
     );
 });
+const MemoizedMessageBubble = React.memo(MessageBubble);
 
 const GroupInfoModal = ({ conversation, onClose }: { conversation: Conversation | null; onClose: () => void; }) => {
     const { users, currentUser, removeUserFromConversation, endConversation } = useDataContext();
@@ -278,7 +279,7 @@ const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: 
     );
 };
 
-const ConversationListItem = React.memo(({ conv, isSelected, onSelect, isCollapsed }: { conv: Conversation, isSelected: boolean, onSelect: (id: string) => void, isCollapsed: boolean }) => {
+const ConversationListItem = ({ conv, isSelected, onSelect, isCollapsed }: { conv: Conversation, isSelected: boolean, onSelect: (id: string) => void, isCollapsed: boolean }) => {
     const { unreadCounts, lastMessagesMap, currentUser, users } = useDataContext();
     const unreadCount = unreadCounts.get(conv.id) || 0;
     const lastMessage = lastMessagesMap.get(conv.id);
@@ -329,7 +330,8 @@ const ConversationListItem = React.memo(({ conv, isSelected, onSelect, isCollaps
             </div>
         </div>
     );
-});
+};
+const MemoizedConversationListItem = React.memo(ConversationListItem);
 
 const NewMessageModal = ({ onClose, onSelectContact }: { onClose: () => void, onSelectContact: (userId: string) => void }) => {
     const { users, conversations, currentUser } = useDataContext();
@@ -690,7 +692,7 @@ const Messages = () => {
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         {filteredConversations.map(conv => (
-                            <ConversationListItem
+                            <MemoizedConversationListItem
                                 key={conv.id}
                                 conv={conv}
                                 isSelected={selectedConversationId === conv.id}
@@ -747,7 +749,7 @@ const Messages = () => {
                                         </button>
                                     </div>
                                 )}
-                                {conversationMessages.map(msg => <MessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} conversation={selectedConversation} />)}
+                                {conversationMessages.map(msg => <MemoizedMessageBubble key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser.id} onReply={setReplyingTo} onReact={(m, e) => addReaction(m.id, e)} conversation={selectedConversation} />)}
                                 <div ref={messagesEndRef} />
                                 {showScrollToBottom && <button onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })} className="absolute bottom-4 right-4 bg-primary-500 text-white w-10 h-10 rounded-full shadow-lg animate-bounce">↓</button>}
                             </div>

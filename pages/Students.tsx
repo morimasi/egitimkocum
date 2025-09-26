@@ -31,7 +31,6 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
     const [notes, setNotes] = useState(student?.notes || '');
-    const [isSavingNotes, setIsSavingNotes] = useState(false);
     
     useEffect(() => {
         setNotes(student?.notes || '');
@@ -40,21 +39,13 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     useEffect(() => {
         if (!student) return;
 
-        const handleSaveNotes = async () => {
+        const timeoutId = setTimeout(() => {
             if (notes !== student.notes) {
-                setIsSavingNotes(true);
-                await updateStudentNotes(student.id, notes);
-                setIsSavingNotes(false);
-                addToast("Notlar otomatik kaydedildi.", "success");
+                updateStudentNotes(student.id, notes);
+                addToast("Notlar otomatik kaydedildi.", "info");
             }
-        };
+        }, 1500);
 
-        // Set a new timeout
-        const timeoutId = window.setTimeout(() => {
-            handleSaveNotes();
-        }, 1500); // Auto-save after 1.5 seconds of inactivity
-
-        // Cleanup function to clear the timeout when the component unmounts or dependencies change
         return () => {
             clearTimeout(timeoutId);
         };
@@ -201,7 +192,6 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                         <h4 className="font-semibold mb-2">Özel Notlar</h4>
                         <p className="text-xs text-gray-500 mb-2">Bu notlar sadece sizin tarafınızdan görülebilir ve otomatik olarak kaydedilir.</p>
                         <textarea value={notes} onChange={handleNotesChange} rows={12} className="w-full p-3 border rounded-md bg-yellow-50 dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500" placeholder={`${student.name} hakkında notlar alın...`} />
-                        <div className="text-right h-4 mt-1"><span className={`text-xs text-gray-400 transition-opacity ${isSavingNotes ? 'opacity-100' : 'opacity-0'}`}>Kaydediliyor...</span></div>
                     </div>
                 )}
             </div>
@@ -209,7 +199,7 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     );
 };
 
-const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
+const StudentCard = ({ student, onSelect }: { student: User; onSelect: (student: User) => void }) => {
     const { getAssignmentsForStudent, users, findOrCreateConversation } = useDataContext();
     const { setActivePage, addToast } = useUI();
 
@@ -309,7 +299,8 @@ const StudentCard = React.memo(({ student, onSelect }: { student: User; onSelect
             </div>
         </Card>
     );
-});
+};
+const MemoizedStudentCard = React.memo(StudentCard);
 
 const Students = () => {
     const { students, currentUser, users } = useDataContext();
@@ -390,7 +381,7 @@ const Students = () => {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredStudents.map(student => (
-                        <StudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
+                        <MemoizedStudentCard key={student.id} student={student} onSelect={handleSelectStudent} />
                     ))}
                 </div>
             )}
