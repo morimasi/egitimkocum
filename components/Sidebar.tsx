@@ -1,6 +1,3 @@
-
-
-
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -107,14 +104,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         }
     }, [currentUser, totalUnreadMessages]);
     
-    const { login, users } = useDataContext();
-    const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedUser = users.find(u => u.id === e.target.value);
-        if (selectedUser) {
-            await login(selectedUser.email, 'password123');
-        }
-    };
-
 
     const sidebarContent = (
         <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-xl">
@@ -137,13 +126,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             </div>
 
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className='mb-4' id="tour-step-2">
-                    <label htmlFor="user-switch" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kullanıcı Değiştir (Demo)</label>
-                    <select id="user-switch" value={currentUser?.id} onChange={handleUserChange} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2">
-                         {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-                    </select>
-                </div>
-
                 <div className="flex items-center justify-between mb-4">
                      <button
                         onClick={toggleTheme}

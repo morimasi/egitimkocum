@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Assignment, AssignmentStatus } from '../types';
@@ -46,7 +45,6 @@ const AnnouncementsCard = () => {
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function ParentPortal() {
     const { currentUser, users, assignments } = useDataContext();
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -173,4 +171,4 @@ export default function ParentPortal() {
             )}
         </div>
     );
-};
+}

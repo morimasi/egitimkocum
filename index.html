@@ -22,7 +22,7 @@
               },
               scaleIn: {
                 '0%': { opacity: '0', transform: 'scale(0.95)' },
-                '100%': { opacity: '1', transform: 'scale(1)' },
+                '100%': { opacity: '1' },
               },
               'scale-in-tr': {
                 '0%': { opacity: 0, transform: 'scale(0.95) translateY(-10px) translateX(10px)' },
@@ -48,6 +48,14 @@
         }
       }
     </script>
+    <style>
+      /* Smooth theme transition */
+      *,
+      *::before,
+      *::after {
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+      }
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script type="importmap">
 {

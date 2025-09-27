@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
+import { ImageIcon } from '../components/Icons';
 
 interface RegisterScreenProps {
     onSwitchToLogin: () => void;
@@ -13,6 +14,22 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [profilePicture, setProfilePicture] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setProfilePicture(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,7 +43,7 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
         setIsLoading(true);
 
         try {
-            await register(name, email, password);
+            await register(name, email, password, profilePicture);
             // On successful registration, onAuthStateChanged will automatically log the user in.
             // The isLoading state will persist until the App component detects the new currentUser.
         } catch (err: any) {
@@ -41,7 +58,7 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
 
     return (
          <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-            <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
+            <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
                  <div className="text-center">
                      <div className="flex items-center justify-center mb-4">
                         <div className="bg-primary-500 rounded-full p-3">
@@ -53,7 +70,29 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
                         Platforma kaydolun. İlk oluşturulan hesap Süper Admin yetkilerine sahip olacaktır.
                     </p>
                 </div>
-                <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+                <form className="space-y-6" onSubmit={handleRegister}>
+                    <div className="flex flex-col items-center space-y-2">
+                        <div 
+                            className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center cursor-pointer overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-500"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {previewUrl ? (
+                                <img src={previewUrl} alt="Profil önizlemesi" className="w-full h-full object-cover" />
+                            ) : (
+                                <ImageIcon className="w-10 h-10 text-gray-400" />
+                            )}
+                        </div>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-primary-500 hover:underline">
+                            Profil Fotoğrafı Yükle
+                        </button>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                    </div>
                     <div className="space-y-4">
                         <input
                             id="name"

@@ -1,7 +1,5 @@
 
 
-
-
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -18,6 +16,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
 import CommandPalette from './components/CommandPalette';
 import TabBar from './components/TabBar';
+import AIChatbot from './components/AIChatbot';
+import { firebaseConfig } from './services/firebase';
+import SetupWizard from './components/SetupWizard';
+
 
 // Lazy load pages for better initial performance
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -75,6 +77,14 @@ const AppContent = () => {
     const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
     const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
+    const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
+
+     useEffect(() => {
+        // Check if the Firebase config has been changed from the default placeholder.
+        if (firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("AIzaSyA...")) {
+            setIsFirebaseConfigured(true);
+        }
+    }, []);
 
     useEffect(() => {
         if (currentUser && currentUser.role === UserRole.Student) {
@@ -165,6 +175,10 @@ const AppContent = () => {
                 return <Dashboard />;
         }
     };
+    
+    if (!isFirebaseConfigured) {
+        return <SetupWizard />;
+    }
 
     if (isLoading) {
        return <AppSkeleton />;
@@ -200,6 +214,7 @@ const AppContent = () => {
             <VideoCallModal />
             {showWeeklyReport && <WeeklyReportModal onClose={handleCloseReport} />}
             <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+            <AIChatbot />
         </div>
     );
 };

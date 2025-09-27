@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, UserRole, AssignmentStatus, Badge } from '../types';
@@ -110,223 +111,128 @@ const EditBadgeModal = ({ badge, onClose }: { badge: Badge; onClose: () => void 
                 </div>
             </div>
             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
-                <button onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600">İptal</button>
-                <button onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded-md">Kaydet</button>
+                <button onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                <button onClick={handleSave} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
             </div>
         </Modal>
     );
 };
 
-
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function SuperAdminDashboard() {
-    const { currentUser, users, updateUser, deleteUser, assignments, resources, goals, badges } = useDataContext();
-    const { addToast } = useUI();
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-    const [roleChanges, setRoleChanges] = useState<Record<string, UserRole>>({});
-    const [coachChanges, setCoachChanges] = useState<Record<string, string | null>>({});
-    const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+    const { users, assignments, badges, deleteUser, seedDatabase } = useDataContext();
     const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-    const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [badgeToEdit, setBadgeToEdit] = useState<Badge | null>(null);
+    const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
 
+    const kpis = useMemo(() => ({
+        totalStudents: users.filter(u => u.role === UserRole.Student).length,
+        totalCoaches: users.filter(u => u.role === UserRole.Coach).length,
+        totalAssignments: assignments.length,
+        pendingAssignments: assignments.filter(a => a.status === AssignmentStatus.Submitted).length,
+    }), [users, assignments]);
 
-    // Confirmation Modal State
-    const [confirmationState, setConfirmationState] = useState<{
-        isOpen: boolean;
-        title: string;
-        message: string;
-        onConfirm: () => void;
-    }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-
-    const coaches = users.filter(u => u.role === UserRole.Coach);
-    const students = users.filter(u => u.role === UserRole.Student);
-
-    useEffect(() => {
-        const timerId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 300);
-
-        return () => {
-            clearTimeout(timerId);
-        };
-    }, [searchTerm]);
-
-    const filteredUsers = useMemo(() => {
-        return users.filter(u =>
-            u.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-            u.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        ).sort((a, b) => a.name.localeCompare(b.name));
-    }, [users, debouncedSearchTerm]);
-
-    const handleRoleChange = (userId: string, newRole: UserRole) => {
-        setRoleChanges(prev => ({ ...prev, [userId]: newRole }));
-    };
-
-    const handleCoachChange = (studentId: string, newCoachId: string) => {
-        setCoachChanges(prev => ({ ...prev, [studentId]: newCoachId === 'null' ? null : newCoachId }));
-    };
-
-    const handleSaveUser = async (user: User) => {
-        setSavingStates(prev => ({ ...prev, [user.id]: true }));
-        try {
-            const updatedUser = {
-                ...user,
-                role: roleChanges[user.id] ?? user.role,
-                assignedCoachId: coachChanges[user.id] !== undefined ? coachChanges[user.id] : user.assignedCoachId
-            };
-            await updateUser(updatedUser);
-            addToast(`${user.name} başarıyla güncellendi.`, "success");
-            
-            // Clean up state
-            setRoleChanges(prev => { const newState = { ...prev }; delete newState[user.id]; return newState; });
-            setCoachChanges(prev => { const newState = { ...prev }; delete newState[user.id]; return newState; });
-
-        } catch (error) {
-            addToast("Kullanıcı güncellenirken bir hata oluştu.", "error");
-        } finally {
-            setSavingStates(prev => ({ ...prev, [user.id]: false }));
+    const handleUserDelete = () => {
+        if (userToDelete) {
+            deleteUser(userToDelete.id);
+            setUserToDelete(null);
         }
     };
-
-    const handleDeleteUser = (user: User) => {
-        if (user.id === currentUser?.id) {
-            addToast("Kendinizi silemezsiniz.", "error");
-            return;
-        }
-        setConfirmationState({
-            isOpen: true,
-            title: "Kullanıcıyı Sil",
-            message: `${user.name} adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
-            onConfirm: async () => {
-                await deleteUser(user.id);
-                addToast(`${user.name} silindi.`, "success");
-                setConfirmationState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-            }
-        });
+    
+    const handleConfirmSeed = () => {
+        seedDatabase();
     };
-
-    const kpis = [
-        { title: "Toplam Kullanıcı", value: users.length, icon: <StudentsIcon className="w-6 h-6 text-white"/>, color: "bg-blue-500" },
-        { title: "Toplam Ödev", value: assignments.length, icon: <AssignmentsIcon className="w-6 h-6 text-white"/>, color: "bg-green-500" },
-        { title: "Kütüphane Kaynakları", value: resources.length, icon: <LibraryIcon className="w-6 h-6 text-white"/>, color: "bg-purple-500" },
-        { title: "Belirlenen Hedefler", value: goals.length, icon: <TargetIcon className="w-6 h-6 text-white"/>, color: "bg-yellow-500" },
-    ];
-
+    
     return (
         <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h1 className="text-3xl font-bold">Süper Admin Paneli</h1>
+                <button onClick={() => setIsNewUserModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold">
+                    + Yeni Kullanıcı Ekle
+                </button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {kpis.map(kpi => <KpiCard key={kpi.title} {...kpi} />)}
+                <KpiCard title="Toplam Öğrenci" value={kpis.totalStudents} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
+                <KpiCard title="Toplam Koç" value={kpis.totalCoaches} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-blue-500" />
+                <KpiCard title="Toplam Ödev" value={kpis.totalAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
+                <KpiCard title="Bekleyen Ödev" value={kpis.pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
             </div>
 
-            <Card>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <h2 className="text-xl font-bold">Kullanıcı Yönetimi</h2>
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                         <input
-                            type="text"
-                            placeholder="Kullanıcı ara (ad veya e-posta)..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-64"
-                        />
-                        <button onClick={() => setIsNewUserModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold flex-shrink-0">
-                            + Yeni Kullanıcı
-                        </button>
+            <Card title="Platform Yönetimi">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                        <h4 className="font-semibold">Deneme Verileri</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Platformu test etmek için örnek öğrenciler, ödevler, mesajlar ve diğer verilerle doldurun.
+                            <br/>
+                            <strong>Not:</strong> Bu işlem yalnızca veritabanı boşken yapılmalıdır.
+                        </p>
                     </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kullanıcı</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atanmış Koç</th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {filteredUsers.map(user => (
-                                <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10">
-                                                <img className="h-10 w-10 rounded-full" src={user.profilePicture} alt="" />
-                                            </div>
-                                            <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</div>
-                                                <div className="text-sm text-gray-500">{user.email}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <select
-                                            value={roleChanges[user.id] || user.role}
-                                            onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                                            className="p-1 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                                        >
-                                            <option value={UserRole.Student}>Öğrenci</option>
-                                            <option value={UserRole.Coach}>Koç</option>
-                                            <option value={UserRole.SuperAdmin}>Süper Admin</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {user.role === UserRole.Student && (
-                                            <select
-                                                value={coachChanges[user.id] !== undefined ? (coachChanges[user.id] || 'null') : (user.assignedCoachId || 'null')}
-                                                onChange={(e) => handleCoachChange(user.id, e.target.value)}
-                                                className="p-1 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                                            >
-                                                <option value="null">Atanmamış</option>
-                                                {coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.name}</option>)}
-                                            </select>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        {(roleChanges[user.id] || coachChanges[user.id] !== undefined) && (
-                                            <button onClick={() => handleSaveUser(user)} className="text-primary-600 hover:text-primary-900" disabled={savingStates[user.id]}>
-                                                {savingStates[user.id] ? 'Kaydediliyor...' : 'Kaydet'}
-                                            </button>
-                                        )}
-                                        <button onClick={() => handleDeleteUser(user)} className="text-red-600 hover:text-red-900 ml-4">Sil</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <button 
+                        onClick={() => setIsConfirmSeedOpen(true)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold w-full sm:w-auto flex-shrink-0"
+                    >
+                        Deneme Verisi Ekle
+                    </button>
                 </div>
             </Card>
 
-            <Card title="Rozet Yönetimi">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {badges.map(badge => (
-                        <div key={badge.id} className="p-3 border dark:border-gray-700 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <TrophyIcon className="w-6 h-6 text-yellow-500" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title="Kullanıcı Yönetimi">
+                    <div className="max-h-96 overflow-y-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Kullanıcı</th>
+                                    <th scope="col" className="px-6 py-3">Rol</th>
+                                    <th scope="col" className="px-6 py-3">Eylem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map(user => (
+                                    <tr key={user.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                        <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                            {user.name}
+                                        </th>
+                                        <td className="px-6 py-4">{user.role}</td>
+                                        <td className="px-6 py-4">
+                                            <button onClick={() => setUserToDelete(user)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+                <Card title="Rozet Yönetimi">
+                     <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {badges.map(badge => (
+                             <div key={badge.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
                                 <div>
                                     <p className="font-semibold text-sm">{badge.name}</p>
-                                    <p className="text-xs text-gray-500">{badge.description}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{badge.description}</p>
                                 </div>
-                            </div>
-                            <button onClick={() => setEditingBadge(badge)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <EditIcon className="w-4 h-4 text-gray-500"/>
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </Card>
-
+                                <button onClick={() => setBadgeToEdit(badge)} className="p-2 text-gray-500 hover:text-blue-500 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50"><EditIcon className="w-4 h-4" /></button>
+                             </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
+            
             {isNewUserModalOpen && <NewUserModal onClose={() => setIsNewUserModalOpen(false)} />}
-            {editingBadge && <EditBadgeModal badge={editingBadge} onClose={() => setEditingBadge(null)} />}
-            <ConfirmationModal
-                isOpen={confirmationState.isOpen}
-                onClose={() => setConfirmationState({ ...confirmationState, isOpen: false })}
-                onConfirm={confirmationState.onConfirm}
-                title={confirmationState.title}
-                message={confirmationState.message}
-                confirmText="Evet, Sil"
-            />
+            {userToDelete && <ConfirmationModal isOpen={!!userToDelete} onClose={() => setUserToDelete(null)} onConfirm={handleUserDelete} title="Kullanıcıyı Sil" message={`'${userToDelete.name}' adlı kullanıcıyı silmek istediğinizden emin misiniz?`} />}
+            {badgeToEdit && <EditBadgeModal badge={badgeToEdit} onClose={() => setBadgeToEdit(null)} />}
+            {isConfirmSeedOpen && (
+                 <ConfirmationModal
+                    isOpen={isConfirmSeedOpen}
+                    onClose={() => setIsConfirmSeedOpen(false)}
+                    onConfirm={handleConfirmSeed}
+                    title="Veritabanını Doldur"
+                    message="Bu işlem, veritabanını deneme verileriyle dolduracaktır. Bu yalnızca boş bir veritabanında yapılmalıdır. Emin misiniz?"
+                    confirmText="Evet, Doldur"
+                />
+            )}
         </div>
     );
-};
+}

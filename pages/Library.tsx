@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -231,7 +230,7 @@ const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClos
                 </select>
                  <select
                     value={filterTrack}
-                    onChange={e => setFilterTrack(e.target.value as any)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterTrack(e.target.value as AcademicTrack | 'all')}
                     className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
                 >
                     <option value="all">Tüm Bölümler</option>
@@ -315,7 +314,6 @@ const ResourceCard = ({ resource, isCoachOrAdmin, onAssign, onDelete, ...props }
     )
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Library() {
     const { resources, currentUser, students, deleteResource } = useDataContext();
     const { addToast } = useUI();

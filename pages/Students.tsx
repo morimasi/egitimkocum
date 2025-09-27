@@ -44,37 +44,37 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
     const [notes, setNotes] = useState(student?.notes || '');
-    
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+    const notesTimeoutRef = useRef<number | null>(null);
+
     useEffect(() => {
         setNotes(student?.notes || '');
-        // When modal opens for a new student, reset to the overview tab
         setActiveTab('overview');
+        setSaveStatus('idle');
     }, [student]);
 
-    useEffect(() => {
-        if (!student) return;
+    const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newNotes = e.target.value;
+        setNotes(newNotes);
+        setSaveStatus('saving');
 
-        const timeoutId = setTimeout(() => {
-            if (notes !== student.notes) {
-                updateStudentNotes(student.id, notes);
-                addToast("Notlar otomatik kaydedildi.", "info");
+        if (notesTimeoutRef.current) {
+            clearTimeout(notesTimeoutRef.current);
+        }
+
+        notesTimeoutRef.current = window.setTimeout(() => {
+            if (student) {
+                updateStudentNotes(student.id, newNotes);
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2000); 
             }
         }, 1500);
-
-        return () => {
-            clearTimeout(timeoutId);
-        };
-    }, [notes, student, updateStudentNotes, addToast]);
-
+    };
 
     if (!student) return null;
     
     const assignedCoach = users.find(u => u.id === student.assignedCoachId);
     
-    const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setNotes(e.target.value);
-    };
-
     const assignments = getAssignmentsForStudent(student.id);
     const goals = getGoalsForStudent(student.id);
     const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
@@ -262,9 +262,15 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
                 )}
                 {activeTab === 'notes' && (
                     <div className="animate-fade-in">
-                        <h4 className="font-semibold mb-2">Özel Notlar</h4>
-                        <p className="text-xs text-gray-500 mb-2">Bu notlar sadece sizin tarafınızdan görülebilir ve otomatik olarak kaydedilir.</p>
-                        <textarea value={notes} onChange={handleNotesChange} rows={12} className="w-full p-3 border rounded-md bg-yellow-50 dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500" placeholder={`${student.name} hakkında notlar alın...`} />
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold">Özel Notlar</h4>
+                            <div className="text-right text-xs text-gray-400 dark:text-gray-500 h-4 transition-opacity duration-300">
+                                {saveStatus === 'saving' && 'Kaydediliyor...'}
+                                {saveStatus === 'saved' && <span className="text-green-500 font-semibold">Kaydedildi ✔</span>}
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-2">Bu notlar sadece sizin tarafınızdan görülebilir.</p>
+                        <textarea value={notes} onChange={handleNotesChange} rows={12} className="w-full p-3 border rounded-md bg-yellow-50 dark:bg-gray-900/50 dark:border-gray-600 focus:ring-primary-500" placeholder={`${student.name} hakkında notlar alın...`} />
                     </div>
                 )}
             </div>
@@ -311,10 +317,7 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
                 type="checkbox"
                 className="absolute top-2 left-2 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 z-10"
                 checked={isSelected}
-                onChange={(e) => {
-                    e.stopPropagation();
-                    onToggleSelect(student.id);
-                }}
+                onChange={() => onToggleSelect(student.id)}
                 aria-label={`Select student ${student.name}`}
             />
             <Card className={`flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full ${isSelected ? 'ring-2 ring-primary-500' : ''}`} onClick={() => onSelect(student)}>
@@ -389,7 +392,6 @@ const AssignResourceToStudentsModal = ({ isOpen, onClose, onAssign, studentCount
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Students() {
     const { students, currentUser, users, addGoal, getAssignmentsForStudent, deleteUser, assignResourceToStudents } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
@@ -438,7 +440,7 @@ export default function Students() {
 
     const groupedStudents = useMemo(() => {
         const gradeKeys = ['9', '10', '11', '12', 'mezun'];
-        const groups: Record<string, User[]> = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {});
+        const groups = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {} as Record<string, User[]>);
         groups['Diğer'] = [];
 
         students
@@ -505,9 +507,8 @@ export default function Students() {
     };
     
     const handleToggleSelect = (studentId: string) => {
-        // Fix: Corrected a reference error where `id` was used instead of `studentId`.
         setSelectedStudentIds(prev => 
-            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+            prev.includes(studentId) ? prev.filter(prevId => prevId !== studentId) : [...prev, studentId]
         );
     };
 
@@ -643,15 +644,18 @@ export default function Students() {
         </div>
 
         {selectedStudentIds.length > 0 && (
-            <div className="fixed bottom-24 lg:bottom-10 right-10 z-40 animate-fade-in-right">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-4 flex items-center gap-4 border dark:border-gray-700">
-                    <span className="text-sm font-semibold">{selectedStudentIds.length} öğrenci seçildi</span>
-                    <button onClick={() => setIsAssignResourceModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-1.5">
-                       <LibraryIcon className="w-4 h-4"/> Kaynak Ata
-                    </button>
-                    <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
-                        <TrashIcon className="w-4 h-4" />
-                    </button>
+            <div className="fixed bottom-16 left-0 right-0 z-40 animate-fade-in lg:left-auto lg:w-auto lg:right-10 lg:bottom-10">
+                <div className="bg-white dark:bg-gray-800 p-4 flex items-center justify-between gap-4 border-t dark:border-gray-700 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] lg:rounded-lg lg:border lg:shadow-2xl">
+                    <span className="text-sm font-semibold whitespace-nowrap">{selectedStudentIds.length} öğrenci seçildi</span>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsAssignResourceModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-1.5">
+                           <LibraryIcon className="w-4 h-4"/>
+                           <span className="hidden sm:inline">Kaynak Ata</span>
+                        </button>
+                        <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                            <TrashIcon className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
         )}
@@ -694,4 +698,4 @@ export default function Students() {
         )}
         </>
     );
-};
+}

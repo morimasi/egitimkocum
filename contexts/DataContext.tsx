@@ -1,12 +1,38 @@
-import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, CalendarEvent } from '../types';
-import { getMockData } from '../hooks/useMockData';
+import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer } from 'react';
+// FIX: Added Poll to the import list.
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll } from '../types';
 import { useUI } from './UIContext';
+import {
+    auth,
+    db,
+    storage,
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    updateProfile,
+    collection,
+    doc,
+    addDoc,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    query,
+    where,
+    orderBy,
+    writeBatch,
+    getDocs,
+    // FIX: Added getDoc to the import list.
+    getDoc,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    arrayUnion,
+    arrayRemove,
+} from '../services/firebase';
+import { seedData } from '../services/seedData';
 
-export const getInitialDataForSeeding = () => {
-    const { users } = getMockData();
-    return { initialUsers: users };
-};
 
 const getInitialState = (): AppState => ({
     users: [],
@@ -41,199 +67,51 @@ type AppState = {
 };
 
 type Action =
-    | { type: 'SET_INITIAL_DATA'; payload: Partial<Omit<AppState, 'currentUser' | 'isLoading'>> }
+    | { type: 'SET_DATA'; payload: { collection: keyof AppState, data: any[] } }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_CURRENT_USER'; payload: User | null }
-    | { type: 'ADD_ASSIGNMENTS'; payload: Assignment[] }
-    | { type: 'UPDATE_ASSIGNMENT'; payload: Assignment }
-    | { type: 'DELETE_ASSIGNMENTS'; payload: string[] }
-    | { type: 'ADD_MESSAGE'; payload: Message }
-    | { type: 'UPDATE_USER'; payload: User }
-    | { type: 'ADD_USER'; payload: User }
-    | { type: 'DELETE_USER'; payload: string }
-    | { type: 'MARK_MESSAGES_AS_READ'; payload: { conversationId: string; currentUserId: string } }
-    | { type: 'SET_NOTIFICATIONS'; payload: AppNotification[] }
-    | { type: 'ADD_NOTIFICATIONS'; payload: AppNotification[] }
-    | { type: 'MARK_NOTIFICATIONS_AS_READ'; payload: { userId: string } }
-    | { type: 'SET_TYPING_STATUS'; payload: { userId: string; isTyping: boolean } }
-    | { type: 'ADD_GOAL'; payload: Goal }
-    | { type: 'UPDATE_GOAL'; payload: Goal }
-    | { type: 'ADD_REACTION'; payload: { messageId: string; emoji: string; userId: string } }
-    | { type: 'VOTE_ON_POLL'; payload: { messageId: string; optionIndex: number; userId: string } }
-    | { type: 'TOGGLE_RESOURCE_ASSIGNMENT'; payload: { resourceId: string; studentId: string } }
-    | { type: 'ASSIGN_RESOURCE_TO_STUDENTS'; payload: { resourceId: string; studentIds: string[] } }
-    | { type: 'ADD_RESOURCE'; payload: Resource }
-    | { type: 'DELETE_RESOURCE'; payload: string }
-    | { type: 'ADD_TEMPLATE'; payload: AssignmentTemplate }
-    | { type: 'UPDATE_TEMPLATE'; payload: AssignmentTemplate }
-    | { type: 'DELETE_TEMPLATE'; payload: string }
-    | { type: 'ADD_CONVERSATION'; payload: Conversation }
-    | { type: 'UPDATE_CONVERSATION'; payload: Conversation }
-    | { type: 'UPDATE_BADGE'; payload: Badge }
-    | { type: 'ADD_CALENDAR_EVENT'; payload: CalendarEvent }
-    | { type: 'DELETE_CALENDAR_EVENT'; payload: string }
-    | { type: 'TOGGLE_TEMPLATE_FAVORITE'; payload: string };
+    | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof AppState, data: any } }
+    | { type: 'REMOVE_DOC'; payload: { collection: keyof AppState, id: string } }
+    | { type: 'RESET_STATE' }
+    | { type: 'SET_TYPING_STATUS'; payload: { userId: string; isTyping: boolean } };
+
 
 const dataReducer = (state: AppState, action: Action): AppState => {
     switch (action.type) {
-        case 'SET_INITIAL_DATA':
-            return { ...state, ...action.payload };
+        case 'SET_DATA':
+            return { ...state, [action.payload.collection]: action.payload.data };
         case 'SET_LOADING':
             return { ...state, isLoading: action.payload };
         case 'SET_CURRENT_USER':
             return { ...state, currentUser: action.payload };
-        case 'ADD_ASSIGNMENTS':
-            return { ...state, assignments: [...state.assignments, ...action.payload] };
-        case 'UPDATE_ASSIGNMENT':
-            return { ...state, assignments: state.assignments.map(a => a.id === action.payload.id ? action.payload : a) };
-        case 'DELETE_ASSIGNMENTS':
-            return { ...state, assignments: state.assignments.filter(a => !action.payload.includes(a.id)) };
-        case 'ADD_MESSAGE':
-             return { ...state, messages: [...state.messages, action.payload] };
-        case 'UPDATE_USER': {
-            const newCurrentUser = state.currentUser?.id === action.payload.id ? action.payload : state.currentUser;
-            return { ...state, users: state.users.map(u => u.id === action.payload.id ? action.payload : u), currentUser: newCurrentUser };
-        }
-        case 'ADD_USER':
-            if (state.users.some(u => u.id === action.payload.id)) {
-                return state;
+        case 'RESET_STATE':
+            return getInitialState();
+        case 'ADD_OR_UPDATE_DOC': {
+            const collectionName = action.payload.collection;
+            const docData = action.payload.data;
+            const existingCollection = state[collectionName] as any[];
+            const docIndex = existingCollection.findIndex(d => d.id === docData.id);
+
+            let updatedCollection;
+            if (docIndex > -1) {
+                updatedCollection = [...existingCollection];
+                updatedCollection[docIndex] = docData;
+            } else {
+                updatedCollection = [...existingCollection, docData];
             }
-            return { ...state, users: [...state.users, action.payload] };
-        case 'DELETE_USER':
-             return {
-                ...state,
-                users: state.users.filter(u => u.id !== action.payload),
-                assignments: state.assignments.filter(a => a.studentId !== action.payload && a.coachId !== action.payload),
-                messages: state.messages.filter(m => m.senderId !== action.payload),
-                conversations: state.conversations.map(c => ({...c, participantIds: c.participantIds.filter(pid => pid !== action.payload)})).filter(c => c.participantIds.length > 1 || c.id === 'conv-announcements'),
-            };
-        case 'MARK_MESSAGES_AS_READ':
-            return { ...state, messages: state.messages.map(m => {
-                if (m.conversationId === action.payload.conversationId && !m.readBy.includes(action.payload.currentUserId)) {
-                    return { ...m, readBy: [...m.readBy, action.payload.currentUserId] };
-                }
-                return m;
-            })};
-        case 'SET_NOTIFICATIONS':
-             return { ...state, notifications: action.payload };
-        case 'ADD_NOTIFICATIONS':
-             return { ...state, notifications: [...state.notifications, ...action.payload] };
-        case 'MARK_NOTIFICATIONS_AS_READ':
-            return { ...state, notifications: state.notifications.map(n => n.userId === action.payload.userId ? { ...n, isRead: true } : n) };
+            return { ...state, [collectionName]: updatedCollection };
+        }
+        case 'REMOVE_DOC': {
+            const collectionName = action.payload.collection;
+            const docId = action.payload.id;
+            const existingCollection = state[collectionName] as any[];
+            return { ...state, [collectionName]: existingCollection.filter(d => d.id !== docId) };
+        }
         case 'SET_TYPING_STATUS':
-            if (state.currentUser && action.payload.userId === state.currentUser.id) {
-                return state; // Don't update for own user
+             if (state.currentUser && action.payload.userId === state.currentUser.id) {
+                return state; 
             }
             return { ...state, typingStatus: { ...state.typingStatus, [action.payload.userId]: action.payload.isTyping } };
-        case 'ADD_GOAL':
-            return { ...state, goals: [...state.goals, action.payload] };
-        case 'UPDATE_GOAL':
-            return { ...state, goals: state.goals.map(g => g.id === action.payload.id ? action.payload : g) };
-        case 'ADD_REACTION':
-             return {
-                ...state,
-                messages: state.messages.map(m => {
-                    if (m.id === action.payload.messageId) {
-                        const newReactions = { ...(m.reactions || {}) };
-                        // Find if user already reacted with any emoji
-                        Object.keys(newReactions).forEach(emoji => {
-                           newReactions[emoji] = newReactions[emoji].filter(uid => uid !== action.payload.userId);
-                           if(newReactions[emoji].length === 0) delete newReactions[emoji];
-                        });
-                        // Add new reaction
-                        if (!newReactions[action.payload.emoji]) {
-                            newReactions[action.payload.emoji] = [];
-                        }
-                        newReactions[action.payload.emoji].push(action.payload.userId);
-                        return { ...m, reactions: newReactions };
-                    }
-                    return m;
-                })
-            };
-        case 'VOTE_ON_POLL':
-            return {
-                ...state,
-                messages: state.messages.map(m => {
-                    if (m.id === action.payload.messageId && m.poll) {
-                        const userId = action.payload.userId;
-                        const optionIndex = action.payload.optionIndex;
-                        const originalOptions = m.poll.options;
-
-                        // Check if the user has already voted for the option they just clicked.
-                        const alreadyVotedForThisOption = originalOptions[optionIndex]?.votes.includes(userId);
-
-                        const newOptions = originalOptions.map((opt, index) => {
-                            // First, remove user's vote from all options.
-                            const votes = opt.votes.filter(vId => vId !== userId);
-                            
-                            // If it's the clicked option AND they weren't already voting for it, add the vote.
-                            if (index === optionIndex && !alreadyVotedForThisOption) {
-                                votes.push(userId);
-                            }
-                            return { ...opt, votes };
-                        });
-
-                        return { ...m, poll: { ...m.poll, options: newOptions } };
-                    }
-                    return m;
-                })
-            };
-        case 'TOGGLE_RESOURCE_ASSIGNMENT':
-             return {
-                ...state,
-                resources: state.resources.map(r => {
-                    if (r.id === action.payload.resourceId) {
-                        const assignedTo = r.assignedTo || [];
-                        const isAssigned = assignedTo.includes(action.payload.studentId);
-                        return {
-                            ...r,
-                            assignedTo: isAssigned
-                                ? assignedTo.filter(id => id !== action.payload.studentId)
-                                : [...assignedTo, action.payload.studentId],
-                        };
-                    }
-                    return r;
-                }),
-            };
-        case 'ASSIGN_RESOURCE_TO_STUDENTS':
-            return {
-                ...state,
-                resources: state.resources.map(r => {
-                    if (r.id === action.payload.resourceId) {
-                        const currentAssigned = r.assignedTo || [];
-                        const newAssigned = [...new Set([...currentAssigned, ...action.payload.studentIds])];
-                        return { ...r, assignedTo: newAssigned };
-                    }
-                    return r;
-                }),
-            };
-        case 'ADD_RESOURCE':
-            return { ...state, resources: [...state.resources, action.payload] };
-        case 'DELETE_RESOURCE':
-            return { ...state, resources: state.resources.filter(r => r.id !== action.payload) };
-        case 'ADD_TEMPLATE':
-            return { ...state, templates: [...state.templates, action.payload] };
-        case 'UPDATE_TEMPLATE':
-            return { ...state, templates: state.templates.map(t => t.id === action.payload.id ? action.payload : t) };
-        case 'DELETE_TEMPLATE':
-            return { ...state, templates: state.templates.filter(t => t.id !== action.payload) };
-         case 'ADD_CONVERSATION':
-            return { ...state, conversations: [...state.conversations, action.payload] };
-        case 'UPDATE_CONVERSATION':
-            return { ...state, conversations: state.conversations.map(c => c.id === action.payload.id ? action.payload : c) };
-        case 'UPDATE_BADGE':
-            return { ...state, badges: state.badges.map(b => b.id === action.payload.id ? action.payload : b) };
-        case 'ADD_CALENDAR_EVENT':
-            return { ...state, calendarEvents: [...state.calendarEvents, action.payload] };
-        case 'DELETE_CALENDAR_EVENT':
-            return { ...state, calendarEvents: state.calendarEvents.filter(e => e.id !== action.payload) };
-        case 'TOGGLE_TEMPLATE_FAVORITE':
-            return {
-                ...state,
-                templates: state.templates.map(t =>
-                    t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t
-                ),
-            };
         default:
             return state;
     }
@@ -257,7 +135,7 @@ interface DataContextType {
     typingStatus: { [userId: string]: boolean };
     login: (email: string, pass: string) => Promise<User | null>;
     logout: () => Promise<void>;
-    register: (name: string, email: string, pass: string) => Promise<void>;
+    register: (name: string, email: string, pass: string, profilePictureFile: File | null) => Promise<void>;
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesForConversation: (conversationId: string) => Message[];
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => Promise<void>;
@@ -292,11 +170,11 @@ interface DataContextType {
     addUserToConversation: (conversationId: string, userId: string) => Promise<void>;
     removeUserFromConversation: (conversationId: string, userId: string) => Promise<void>;
     endConversation: (conversationId: string) => Promise<void>;
-    seedDatabase: (uids: Record<string, string>) => Promise<void>;
     updateBadge: (updatedBadge: Badge) => Promise<void>;
-    addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<void>;
+    addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'userId'>) => Promise<void>;
     deleteCalendarEvent: (eventId: string) => Promise<void>;
     toggleTemplateFavorite: (templateId: string) => Promise<void>;
+    seedDatabase: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -304,41 +182,71 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [state, dispatch] = useReducer(dataReducer, getInitialState());
     const { addToast } = useUI();
-    const isInitialized = useRef(false);
-    
+
     useEffect(() => {
-        if (isInitialized.current) return;
-        isInitialized.current = true;
-        
-        const loadData = () => {
-            dispatch({ type: 'SET_LOADING', payload: true });
-            
-            const { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } = getMockData();
-            
-            const defaultUser = users.find(u => u.role === UserRole.Coach) || users[0];
-            sessionStorage.setItem('currentUser', JSON.stringify(defaultUser));
-            
-            dispatch({
-                type: 'SET_INITIAL_DATA',
-                payload: { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents, notifications: [
-                     { id: 'notif-1', userId: defaultUser.id, message: 'Yeni bir ödev atandı: Matematik Problemleri', timestamp: new Date().toISOString(), isRead: false, link: { page: 'assignments' } },
-                     { id: 'notif-2', userId: 'student-1', message: 'Fizik raporunuz notlandırıldı: 85', timestamp: new Date(Date.now() - 3600*1000).toISOString(), isRead: false, link: { page: 'assignments' } },
-                ] }
-            });
-            dispatch({ type: 'SET_CURRENT_USER', payload: defaultUser });
-            dispatch({ type: 'SET_LOADING', payload: false });
-        };
-        
-        const persistedUser = sessionStorage.getItem('currentUser');
-        if (persistedUser) {
-             const { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } = getMockData();
-             dispatch({ type: 'SET_INITIAL_DATA', payload: { users, assignments, messages, templates, resources, goals, conversations, badges, calendarEvents } });
-             dispatch({ type: 'SET_CURRENT_USER', payload: JSON.parse(persistedUser) });
-             dispatch({ type: 'SET_LOADING', payload: false });
-        } else {
-            loadData();
-        }
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                const unsubUser = onSnapshot(userDocRef, (doc) => {
+                    if (doc.exists()) {
+                        const appUser = { id: doc.id, ...doc.data() } as User;
+                        dispatch({ type: 'SET_CURRENT_USER', payload: appUser });
+                    }
+                    dispatch({ type: 'SET_LOADING', payload: false });
+                });
+                return () => unsubUser();
+            } else {
+                dispatch({ type: 'RESET_STATE' });
+                dispatch({ type: 'SET_LOADING', payload: false });
+            }
+        });
+        return () => unsubscribe();
     }, []);
+
+     useEffect(() => {
+        if (!state.currentUser) return;
+
+        const { id, role } = state.currentUser;
+        const subscriptions: (() => void)[] = [];
+
+        // Universal subscriptions
+        subscriptions.push(onSnapshot(collection(db, 'users'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'users', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+        subscriptions.push(onSnapshot(collection(db, 'badges'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'badges', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+        subscriptions.push(onSnapshot(query(collection(db, 'notifications'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'notifications', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+        subscriptions.push(onSnapshot(query(collection(db, 'conversations'), where('participantIds', 'array-contains', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'conversations', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+       
+        // Role-based subscriptions
+        if (role === UserRole.Student) {
+            subscriptions.push(onSnapshot(query(collection(db, 'assignments'), where('studentId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(query(collection(db, 'goals'), where('studentId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'goals', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(query(collection(db, 'resources'), where('assignedTo', 'array-contains', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'resources', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(query(collection(db, 'calendarEvents'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'calendarEvents', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+
+        } else if (role === UserRole.Coach || role === UserRole.SuperAdmin) {
+            const studentIds = state.users.filter(u => u.role === UserRole.Student && (role === UserRole.SuperAdmin || u.assignedCoachId === id)).map(s => s.id);
+            if (studentIds.length > 0) {
+                 subscriptions.push(onSnapshot(query(collection(db, 'assignments'), where('studentId', 'in', studentIds)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            } else {
+                 dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: [] } });
+            }
+            subscriptions.push(onSnapshot(collection(db, 'templates'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'templates', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(collection(db, 'resources'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'resources', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(collection(db, 'goals'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'goals', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+            subscriptions.push(onSnapshot(query(collection(db, 'calendarEvents'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'calendarEvents', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+        }
+        
+        // Message subscription based on active conversations
+        if (state.conversations.length > 0) {
+            const conversationIds = state.conversations.map(c => c.id);
+            subscriptions.push(onSnapshot(query(collection(db, 'messages'), where('conversationId', 'in', conversationIds)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'messages', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
+        }
+
+
+        return () => {
+            subscriptions.forEach(unsub => unsub());
+        };
+
+    }, [state.currentUser, state.users, state.conversations.length]);
 
     const coach = useMemo(() => {
         if (state.currentUser?.role === UserRole.Student) {
@@ -394,360 +302,371 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         });
         return map;
     }, [state.messages]);
-
-     // --- Memoized Functions ---
-    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
-        const user = state.users.find(u => u.email === email);
-        if (user) {
-            dispatch({ type: 'SET_CURRENT_USER', payload: user });
-            sessionStorage.setItem('currentUser', JSON.stringify(user));
-            return user;
+    
+     const awardBadge = useCallback(async (studentId: string, badgeId: BadgeID) => {
+        const student = state.users.find(u => u.id === studentId);
+        const badge = state.badges.find(b => b.id === badgeId);
+        if (!student || !badge || student.earnedBadgeIds?.includes(badgeId)) {
+            return;
         }
-        return null;
+        const userRef = doc(db, 'users', studentId);
+        await updateDoc(userRef, {
+            earnedBadgeIds: arrayUnion(badgeId),
+            xp: (student.xp || 0) + 50
+        });
+        addToast(`Yeni rozet kazandın: ${badge.name}! (+50 XP)`, 'xp');
+    }, [state.users, state.badges, addToast]);
+
+    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
+        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        const appUser = state.users.find(u => u.email === userCredential.user.email);
+        return appUser || null;
     }, [state.users]);
 
     const logout = useCallback(async () => {
-        dispatch({ type: 'SET_CURRENT_USER', payload: null });
-        sessionStorage.removeItem('currentUser');
+        await signOut(auth);
     }, []);
 
-    const register = useCallback(async (name: string, email: string, pass: string) => {
-         if (state.users.some(u => u.email === email)) {
-            const error = new Error("Bu e-posta adresi zaten kullanılıyor.");
-            (error as any).code = 'auth/email-already-in-use';
-            throw error;
+    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, file);
+        return await getDownloadURL(storageRef);
+    }, []);
+
+    const register = useCallback(async (name: string, email: string, pass: string, profilePictureFile: File | null) => {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const isFirstUser = usersSnapshot.empty;
+        
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(userCredential.user, { displayName: name });
+        
+        let profilePictureUrl = `https://i.pravatar.cc/150?u=${email}`;
+        if (profilePictureFile) {
+            profilePictureUrl = await uploadFile(profilePictureFile, `profile-pictures/${userCredential.user.uid}`);
         }
+
         const newUser: User = {
-            id: `user-${Date.now()}`,
+            id: userCredential.user.uid,
             name,
             email,
-            role: state.users.length === 0 ? UserRole.SuperAdmin : UserRole.Student,
-            profilePicture: `https://i.pravatar.cc/150?u=${email}`,
+            role: isFirstUser ? UserRole.SuperAdmin : UserRole.Student,
+            profilePicture: profilePictureUrl,
         };
-        dispatch({ type: 'ADD_USER', payload: newUser });
-        dispatch({ type: 'SET_CURRENT_USER', payload: newUser });
-        sessionStorage.setItem('currentUser', JSON.stringify(newUser));
-    }, [state.users]);
+        
+        await setDoc(doc(db, "users", userCredential.user.uid), newUser);
+    }, [uploadFile]);
     
     const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
-        if(!state.currentUser) return;
-        const newMessage: Message = {
+        if (!state.currentUser) return;
+        const newMessage = {
             ...messageData,
-            id: `msg-${Date.now()}`,
             timestamp: new Date().toISOString(),
             readBy: [messageData.senderId],
         };
-        dispatch({ type: 'ADD_MESSAGE', payload: newMessage });
-        addToast("Mesaj başarıyla gönderildi.", "success");
-
-        // Notify recipients
-        const conversation = state.conversations.find(c => c.id === messageData.conversationId);
-        if (conversation) {
-            const recipients = conversation.participantIds.filter(id => id !== state.currentUser!.id);
-            const notificationsToAdd: AppNotification[] = recipients.map(recipientId => ({
-                id: `notif-${Date.now()}-${recipientId}`,
-                userId: recipientId,
-                message: `${state.currentUser!.name} size yeni bir mesaj gönderdi.`,
-                timestamp: new Date().toISOString(),
-                isRead: false,
-                link: { page: 'messages', filter: { contactId: conversation.id } }
-            }));
-            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
-        }
-    }, [state.currentUser, state.conversations, addToast]);
-
-    const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
-        const newAssignments: Assignment[] = studentIds.map(studentId => ({
-            ...assignmentData,
-            id: `asg-${Date.now()}-${studentId}`,
-            studentId,
-        }));
-        dispatch({ type: 'ADD_ASSIGNMENTS', payload: newAssignments });
-
-        if (state.currentUser) {
-            const notificationsToAdd: AppNotification[] = studentIds.map(studentId => ({
-                 id: `notif-${Date.now()}-${studentId}`,
-                 userId: studentId,
-                 message: `${state.currentUser!.name} size yeni bir ödev atadı: "${assignmentData.title}"`,
-                 timestamp: new Date().toISOString(),
-                 isRead: false,
-                 link: { page: 'assignments' }
-            }));
-            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
-        }
+        await addDoc(collection(db, 'messages'), newMessage);
     }, [state.currentUser]);
 
-    const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
-        const oldAssignment = state.assignments.find(a => a.id === updatedAssignment.id);
+    const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
+        const batch = writeBatch(db);
+        studentIds.forEach(studentId => {
+            const newAssignment = { ...assignmentData, studentId };
+            const docRef = doc(collection(db, 'assignments'));
+            batch.set(docRef, newAssignment);
+        });
+        await batch.commit();
+    }, []);
 
-        // Dispatch the main update first
-        dispatch({ type: 'UPDATE_ASSIGNMENT', payload: updatedAssignment });
-    
-        // Now handle notifications based on the state change
-        if (!oldAssignment || !state.currentUser) {
-            return;
-        }
-    
-        let notificationsToAdd: AppNotification[] = [];
-    
-        // Student submits an assignment -> Notify coach
-        if (oldAssignment.status === AssignmentStatus.Pending && updatedAssignment.status === AssignmentStatus.Submitted) {
-            const student = state.users.find(u => u.id === updatedAssignment.studentId);
-            if (student) {
-                addToast("Ödev başarıyla teslim edildi.", "success");
-                notificationsToAdd.push({
-                    id: `notif-${Date.now()}-${updatedAssignment.coachId}`,
-                    userId: updatedAssignment.coachId,
-                    message: `${student.name}, "${updatedAssignment.title}" ödevini teslim etti.`,
-                    timestamp: new Date().toISOString(),
-                    isRead: false,
-                    link: { page: 'assignments', filter: { status: AssignmentStatus.Submitted, studentId: student.id } }
-                });
-            }
-        }
-        
-        // Coach grades an assignment -> Notify student
-        if (oldAssignment.status === AssignmentStatus.Submitted && updatedAssignment.status === AssignmentStatus.Graded) {
-            addToast("Ödev notlandırıldı.", "success");
-            notificationsToAdd.push({
-                id: `notif-${Date.now()}-${updatedAssignment.studentId}`,
-                userId: updatedAssignment.studentId,
-                message: `"${updatedAssignment.title}" ödeviniz notlandırıldı: ${updatedAssignment.grade}`,
-                timestamp: new Date().toISOString(),
-                isRead: false,
-                link: { page: 'assignments' }
-            });
-        }
-    
-        if (notificationsToAdd.length > 0) {
-            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
-        }
-    }, [state.assignments, state.currentUser, state.users, addToast]);
+    const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
+        const { id, ...dataToUpdate } = updatedAssignment;
+        await updateDoc(doc(db, 'assignments', id), dataToUpdate);
+    }, []);
 
     const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
-        dispatch({ type: 'DELETE_ASSIGNMENTS', payload: assignmentIds });
+        const batch = writeBatch(db);
+        assignmentIds.forEach(id => {
+            batch.delete(doc(db, 'assignments', id));
+        });
+        await batch.commit();
     }, []);
     
     const updateUser = useCallback(async (updatedUser: User) => {
-        dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+         const { id, ...dataToUpdate } = updatedUser;
+         await updateDoc(doc(db, 'users', id), dataToUpdate);
     }, []);
 
     const deleteUser = useCallback(async (userId: string) => {
-         dispatch({ type: 'DELETE_USER', payload: userId });
+         await deleteDoc(doc(db, 'users', userId));
     }, []);
 
     const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-        const user: User = { ...newUser, id: `user-${Date.now()}`};
-        dispatch({ type: 'ADD_USER', payload: user });
-        return user;
+        const userRef = await addDoc(collection(db, 'users'), newUser);
+        return { ...newUser, id: userRef.id };
     }, []);
 
     const markMessagesAsRead = useCallback(async (conversationId: string) => {
-        if (state.currentUser) {
-            dispatch({ type: 'MARK_MESSAGES_AS_READ', payload: { conversationId, currentUserId: state.currentUser.id } });
-        }
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+        const q = query(collection(db, 'messages'), where('conversationId', '==', conversationId));
+        const messagesSnapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        messagesSnapshot.forEach(messageDoc => {
+            const msg = messageDoc.data() as Message;
+            if (msg.senderId !== currentUserId && !msg.readBy.includes(currentUserId)) {
+                batch.update(messageDoc.ref, { readBy: arrayUnion(currentUserId) });
+            }
+        });
+        await batch.commit();
     }, [state.currentUser]);
 
     const markNotificationsAsRead = useCallback(async () => {
-         if (state.currentUser) {
-            dispatch({ type: 'MARK_NOTIFICATIONS_AS_READ', payload: { userId: state.currentUser.id } });
-         }
+        if (!state.currentUser) return;
+        const q = query(collection(db, 'notifications'), where('userId', '==', state.currentUser.id), where('isRead', '==', false));
+        const snapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        snapshot.forEach(doc => batch.update(doc.ref, { isRead: true }));
+        await batch.commit();
     }, [state.currentUser]);
 
     const updateTypingStatus = useCallback(async (isTyping: boolean) => {}, []);
     
     const updateGoal = useCallback(async (updatedGoal: Goal) => { 
-        dispatch({ type: 'UPDATE_GOAL', payload: updatedGoal });
+        const { id, ...data } = updatedGoal;
+        await updateDoc(doc(db, 'goals', id), data);
     }, []);
 
     const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => { 
-        const goal: Goal = { ...newGoal, id: `goal-${Date.now()}` };
-        dispatch({ type: 'ADD_GOAL', payload: goal });
+        await addDoc(collection(db, 'goals'), newGoal);
     }, []);
 
     const addReaction = useCallback(async (messageId: string, emoji: string) => {
-         if (state.currentUser) {
-            dispatch({ type: 'ADD_REACTION', payload: { messageId, emoji, userId: state.currentUser.id } });
-         }
+         if (!state.currentUser) return;
+         const msgRef = doc(db, 'messages', messageId);
+         // This is complex with Firestore security rules, simplified for now
+         const msgDoc = await getDoc(msgRef);
+         if (!msgDoc.exists()) return;
+
+         const reactions = msgDoc.data().reactions || {};
+         // Remove previous reactions by the user
+         Object.keys(reactions).forEach(key => {
+            reactions[key] = reactions[key].filter((uid: string) => uid !== state.currentUser!.id);
+            if (reactions[key].length === 0) delete reactions[key];
+         });
+         
+         if (!reactions[emoji]) reactions[emoji] = [];
+         reactions[emoji].push(state.currentUser.id);
+         
+         await updateDoc(msgRef, { reactions });
     }, [state.currentUser]);
 
     const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
-        if (state.currentUser) {
-            dispatch({ type: 'VOTE_ON_POLL', payload: { messageId, optionIndex, userId: state.currentUser.id } });
+        if (!state.currentUser) return;
+        const msgRef = doc(db, 'messages', messageId);
+        const msgDoc = await getDoc(msgRef);
+        if (!msgDoc.exists() || !msgDoc.data().poll) return;
+        
+        const poll = msgDoc.data().poll as Poll;
+        const userId = state.currentUser.id;
+
+        const alreadyVoted = poll.options[optionIndex]?.votes.includes(userId);
+        
+        poll.options.forEach(opt => {
+            opt.votes = opt.votes.filter(vId => vId !== userId);
+        });
+
+        if (!alreadyVoted) {
+            poll.options[optionIndex].votes.push(userId);
         }
+
+        await updateDoc(msgRef, { poll });
     }, [state.currentUser]);
     
     const toggleResourceAssignment = useCallback(async (resourceId: string, studentId: string) => {
-        dispatch({ type: 'TOGGLE_RESOURCE_ASSIGNMENT', payload: { resourceId, studentId } });
+        const resRef = doc(db, 'resources', resourceId);
+        const resDoc = await getDoc(resRef);
+        if(!resDoc.exists()) return;
+        const isAssigned = resDoc.data().assignedTo?.includes(studentId);
+        await updateDoc(resRef, {
+            assignedTo: isAssigned ? arrayRemove(studentId) : arrayUnion(studentId)
+        });
     }, []);
 
     const assignResourceToStudents = useCallback(async (resourceId: string, studentIds: string[]) => {
-        dispatch({ type: 'ASSIGN_RESOURCE_TO_STUDENTS', payload: { resourceId, studentIds } });
+         const resRef = doc(db, 'resources', resourceId);
+         await updateDoc(resRef, { assignedTo: arrayUnion(...studentIds) });
     }, []);
 
-    const addResource = useCallback(async (resourceData: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => {
+    const addResource = useCallback(async (resourceData: Omit<Resource, 'id' | 'uploaderId'>) => {
         if (!state.currentUser) return;
-        const newResource: Resource = {
-            name: resourceData.name,
-            type: resourceData.type,
-            url: resourceData.url,
-            isPublic: resourceData.isPublic,
-            id: `res-${Date.now()}`,
-            uploaderId: state.currentUser.id,
-            assignedTo: resourceData.assignedTo || []
-        };
-        dispatch({ type: 'ADD_RESOURCE', payload: newResource });
-
-        if (!newResource.isPublic && newResource.assignedTo && newResource.assignedTo.length > 0) {
-            const notificationsToAdd: AppNotification[] = newResource.assignedTo.map(studentId => ({
-                id: `notif-${Date.now()}-${studentId}`,
-                userId: studentId,
-                message: `${state.currentUser?.name} sizinle yeni bir kaynak paylaştı: "${newResource.name}"`,
-                timestamp: new Date().toISOString(),
-                isRead: false,
-                link: { page: 'library' }
-            }));
-            dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
-        }
+        const newResource = { ...resourceData, uploaderId: state.currentUser.id };
+        await addDoc(collection(db, 'resources'), newResource);
     }, [state.currentUser]);
 
     const deleteResource = useCallback(async (resourceId: string) => {
-        dispatch({ type: 'DELETE_RESOURCE', payload: resourceId });
+        await deleteDoc(doc(db, 'resources', resourceId));
     }, []);
 
     const addTemplate = useCallback(async (templateData: Omit<AssignmentTemplate, 'id'>) => {
-        const newTemplate: AssignmentTemplate = {
-            ...templateData,
-            id: `temp-${Date.now()}`
-        };
-        dispatch({ type: 'ADD_TEMPLATE', payload: newTemplate });
+        await addDoc(collection(db, 'templates'), templateData);
     }, []);
 
     const updateTemplate = useCallback(async (template: AssignmentTemplate) => {
-        dispatch({ type: 'UPDATE_TEMPLATE', payload: template });
+        const { id, ...data } = template;
+        await updateDoc(doc(db, 'templates', id), data);
     }, []);
 
     const deleteTemplate = useCallback(async (templateId: string) => {
-        dispatch({ type: 'DELETE_TEMPLATE', payload: templateId });
+        await deleteDoc(doc(db, 'templates', templateId));
     }, []);
     
-    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return URL.createObjectURL(file);
-    }, []);
-
     const updateStudentNotes = useCallback(async (studentId: string, notes: string) => {
-        const student = state.users.find(u => u.id === studentId);
-        if (student) {
-            dispatch({ type: 'UPDATE_USER', payload: { ...student, notes } });
-        }
-    }, [state.users]);
+         await updateDoc(doc(db, 'users', studentId), { notes });
+    }, []);
 
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string) => {
         if (!state.currentUser) return;
-        const newConversation: Conversation = {
-            id: `conv-${Date.now()}`,
+        const newConversation = {
             participantIds,
             isGroup: true,
             groupName,
             adminId: state.currentUser.id,
         };
-        dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
-        sendMessage({
+        const docRef = await addDoc(collection(db, 'conversations'), newConversation);
+        await sendMessage({
             senderId: state.currentUser.id,
-            conversationId: newConversation.id,
+            conversationId: docRef.id,
             text: `${state.currentUser.name}, ${groupName} grubunu oluşturdu.`,
             type: 'system',
         });
-        return newConversation.id;
+        return docRef.id;
     }, [state.currentUser, sendMessage]);
     
     const findOrCreateConversation = useCallback(async (otherParticipantId: string) => {
         if (!state.currentUser) return;
         const currentUserId = state.currentUser.id;
 
-        const existingConversation = state.conversations.find(c =>
-            !c.isGroup &&
-            c.participantIds.length === 2 &&
-            c.participantIds.includes(currentUserId) &&
-            c.participantIds.includes(otherParticipantId)
+        const q = query(
+            collection(db, 'conversations'),
+            where('isGroup', '==', false),
+            where('participantIds', 'array-contains', currentUserId)
         );
+        const snapshot = await getDocs(q);
+        const existing = snapshot.docs.find(d => d.data().participantIds.includes(otherParticipantId));
 
-        if (existingConversation) {
-            return existingConversation.id;
-        }
-
-        const newConversation: Conversation = {
-            id: `conv-${Date.now()}`,
+        if (existing) return existing.id;
+        
+        const newConversation = {
             participantIds: [currentUserId, otherParticipantId],
             isGroup: false,
         };
-        dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
-        return newConversation.id;
-    }, [state.currentUser, state.conversations]);
+        const docRef = await addDoc(collection(db, 'conversations'), newConversation);
+        return docRef.id;
+    }, [state.currentUser]);
 
 
     const addUserToConversation = useCallback(async (conversationId: string, userId: string) => {
-        const conversation = state.conversations.find(c => c.id === conversationId);
-        const user = state.users.find(u => u.id === userId);
-        if (conversation && user && !conversation.participantIds.includes(userId)) {
-            const updatedConversation = { ...conversation, participantIds: [...conversation.participantIds, userId] };
-            dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
-            sendMessage({
-                senderId: state.currentUser!.id,
-                conversationId: conversationId,
-                text: `${state.currentUser!.name}, ${user.name} kişisini gruba ekledi.`,
-                type: 'system',
-            });
-        }
-    }, [state.conversations, state.users, state.currentUser, sendMessage]);
+        await updateDoc(doc(db, 'conversations', conversationId), {
+            participantIds: arrayUnion(userId)
+        });
+    }, []);
 
     const removeUserFromConversation = useCallback(async (conversationId: string, userId: string) => {
-        const conversation = state.conversations.find(c => c.id === conversationId);
-        const user = state.users.find(u => u.id === userId);
-        if (conversation && user && conversation.participantIds.includes(userId)) {
-            const updatedConversation = { ...conversation, participantIds: conversation.participantIds.filter(id => id !== userId) };
-            dispatch({ type: 'UPDATE_CONVERSATION', payload: updatedConversation });
-            sendMessage({
-                senderId: state.currentUser!.id,
-                conversationId: conversationId,
-                text: `${state.currentUser!.name}, ${user.name} kişisini gruptan çıkardı.`,
-                type: 'system',
-            });
-        }
-    }, [state.conversations, state.users, state.currentUser, sendMessage]);
+        await updateDoc(doc(db, 'conversations', conversationId), {
+            participantIds: arrayRemove(userId)
+        });
+    }, []);
 
     const endConversation = useCallback(async (conversationId: string) => {
-        const conversation = state.conversations.find(c => c.id === conversationId);
-        if (conversation && state.currentUser) {
-            dispatch({ type: 'UPDATE_CONVERSATION', payload: { ...conversation, isArchived: true } });
-             sendMessage({
-                senderId: state.currentUser.id,
-                conversationId: conversationId,
-                text: `${state.currentUser.name}, grubu sonlandırdı.`,
-                type: 'system',
-            });
-        }
-    }, [state.conversations, state.currentUser, sendMessage]);
+        await updateDoc(doc(db, 'conversations', conversationId), { isArchived: true });
+    }, []);
     
     const updateBadge = useCallback(async (updatedBadge: Badge) => {
-        dispatch({ type: 'UPDATE_BADGE', payload: updatedBadge });
+        const { id, ...data } = updatedBadge;
+        await updateDoc(doc(db, 'badges', id), data);
     }, []);
 
-    const seedDatabase = useCallback(async (uids: Record<string, string>) => {}, []);
-
-    const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>) => {
-        const newEvent: CalendarEvent = { ...event, id: `ce-${Date.now()}` };
-        dispatch({ type: 'ADD_CALENDAR_EVENT', payload: newEvent });
-    }, []);
+    const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id' | 'userId'>) => {
+        if (!state.currentUser) return;
+        await addDoc(collection(db, 'calendarEvents'), { ...event, userId: state.currentUser.id });
+    }, [state.currentUser]);
 
     const deleteCalendarEvent = useCallback(async (eventId: string) => {
-        dispatch({ type: 'DELETE_CALENDAR_EVENT', payload: eventId });
+        await deleteDoc(doc(db, 'calendarEvents', eventId));
     }, []);
 
     const toggleTemplateFavorite = useCallback(async (templateId: string) => {
-        dispatch({ type: 'TOGGLE_TEMPLATE_FAVORITE', payload: templateId });
+        const templateRef = doc(db, 'templates', templateId);
+        const templateDoc = await getDoc(templateRef);
+        if (templateDoc.exists()) {
+            await updateDoc(templateRef, { isFavorite: !templateDoc.data().isFavorite });
+        }
     }, []);
+
+    const seedDatabase = useCallback(async () => {
+        if (!state.currentUser || state.currentUser.role !== UserRole.SuperAdmin) {
+            addToast("Sadece Süper Adminler bu işlemi yapabilir.", "error");
+            return;
+        }
+
+        const assignmentsCheck = await getDocs(collection(db, 'assignments'));
+        if (!assignmentsCheck.empty) {
+            addToast("Veritabanı zaten dolu. Bu işlem yalnızca boş bir veritabanında çalıştırılabilir.", "info");
+            return;
+        }
+        
+        addToast("Deneme verileri ekleniyor, lütfen bekleyin...", "info");
+
+        try {
+            const coach = state.users.find(u => u.email === 'koc@deneme.com');
+            const student1 = state.users.find(u => u.email === 'leyla.tek@deneme.com');
+            const student2 = state.users.find(u => u.email === 'can.yurt@deneme.com');
+
+            if (!coach || !student1 || !student2) {
+                addToast("Lütfen önce deneme hesaplarını oluşturun: koc@deneme.com, leyla.tek@deneme.com, can.yurt@deneme.com", "error");
+                return;
+            }
+
+            const batch = writeBatch(db);
+
+            batch.update(doc(db, 'users', student1.id), { assignedCoachId: coach.id });
+            batch.update(doc(db, 'users', student2.id), { assignedCoachId: coach.id });
+
+            const idMap: { [key: string]: string } = {
+                COACH_ID: coach.id,
+                STUDENT_1_ID: student1.id,
+                STUDENT_2_ID: student2.id,
+            };
+
+            const processItem = (item: any) => {
+                const processed = { ...item };
+                for (const key in processed) {
+                    if (key.endsWith('Id') && idMap[processed[key]]) {
+                        processed[key] = idMap[processed[key]];
+                    } else if (key.endsWith('Ids') && Array.isArray(processed[key])) {
+                        processed[key] = processed[key].map((id: string) => idMap[id] || id);
+                    }
+                }
+                if (processed.assignedTo && Array.isArray(processed.assignedTo)) {
+                     processed.assignedTo = processed.assignedTo.map((id: string) => idMap[id] || id);
+                }
+                return processed;
+            };
+
+            seedData.assignments.map(processItem).forEach(item => batch.set(doc(collection(db, 'assignments')), item));
+            seedData.conversations.map(processItem).forEach(item => batch.set(doc(db, 'conversations', item.id), item));
+            seedData.messages.map(processItem).forEach(item => batch.set(doc(collection(db, 'messages')), item));
+            seedData.goals.map(processItem).forEach(item => batch.set(doc(collection(db, 'goals')), item));
+            seedData.resources.map(processItem).forEach(item => batch.set(doc(collection(db, 'resources')), item));
+            seedData.templates.forEach(item => batch.set(doc(collection(db, 'templates')), item));
+            seedData.badges.forEach(item => batch.set(doc(db, 'badges', item.id), item));
+
+            await batch.commit();
+            addToast("Deneme verileri başarıyla eklendi!", "success");
+
+        } catch (error) {
+            console.error("Error seeding database:", error);
+            addToast("Veritabanı doldurulurken bir hata oluştu.", "error");
+        }
+    }, [state.currentUser, addToast, state.users]);
 
     const value = useMemo(() => ({
         currentUser: state.currentUser,
@@ -802,11 +721,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addUserToConversation,
         removeUserFromConversation,
         endConversation,
-        seedDatabase,
         updateBadge,
         addCalendarEvent,
         deleteCalendarEvent,
         toggleTemplateFavorite,
+        seedDatabase,
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
@@ -815,7 +734,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
         findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
-        seedDatabase, updateBadge, addCalendarEvent, deleteCalendarEvent, toggleTemplateFavorite
+        updateBadge, addCalendarEvent, deleteCalendarEvent, toggleTemplateFavorite, seedDatabase
     ]);
 
 

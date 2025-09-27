@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -33,12 +32,6 @@ const Tour = () => {
                 title: 'Navigasyon Menüsü',
                 content: 'Uygulamanın tüm sayfalarına buradan kolayca erişebilirsiniz.',
                 position: 'right',
-            },
-            {
-                id: 'tour-step-2',
-                title: 'Kullanıcı Değiştirme',
-                content: 'Demo için koç ve öğrenci görünümleri arasında buradan geçiş yapabilirsiniz.',
-                position: 'top',
             },
             {
                 id: 'tour-step-3',

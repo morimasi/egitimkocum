@@ -189,6 +189,7 @@ export interface Goal {
 
 export interface CalendarEvent {
   id: string;
+  userId: string;
   title: string;
   date: string;
   type: 'personal' | 'study';

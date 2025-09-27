@@ -1,5 +1,4 @@
 
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -43,8 +42,7 @@ class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    const { children } = this.props;
-    return children;
+    return this.props.children;
   }
 }
 

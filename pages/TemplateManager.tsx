@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { AssignmentTemplate, ChecklistItem } from '../types';
@@ -145,7 +143,6 @@ const TemplateFormModal = ({ isOpen, onClose, templateToEdit }: { isOpen: boolea
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function TemplateManager() {
     const { templates, deleteTemplate } = useDataContext();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -162,14 +159,14 @@ export default function TemplateManager() {
     }, [templates, searchTerm]);
 
     const groupedTemplates = useMemo(() => {
-        return filteredTemplates.reduce((acc: { [key: string]: AssignmentTemplate[] }, template) => {
+        return filteredTemplates.reduce((acc, template) => {
             const subject = template.title.split(':')[0] || 'Diğer';
             if (!acc[subject]) {
                 acc[subject] = [];
             }
             acc[subject].push(template);
             return acc;
-        }, {});
+        }, {} as { [key: string]: AssignmentTemplate[] });
     }, [filteredTemplates]);
 
     const handleEdit = (template: AssignmentTemplate) => {

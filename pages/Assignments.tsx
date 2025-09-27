@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack } from '../types';
@@ -317,7 +318,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
                             {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
                         </button>
                     </div>
-                    <select multiple value={selectedStudents} onChange={e => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         {Object.entries(availableStudents).map(([track, studentGroup]) => (
                             <optgroup key={track} label={track}>
                                 {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -600,7 +601,6 @@ const BatchGradeModal = ({ isOpen, onClose, onBatchGrade, assignmentCount }: { i
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Assignments() {
     const { currentUser, assignments, students, updateAssignment, deleteAssignments } = useDataContext();
     const { addToast, initialFilters, setInitialFilters } = useUI();

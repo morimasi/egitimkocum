@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -125,7 +122,7 @@ const StudentSettings = () => {
                 </Card>
                  <Card title="Hesap Yönetimi">
                      <div className="space-y-4">
-                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik demo modunda aktif değildir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
+                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik yakında eklenecektir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
                         <div className="flex justify-between items-center"><p>Uygulama tanıtım turunu yeniden başlatın.</p><button onClick={startTour} className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">Turu Başlat</button></div>
                          <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700"><p>Oturumu güvenle kapatın.</p><button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold"><LogoutIcon className="w-4 h-4"/> Çıkış Yap</button></div>
                     </div>
@@ -213,7 +210,7 @@ const CoachSettings = () => {
                 </Card>
                  <Card title="Hesap Yönetimi">
                      <div className="space-y-4">
-                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik demo modunda aktif değildir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
+                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik yakında eklenecektir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
                         <div className="flex justify-between items-center"><p>Uygulama tanıtım turunu yeniden başlatın.</p><button onClick={startTour} className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">Turu Başlat</button></div>
                         <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700"><p>Oturumu güvenle kapatın.</p><button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold"><LogoutIcon className="w-4 h-4"/> Çıkış Yap</button></div>
                     </div>
@@ -249,55 +246,20 @@ const CoachSettings = () => {
 };
 
 const AdminSettings = () => {
-    const { addToast } = useUI();
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-
-    const handleResetData = () => {
-        // In a real app, this would trigger a backend process.
-        // Here, we'll just reload the page to reset the mock data.
-        addToast("Demo verileri sıfırlanıyor...", "info");
-        setTimeout(() => window.location.reload(), 1500);
-    };
-
     return (
         <div className="space-y-6 max-w-2xl mx-auto pt-8">
              <Card title="Platform Ayarları">
                 <div className="text-center">
                     <h4 className="font-semibold">Uygulama Bilgisi</h4>
                     <p className="text-sm text-gray-500 mt-2">
-                        Bu uygulama şu anda sahte (mock) verilerle çalışmaktadır. Yaptığınız değişiklikler sayfa yenilendiğinde kaybolacaktır. Yönetimsel işlemler için Süper Admin Paneli'ni kullanabilirsiniz.
+                        Bu uygulama canlı Firebase verileriyle çalışmaktadır. Yaptığınız tüm değişiklikler kalıcı olacaktır. Yönetimsel işlemler ve kullanıcı yönetimi için Süper Admin Paneli'ni kullanabilirsiniz.
                     </p>
                 </div>
             </Card>
-            <Card title="Tehlikeli Alan">
-                <div className="flex flex-col md:flex-row justify-between items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg">
-                    <div>
-                        <h4 className="font-semibold text-red-800 dark:text-red-200">Demo Verilerini Sıfırla</h4>
-                        <p className="text-sm text-red-600 dark:text-red-300 mt-1">Bu işlem, tüm kullanıcıları, ödevleri ve mesajları orijinal demo durumuna geri yükler. Bu işlem geri alınamaz.</p>
-                    </div>
-                     <button 
-                        onClick={() => setIsConfirmModalOpen(true)}
-                        className="mt-4 md:mt-0 md:ml-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold flex-shrink-0"
-                    >
-                       Verileri Sıfırla
-                    </button>
-                </div>
-            </Card>
-            {isConfirmModalOpen && (
-                 <ConfirmationModal
-                    isOpen={isConfirmModalOpen}
-                    onClose={() => setIsConfirmModalOpen(false)}
-                    onConfirm={handleResetData}
-                    title="Verileri Sıfırla"
-                    message="Tüm demo verilerini sıfırlamak istediğinizden emin misiniz? Bu işlem, yapılan tüm değişiklikleri geri alacaktır."
-                    confirmText="Evet, Sıfırla"
-                />
-            )}
         </div>
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Settings() {
     const { currentUser } = useDataContext();
     if (!currentUser) return null;
@@ -317,4 +279,4 @@ export default function Settings() {
             </div>
         </div>
     );
-};
+}

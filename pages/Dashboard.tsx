@@ -1,22 +1,47 @@
 
-
-
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon, XIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentFocusSuggestion, generatePersonalCoachSummary } from '../services/geminiService';
 import AnnouncementModal from '../components/AnnouncementModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 
+const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void }) => {
+    let title = `Hoş geldin, ${user.name}!`;
+    let message = "Platformumuza hoş geldin! Başarıya giden yolda sana destek olmak için buradayız. Ödevlerini takip edebilir, koçunla mesajlaşabilir ve ilerlemeni görebilirsin.";
+
+    if (user.role === UserRole.Coach) {
+        title = `Hoş geldin Koç, ${user.name}!`;
+        message = "Öğrencilerinizi başarıya ulaştırmaya hazır mısınız? Ödevler oluşturun, ilerlemelerini takip edin ve onlarla iletişimde kalın.";
+    } else if (user.role === UserRole.SuperAdmin) {
+        title = `Hoş geldin Admin, ${user.name}!`;
+        message = "Platform yönetimine hoş geldiniz. Kullanıcıları yönetebilir ve sistemin genel durumunu izleyebilirsiniz.";
+    }
+
+    return (
+        <Card className="bg-gradient-to-r from-primary-600 to-blue-500 text-white mb-6 relative animate-fade-in shadow-lg">
+            <button onClick={onDismiss} className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                <XIcon className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-4">
+                 <img src={user.profilePicture} alt={user.name} className="w-16 h-16 rounded-full border-4 border-white/50" />
+                <div>
+                    <h2 className="text-2xl font-bold">{title}</h2>
+                    <p className="mt-1 text-white/90 max-w-2xl">{message}</p>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+
 const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) => {
-    const { messages, coach } = useDataContext();
+    const { messages, users } = useDataContext();
     const { setActivePage } = useUI();
     const announcements = useMemo(() => messages
         .filter(m => m.type === 'announcement')
@@ -30,19 +55,28 @@ const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) =>
     return (
         <Card title="Son Duyurular" className={`h-full ${className}`}>
              <ul className="space-y-3">
-                {announcements.map(msg => (
-                     <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-start space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'conv-announcements'})}>
-                        <div className="flex-shrink-0 pt-1">
-                            <MegaphoneIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{msg.text}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                                {coach?.name} - {new Date(msg.timestamp).toLocaleString('tr-TR')}
-                            </p>
-                        </div>
-                    </li>
-                ))}
+                {announcements.map(msg => {
+                    const sender = users.find(u => u.id === msg.senderId);
+                     return (
+                         <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'conv-announcements'})}>
+                            <div className="flex-shrink-0">
+                                {sender && sender.profilePicture ? (
+                                    <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                        <StudentsIcon className="w-4 h-4 text-gray-500" />
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-700 dark:text-gray-300">{msg.text}</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {sender?.name} - {new Date(msg.timestamp).toLocaleString('tr-TR')}
+                                </p>
+                            </div>
+                        </li>
+                    )
+                })}
             </ul>
         </Card>
     );
@@ -348,9 +382,25 @@ const CoachDashboard = () => {
 };
 
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Dashboard() {
     const { currentUser, isLoading } = useDataContext();
+    const [showWelcome, setShowWelcome] = useState(false);
+
+    useEffect(() => {
+        if (currentUser) {
+            const welcomeSeen = localStorage.getItem(`welcome_seen_${currentUser.id}`);
+            if (!welcomeSeen) {
+                setShowWelcome(true);
+            }
+        }
+    }, [currentUser]);
+
+    const handleDismissWelcome = () => {
+        if (currentUser) {
+            localStorage.setItem(`welcome_seen_${currentUser.id}`, 'true');
+            setShowWelcome(false);
+        }
+    };
     
     if (isLoading) {
         return <DashboardSkeleton />;
@@ -360,13 +410,22 @@ export default function Dashboard() {
         return null;
     }
 
-    switch (currentUser.role) {
-        case UserRole.Student:
-            return <StudentDashboard />;
-        case UserRole.Coach:
-        case UserRole.SuperAdmin:
-            return <CoachDashboard />;
-        default:
-            return <div>Bilinmeyen kullanıcı rolü.</div>;
-    }
-};
+    const renderDashboardContent = () => {
+        switch (currentUser.role) {
+            case UserRole.Student:
+                return <StudentDashboard />;
+            case UserRole.Coach:
+            case UserRole.SuperAdmin:
+                return <CoachDashboard />;
+            default:
+                return <div>Bilinmeyen kullanıcı rolü.</div>;
+        }
+    };
+    
+    return (
+        <>
+            {showWelcome && <WelcomeCard user={currentUser} onDismiss={handleDismissWelcome} />}
+            {renderDashboardContent()}
+        </>
+    );
+}

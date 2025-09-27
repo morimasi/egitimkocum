@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 
@@ -19,34 +18,17 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
         setIsLoading(true);
 
         try {
-            const user = await login(email, password);
-            if (!user) {
-                setError('Kullanıcı bulunamadı veya e-posta/şifre hatalı.');
+            await login(email, password);
+            // On successful login, AppContent will automatically switch views via onAuthStateChanged
+        } catch (err: any) {
+             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                 setError('E-posta veya şifre hatalı.');
+            } else {
+                 setError('Giriş sırasında bir hata oluştu.');
             }
-            // On successful login, AppContent will automatically switch views
-        } catch (err) {
-            setError('Giriş sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
-        } finally {
-            setIsLoading(false);
+             setIsLoading(false);
         }
     };
-
-    const handleDemoLogin = async (demoEmail: string) => {
-        setEmail(demoEmail);
-        setPassword('password123'); // Demo password
-        setError('');
-        setIsLoading(true);
-        try {
-            const user = await login(demoEmail, 'password123');
-            if (!user) {
-                setError('Demo kullanıcısı bulunamadı.');
-            }
-        } catch (err) {
-            setError('Giriş sırasında bir hata oluştu.');
-        } finally {
-            setIsLoading(false);
-        }
-    }
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -105,14 +87,6 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
                             Kayıt Olun
                         </button>
                     </p>
-                </div>
-                <div className="border-t dark:border-gray-600 pt-4 mt-4 text-center">
-                    <p className="text-sm text-gray-500 mb-2">Veya demo kullanıcılarıyla giriş yapın:</p>
-                    <div className="flex justify-center gap-2 flex-wrap">
-                        <button onClick={() => handleDemoLogin('ayse.yilmaz@koc.com')} className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200">Koç</button>
-                        <button onClick={() => handleDemoLogin('ali.veli@ogrenci.com')} className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200">Öğrenci</button>
-                        <button onClick={() => handleDemoLogin('veli.hanim@aile.com')} className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200">Veli</button>
-                    </div>
                 </div>
             </div>
         </div>
