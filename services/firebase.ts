@@ -1,8 +1,9 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-// FIX: Changed to namespace import for firebase/auth to avoid potential issues with named exports in some environments.
-import * as fbAuth from "firebase/auth";
+// FIX: The named imports below were causing errors. Switched to a namespace import to resolve the issue.
+import * as firebaseAuth from "firebase/auth";
+
 import { 
-    getFirestore, 
+    initializeFirestore,
     collection, 
     doc, 
     addDoc, 
@@ -53,26 +54,22 @@ export const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Servisleri dışa aktar
-export const auth = fbAuth.getAuth(app);
-export const db = getFirestore(app);
+export const auth = firebaseAuth.getAuth(app);
+// Firestore bağlantı hatalarını (code=unavailable) önlemek için long-polling'i zorla.
+// Bu, kısıtlayıcı ağ ortamlarında (firewall, proxy vb.) bağlantı sorunlarını çözebilir.
+export const db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+    useFetchStreams: false,
+});
 export const storage = getStorage(app);
 
-// FIX: Destructure auth functions from namespace import to make them available for re-export.
-const { 
-    onAuthStateChanged, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    updateProfile 
-} = fbAuth;
-
 // Auth ve Firestore fonksiyonlarını da buradan dışa aktararak kullanımı kolaylaştıralım
+export const onAuthStateChanged = firebaseAuth.onAuthStateChanged;
+export const createUserWithEmailAndPassword = firebaseAuth.createUserWithEmailAndPassword;
+export const signInWithEmailAndPassword = firebaseAuth.signInWithEmailAndPassword;
+export const signOut = firebaseAuth.signOut;
+export const updateProfile = firebaseAuth.updateProfile;
 export {
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    updateProfile,
     collection,
     doc,
     addDoc,
