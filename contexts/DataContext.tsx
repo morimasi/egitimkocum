@@ -187,21 +187,39 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = doc(db, 'users', firebaseUser.uid);
-                const unsubUser = onSnapshot(userDocRef, (doc) => {
-                    if (doc.exists()) {
-                        const appUser = { id: doc.id, ...doc.data() } as User;
-                        dispatch({ type: 'SET_CURRENT_USER', payload: appUser });
+                
+                const unsubUser = onSnapshot(userDocRef, 
+                    // Success callback
+                    (docSnapshot) => {
+                        if (docSnapshot.exists()) {
+                            const appUser = { id: docSnapshot.id, ...docSnapshot.data() } as User;
+                            dispatch({ type: 'SET_CURRENT_USER', payload: appUser });
+                            dispatch({ type: 'SET_LOADING', payload: false });
+                        } else {
+                            // Auth user exists but no Firestore record. This is an inconsistent state.
+                            console.error(`Authenticated user with UID ${firebaseUser.uid} has no document in Firestore.`);
+                            addToast("Kullanıcı veritabanında bulunamadı. Lütfen yöneticiyle iletişime geçin.", "error");
+                            signOut(auth); // Sign out to prevent getting stuck. The 'else' block below will handle the state reset.
+                        }
+                    }, 
+                    // Error callback
+                    (error) => {
+                        console.error("Firestore error listening to user document:", error);
+                        addToast("Veritabanına bağlanılamadı. İnternet bağlantınızı veya Firebase yapılandırmanızı kontrol edin.", "error");
+                        signOut(auth); // Sign out if we can't connect to the DB.
+                        dispatch({ type: 'SET_LOADING', payload: false });
+                        dispatch({ type: 'SET_CURRENT_USER', payload: null });
                     }
-                    dispatch({ type: 'SET_LOADING', payload: false });
-                });
+                );
                 return () => unsubUser();
             } else {
+                // User is signed out or became signed out due to an error above.
                 dispatch({ type: 'RESET_STATE' });
                 dispatch({ type: 'SET_LOADING', payload: false });
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [addToast]);
 
      useEffect(() => {
         if (!state.currentUser) return;

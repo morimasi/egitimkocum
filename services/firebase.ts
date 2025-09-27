@@ -1,92 +1,96 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-// FIX: The named imports below were causing errors. Switched to a namespace import to resolve the issue.
-import * as firebaseAuth from "firebase/auth";
+import { initializeApp } from 'firebase/app';
+// FIX: The v9 modular auth imports are failing, likely due to a version mismatch.
+// Replaced with the v8 compatibility layer and created v9-style wrapper functions below.
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import {
+  getFirestore,
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  writeBatch,
+  getDocs,
+  getDoc,
+  arrayUnion,
+  arrayRemove,
+} from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 
-import { 
-    initializeFirestore,
-    collection, 
-    doc, 
-    addDoc, 
-    setDoc, 
-    updateDoc, 
-    deleteDoc, 
-    onSnapshot, 
-    query, 
-    where, 
-    orderBy, 
-    writeBatch, 
-    getDocs, 
-    getDoc, 
-    arrayUnion, 
-    arrayRemove 
-} from "firebase/firestore";
-import { 
-    getStorage, 
-    ref, 
-    uploadBytes, 
-    getDownloadURL, 
-    deleteObject 
-} from "firebase/storage";
-
-
-// --- ÖNEMLİ KURULUM ADIMI ---
-// Bu bölümü kendi Firebase projenizin bilgileriyle DOLDURMANIZ GEREKMEKTEDİR.
-//
-// Bu bilgileri almak için:
-// 1. Firebase Konsolu'na gidin: https://console.firebase.google.com/
-// 2. Projenizi seçin.
-// 3. Sol üstteki dişli çark simgesine (⚙️) tıklayıp "Proje ayarları"nı seçin.
-// 4. "Genel" sekmesinde, sayfanın altına "Uygulamalarınız" bölümüne kaydırın.
-// 5. "SDK kurulumu ve yapılandırması" başlığı altından "Yapılandırma"yı seçin.
-// 6. `firebaseConfig` nesnesini kopyalayıp aşağıdaki nesnenin yerine yapıştırın.
-//
-// UYARI: Eğer bu bilgileri doldurmazsanız, uygulama "Kurulum Sihirbazı" ekranında kalacaktır.
+// UYARI: BU BİLGİLERİ KENDİ FIREBASE PROJE BİLGİLERİNİZLE DEĞİŞTİRİN!
+// Bu bilgileri Firebase Console -> Proje Ayarları -> Genel sekmesinde bulabilirsiniz.
 export const firebaseConfig = {
-  apiKey: "AIzaSyBbUBvBSS4zrCbYt5CwCx7uUPRhLL2DQCk",
-  authDomain: "egitimkocuplatformu-f5330.firebaseapp.com",
-  projectId: "egitimkocuplatformu-f5330",
-  storageBucket: "egitimkocuplatformu-f5330.firebasestorage.app",
-  messagingSenderId: "794855483517",
-  appId: "1:794855483517:web:f40e35f487dedb18192914"
+  apiKey: "AIzaSyBFj6qiPWkkdIfgJ6ddZRwZAKilH_yXlTw",
+  authDomain: "kocumbenim-ed862.firebaseapp.com",
+  projectId: "kocumbenim-ed862",
+  storageBucket: "kocumbenim-ed862.appspot.com",
+  messagingSenderId: "225009318677",
+  appId: "1:225009318677:web:c028c6459272c34ef0c71c"
 };
 
 // Firebase'i başlat
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Initialize V9 app for non-auth services
+const app = initializeApp(firebaseConfig);
+// Initialize V8 compat app for auth service.
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
-// Servisleri dışa aktar
-export const auth = firebaseAuth.getAuth(app);
-// Firestore bağlantı hatalarını (code=unavailable) önlemek için long-polling'i zorla.
-// Bu, kısıtlayıcı ağ ortamlarında (firewall, proxy vb.) bağlantı sorunlarını çözebilir.
-export const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-    useFetchStreams: false,
-});
-export const storage = getStorage(app);
 
-// Auth ve Firestore fonksiyonlarını da buradan dışa aktararak kullanımı kolaylaştıralım
-export const onAuthStateChanged = firebaseAuth.onAuthStateChanged;
-export const createUserWithEmailAndPassword = firebaseAuth.createUserWithEmailAndPassword;
-export const signInWithEmailAndPassword = firebaseAuth.signInWithEmailAndPassword;
-export const signOut = firebaseAuth.signOut;
-export const updateProfile = firebaseAuth.updateProfile;
+// Servisleri başlat ve dışa aktar
+const db = getFirestore(app);
+// Use the v8-compat auth object.
+const auth = firebase.auth();
+const storage = getStorage(app);
+
+// FIX: Create v9-style wrapper functions for auth to be used by other parts of the app.
+const onAuthStateChanged = (authInstance, callback) => authInstance.onAuthStateChanged(callback);
+const createUserWithEmailAndPassword = (authInstance, email, password) => authInstance.createUserWithEmailAndPassword(email, password);
+const signInWithEmailAndPassword = (authInstance, email, password) => authInstance.signInWithEmailAndPassword(email, password);
+const signOut = (authInstance) => authInstance.signOut();
+const updateProfile = (user, profileData) => user.updateProfile(profileData);
+
+
+// Firestore ve Auth fonksiyonlarını DataContext'te kullanmak için dışa aktar
 export {
-    collection,
-    doc,
-    addDoc,
-    setDoc,
-    updateDoc,
-    deleteDoc,
-    onSnapshot,
-    query,
-    where,
-    orderBy,
-    writeBatch,
-    getDocs,
-    getDoc,
-    arrayUnion,
-    arrayRemove,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    deleteObject
+  app,
+  db,
+  auth,
+  storage,
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  writeBatch,
+  getDocs,
+  getDoc,
+  arrayUnion,
+  arrayRemove,
+  // Auth functions are now the direct modular functions (our wrappers)
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  // Storage functions
+  ref,
+  uploadBytes,
+  getDownloadURL,
 };
