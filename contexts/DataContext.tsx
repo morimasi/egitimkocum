@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, CalendarEvent } from '../types';
 import { getMockData } from '../hooks/useMockData';
+import { useUI } from './UIContext';
 
 export const getInitialDataForSeeding = () => {
     const { users } = getMockData();
@@ -303,6 +303,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [state, dispatch] = useReducer(dataReducer, getInitialState());
+    const { addToast } = useUI();
     const isInitialized = useRef(false);
     
     useEffect(() => {
@@ -437,6 +438,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             readBy: [messageData.senderId],
         };
         dispatch({ type: 'ADD_MESSAGE', payload: newMessage });
+        addToast("Mesaj başarıyla gönderildi.", "success");
 
         // Notify recipients
         const conversation = state.conversations.find(c => c.id === messageData.conversationId);
@@ -452,7 +454,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             }));
             dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
         }
-    }, [state.currentUser, state.conversations]);
+    }, [state.currentUser, state.conversations, addToast]);
 
     const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
         const newAssignments: Assignment[] = studentIds.map(studentId => ({
@@ -492,6 +494,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (oldAssignment.status === AssignmentStatus.Pending && updatedAssignment.status === AssignmentStatus.Submitted) {
             const student = state.users.find(u => u.id === updatedAssignment.studentId);
             if (student) {
+                addToast("Ödev başarıyla teslim edildi.", "success");
                 notificationsToAdd.push({
                     id: `notif-${Date.now()}-${updatedAssignment.coachId}`,
                     userId: updatedAssignment.coachId,
@@ -505,6 +508,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         
         // Coach grades an assignment -> Notify student
         if (oldAssignment.status === AssignmentStatus.Submitted && updatedAssignment.status === AssignmentStatus.Graded) {
+            addToast("Ödev notlandırıldı.", "success");
             notificationsToAdd.push({
                 id: `notif-${Date.now()}-${updatedAssignment.studentId}`,
                 userId: updatedAssignment.studentId,
@@ -518,7 +522,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (notificationsToAdd.length > 0) {
             dispatch({ type: 'ADD_NOTIFICATIONS', payload: notificationsToAdd });
         }
-    }, [state.assignments, state.currentUser, state.users]);
+    }, [state.assignments, state.currentUser, state.users, addToast]);
 
     const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
         dispatch({ type: 'DELETE_ASSIGNMENTS', payload: assignmentIds });
