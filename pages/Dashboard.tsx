@@ -296,6 +296,51 @@ const CoachStatCard = ({ title, value, icon, color, onClick }: { title: string, 
     </Card>
 );
 
+const StudentsAtRiskCard = () => {
+    const { students, assignments } = useDataContext();
+    const { setActivePage } = useUI();
+
+    const studentsAtRisk = useMemo(() => {
+        return students.map(student => {
+            const studentAssignments = assignments.filter(a => a.studentId === student.id);
+            const overdueCount = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+            const graded = studentAssignments.filter(a => a.grade !== null);
+            const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : null;
+            
+            const riskFactors = [];
+            if (overdueCount > 1) riskFactors.push(`${overdueCount} gecikmiş ödev`);
+            if (avgGrade !== null && avgGrade < 70) riskFactors.push(`not ort: ${avgGrade}`);
+            
+            return { ...student, overdueCount, avgGrade, riskFactors };
+        }).filter(s => s.riskFactors.length > 0)
+          .sort((a, b) => b.riskFactors.length - a.riskFactors.length)
+          .slice(0, 5); // Show top 5
+    }, [students, assignments]);
+
+    if (studentsAtRisk.length === 0) {
+        return null;
+    }
+
+    return (
+        <Card title="İlgi Gerektiren Öğrenciler">
+            <ul className="space-y-3">
+                {studentsAtRisk.map(student => (
+                    <li key={student.id} onClick={() => setActivePage('students', {studentId: student.id})} className="p-3 bg-red-50 dark:bg-red-900/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900">
+                        <div className="flex items-center gap-3">
+                             <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full object-cover" />
+                            <div>
+                                <p className="font-semibold">{student.name}</p>
+                                <p className="text-xs text-red-700 dark:text-red-300">{student.riskFactors.join(', ')}</p>
+                            </div>
+                        </div>
+                         <button className="text-xs font-semibold text-red-600 dark:text-red-200 hover:underline">Detay</button>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+}
+
 const QuickActions = () => {
     const { setActivePage } = useUI();
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
@@ -356,6 +401,8 @@ const CoachDashboard = () => {
             </div>
 
             <QuickActions />
+
+            <StudentsAtRiskCard />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                  <Card title="Öğrenci Performans Sıralaması" className="lg:col-span-2 h-full">

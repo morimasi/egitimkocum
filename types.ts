@@ -135,7 +135,7 @@ export interface Message {
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi';
 
 export type ToastType = 'success' | 'error' | 'info' | 'xp';
 

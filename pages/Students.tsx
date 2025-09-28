@@ -6,13 +6,13 @@ import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
-import AddStudentForm from '../components/AddStudentForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverviewTab from '../components/studentDetail/OverviewTab';
 import AssignmentsTab from '../components/studentDetail/AssignmentsTab';
 import MotivationTab from '../components/studentDetail/MotivationTab';
 import NotesTab from '../components/studentDetail/NotesTab';
 import { suggestStudentGoal } from '../services/geminiService';
+import InviteStudentModal from '../components/InviteStudentModal';
 
 // Helper function to get display name for academic track
 const getAcademicTrackLabel = (track: AcademicTrack): string => {
@@ -204,7 +204,7 @@ export default function Students() {
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
     const [filterCoach, setFilterCoach] = useState('all');
-    const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
     const { initialFilters, setInitialFilters, addToast } = useUI();
     const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
@@ -312,11 +312,11 @@ export default function Students() {
         }
     };
     
-    const handleToggleSelect = (studentId: string) => {
+    const handleToggleSelect = useCallback((studentId: string) => {
         setSelectedStudentIds(prev => 
             prev.includes(studentId) ? prev.filter(prevId => prevId !== studentId) : [...prev, studentId]
         );
-    };
+    }, []);
 
     const handleSelectAll = () => {
         if (selectedStudentIds.length === visibleStudents.length) {
@@ -400,10 +400,10 @@ export default function Students() {
                         {isGeneratingGoals ? 'Oluşturuluyor...' : 'Tümüne Hedef Ata'}
                     </button>
                     <button
-                        onClick={() => setIsAddStudentModalOpen(true)}
+                        onClick={() => setIsInviteModalOpen(true)}
                         className="w-full sm:w-auto px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 font-semibold flex-shrink-0"
                     >
-                        + Yeni Öğrenci Ekle
+                        + Öğrenci Davet Et
                     </button>
                 </div>
             </div>
@@ -467,11 +467,7 @@ export default function Students() {
         )}
         
         {selectedStudent && <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />}
-        {isAddStudentModalOpen && (
-            <Modal isOpen={isAddStudentModalOpen} onClose={() => setIsAddStudentModalOpen(false)} title="Yeni Öğrenci Ekle">
-                <AddStudentForm onClose={() => setIsAddStudentModalOpen(false)} />
-            </Modal>
-        )}
+        {isInviteModalOpen && <InviteStudentModal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} />}
         {isConfirmGoalModalOpen && (
             <ConfirmationModal
                 isOpen={isConfirmGoalModalOpen}

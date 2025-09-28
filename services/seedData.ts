@@ -1,4 +1,3 @@
-
 import { UserRole, AssignmentStatus, BadgeID, AcademicTrack } from '../types';
 
 export const seedData = {
@@ -187,6 +186,60 @@ export const seedData = {
         { text: "Boş bırakılan soruların nedenleri analiz edildi." },
         { text: "Yanlış ve boşların konu dağılımı çıkarıldı." },
         { text: "Eksik konular için haftalık bir tekrar programı hazırlandı." }
+      ]
+    },
+    {
+      title: "Fizik: Basit Sarkaç Deneyi Raporu",
+      description: "Evde bulabileceğin basit malzemelerle bir sarkaç düzeneği kur. Sarkacın periyodunu etkileyen faktörleri (ip uzunluğu, kütle, salınım açısı) gözlemle. Deney adımlarını, gözlemlerini ve sonuçlarını içeren bir rapor hazırla.",
+      checklist: [
+        { text: "Deney düzeneği kuruldu ve fotoğrafı çekildi." },
+        { text: "İp uzunluğu değiştirilerek periyot ölçümleri yapıldı ve tabloya kaydedildi." },
+        { text: "Kütle değiştirilerek periyot ölçümleri yapıldı ve tabloya kaydedildi." },
+        { text: "Gözlemler ve sonuçlar yorumlandı." },
+        { text: "Deney raporu tamamlandı ve yüklendi." }
+      ]
+    },
+    {
+      title: "Edebiyat: Deneme Türü İncelemesi",
+      description: "Belirtilen deneme metnini oku. Yazarın üslubunu, ana fikrini, kullandığı dil ve anlatım özelliklerini analiz eden bir inceleme yazısı yaz.",
+      checklist: [
+        { text: "Deneme metni dikkatlice okundu." },
+        { text: "Metnin ana fikri ve yardımcı fikirleri belirlendi." },
+        { text: "Yazarın kullandığı söz sanatları ve dil özellikleri tespit edildi." },
+        { text: "İnceleme yazısı taslağı oluşturuldu." },
+        { text: "Yazım ve noktalama kurallarına dikkat edilerek inceleme yazısı tamamlandı." }
+      ]
+    },
+    {
+      title: "Tarih: İstanbul'un Fethi Araştırma Ödevi",
+      description: "İstanbul'un Fethi'nin nedenlerini, önemli olaylarını ve dünya tarihi açısından sonuçlarını araştırarak kapsamlı bir araştırma yazısı hazırlayın. En az üç farklı kaynak kullanın.",
+      checklist: [
+        { text: "Araştırma konusuyla ilgili en az üç güvenilir kaynak (kitap, makale, belgesel) bulundu." },
+        { text: "Fethin nedenleri ve sonuçları hakkında notlar alındı." },
+        { text: "Fatih Sultan Mehmet'in rolü ve kullandığı teknolojiler araştırıldı." },
+        { text: "Araştırma yazısı planı oluşturuldu." },
+        { text: "Kaynaklar belirtilerek araştırma yazısı tamamlandı." }
+      ]
+    },
+    {
+      title: "İngilizce: Kelime Çalışması ve Cümle Kurma",
+      description: "Verilen 20 İngilizce kelimenin anlamlarını öğrenin. Her kelimeyi içeren özgün birer cümle yazın.",
+      checklist: [
+        { text: "Kelimelerin Türkçe anlamları öğrenildi." },
+        { text: "Kelimelerin İngilizce telaffuzları çalışıldı." },
+        { text: "Her kelime için birer cümle yazıldı." },
+        { text: "Cümlelerin gramer doğruluğu kontrol edildi." }
+      ]
+    },
+    {
+      title: "Felsefe: Varlık Felsefesi Üzerine Kompozisyon",
+      description: "'Varlık nedir?' sorusuna Platon ve Aristoteles'in verdiği cevapları karşılaştırarak, kendi görüşlerinizi de içeren bir kompozisyon yazın.",
+      checklist: [
+        { text: "Platon'un 'İdealar Kuramı' araştırıldı." },
+        { text: "Aristoteles'in 'Madde-Form' öğretisi araştırıldı." },
+        { text: "İki filozofun varlık anlayışları arasındaki temel farklar belirlendi." },
+        { text: "Kompozisyon planı yapıldı." },
+        { text: "Kendi düşüncelerinizi de ekleyerek kompozisyon yazıldı." }
       ]
     }
   ],

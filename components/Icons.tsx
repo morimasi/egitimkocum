@@ -1,16 +1,17 @@
 
+
 import React from 'react';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
 export const DashboardIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" />
     </svg>
 );
 
 export const AssignmentsIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V21c0 .6.4 1 1 1h12c.6 0 1-.4 1-1V7.5L15.5 2z" /><polyline points="14 2 14 8 20 8" /><path d="M9 16h6" /><path d="M9 12h6" />
     </svg>
 );
@@ -22,7 +23,7 @@ export const StudentsIcon = (props: IconProps) => (
 );
 
 export const MessagesIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
 );
@@ -379,8 +380,34 @@ export const MinimizeIcon = (props: IconProps) => (
 );
 
 export const BotIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" />
         <path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" />
+    </svg>
+);
+
+export const ClipboardCheckIcon = (props: IconProps) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <path d="m9 14 2 2 4-4" />
+    </svg>
+);
+
+export const BrainCircuitIcon = (props: IconProps) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M12 2a2.5 2.5 0 0 1 3 2.5" /><path d="M12 2a2.5 2.5 0 0 0-3 2.5" />
+        <path d="M12 22a2.5 2.5 0 0 1-3-2.5" /><path d="M12 22a2.5 2.5 0 0 0 3-2.5" />
+        <path d="M15 4.5a2.5 2.5 0 0 1 2.5 2.5" /><path d="M15 4.5a2.5 2.5 0 0 0-2.5 2.5" />
+        <path d="M9 4.5a2.5 2.5 0 0 1 2.5 2.5" /><path d="M9 4.5a2.5 2.5 0 0 0-2.5 2.5" />
+        <path d="M17.5 7a2.5 2.5 0 0 1 2.5 2.5" /><path d="M17.5 7a2.5 2.5 0 0 0-2.5 2.5" />
+        <path d="M6.5 7a2.5 2.5 0 0 1 2.5 2.5" /><path d="M6.5 7a2.5 2.5 0 0 0-2.5 2.5" />
+        <path d="M20 9.5a2.5 2.5 0 0 1 0 5" /><path d="M4 9.5a2.5 2.5 0 0 0 0 5" />
+        <path d="M12 12a2.5 2.5 0 0 1 2.5-2.5" /><path d="M12 12a2.5 2.5 0 0 0-2.5-2.5" />
+        <path d="M12 12a2.5 2.5 0 0 1 2.5 2.5" /><path d="M12 12a2.5 2.5 0 0 0-2.5 2.5" />
+        <path d="M15 19.5a2.5 2.5 0 0 1-2.5-2.5" /><path d="M15 19.5a2.5 2.5 0 0 0 2.5-2.5" />
+        <path d="M9 19.5a2.5 2.5 0 0 1-2.5-2.5" /><path d="M9 19.5a2.5 2.5 0 0 0 2.5-2.5" />
+        <path d="M6.5 17a2.5 2.5 0 0 1-2.5-2.5" /><path d="M6.5 17a2.5 2.5 0 0 0 2.5-2.5" />
+        <path d="M17.5 17a2.5 2.5 0 0 1-2.5-2.5" /><path d="M17.5 17a2.5 2.5 0 0 0 2.5-2.5" />
     </svg>
 );

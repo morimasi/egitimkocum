@@ -453,3 +453,125 @@ export const generateAiTemplate = async (topic: string, level: string, duration:
         null
     );
 };
+
+export const generateExamPerformanceInsight = (
+    studentName: string, 
+    performanceData: { 
+        overallAvg: number | string; 
+        subjectAvgs: { subject: string; average: number }[] 
+    }
+): Promise<string> => {
+    const { overallAvg, subjectAvgs } = performanceData;
+    
+    const performanceSummary = subjectAvgs
+        .sort((a, b) => a.average - b.average) // Sort by lowest average first
+        .map(s => `${s.subject} (ortalama: ${s.average.toFixed(1)})`)
+        .join(', ');
+
+    const prompt = `Sen bir uzman YKS (TYT/AYT) eğitim koçusun. Öğrencinin adı ${studentName}. Aşağıdaki performans verilerini analiz et:
+    - Genel Not Ortalaması: ${overallAvg}/100
+    - Ders Bazında Performans: ${performanceSummary}
+
+    Bu verilere dayanarak, öğrenci için detaylı, yapıcı ve motive edici bir sınav performansı analizi hazırla. Analiz metnini Markdown formatında, başlıklar kullanarak ve her bölüme en az bir emoji ekleyerek oluştur. Analiz şu bölümleri içermeli:
+    
+    ### 📊 Genel Değerlendirme
+    Öğrencinin genel durumu hakkında kısa bir yorum yap.
+    
+    ### ✨ Güçlü Yönler
+    En başarılı olduğu 2-3 dersi ve nedenlerini vurgula.
+    
+    ### 🔬 Geliştirilmesi Gereken Alanlar
+    En düşük performans gösterdiği 2-3 dersi belirle. Bu derslerdeki olası eksik konuları tahmin et.
+    
+    ### 🚀 Kişiselleştirilmiş Eylem Planı
+    Geliştirilmesi gereken alanlara yönelik 3-4 maddelik somut, haftalık ve eyleme geçirilebilir tavsiyeler sun (Örn: - **Fizik:** Bu hafta 'Elektrik' konusunu tekrar et ve en az 50 soru çöz.).
+    
+    ### ⭐ Motivasyon Mesajı
+    Öğrenciyi teşvik eden pozitif bir kapanış cümlesi.
+
+    Tonun profesyonel, destekleyici ve yol gösterici olmalı. Sadece analiz metnini döndür.`;
+    
+    const cacheKey = `examInsight_${studentName}_${overallAvg}_${subjectAvgs.length}`;
+    
+    return cachedGeminiCall(
+        cacheKey,
+        FIFTEEN_MINUTES,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } }),
+        (response) => response.text,
+        "Performans analizi oluşturulurken bir hata oluştu. Lütfen derslerine odaklanmaya devam et, harika gidiyorsun!"
+    );
+};
+
+// FIX: Export 'generateStudyPlan' function to be used in AkilliPlanlayici page.
+type StudyPlanParams = {
+    targetExams: string[];
+    focusSubjects: string[];
+    weeklyAvailability: Record<string, boolean[]>;
+    sessionDuration: number;
+    breakDuration: number;
+};
+
+type StudyPlanEvent = {
+    title: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+};
+
+export const generateStudyPlan = async (params: StudyPlanParams): Promise<StudyPlanEvent[] | null> => {
+    const { targetExams, focusSubjects, weeklyAvailability, sessionDuration, breakDuration } = params;
+    
+    const availabilityString = Object.entries(weeklyAvailability)
+        .map(([day, slots]) => {
+            const availableSlots = slots.map((s, i) => s ? ['Sabah (08:00-12:00)', 'Öğlen (13:00-17:00)', 'Akşam (18:00-22:00)'][i] : null).filter(Boolean);
+            return availableSlots.length > 0 ? `${day}: ${availableSlots.join(', ')}` : null;
+        })
+        .filter(Boolean)
+        .join('\n');
+
+    const prompt = `Bir öğrenci için önümüzdeki 7 günü kapsayan kişiselleştirilmiş bir haftalık çalışma planı oluştur. Planı, verimli çalışma ve dinlenme sürelerini dengeleyecek şekilde Pomodoro tekniğine benzer bir yapıda hazırla.
+
+    Öğrenci Bilgileri:
+    - Hedef Sınavlar: ${targetExams.join(', ')}
+    - Odaklanılacak Dersler: ${focusSubjects.join(', ')}
+    - Bir Ders Seansı Süresi: ${sessionDuration} dakika
+    - Molalar: ${breakDuration} dakika
+    - Haftalık Müsait Zamanlar:
+    ${availabilityString}
+
+    Lütfen bu bilgilere dayanarak, müsaİt zaman dilimlerini kullanarak bir çalışma planı oluştur. Her çalışma bloğu için başlık, tarih (YYYY-MM-DD formatında, bugünden başlayarak), başlangıç saati (HH:mm), bitiş saati (HH:mm) ve kısa bir açıklama (ne çalışılacağı) içeren bir JSON dizisi döndür. Dersleri ve konuları odak derslere ve hedef sınavlara göre çeşitlendir. Sadece JSON dizisini döndür.`;
+
+    const schema = {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING },
+                date: { type: Type.STRING },
+                startTime: { type: Type.STRING },
+                endTime: { type: Type.STRING },
+                description: { type: Type.STRING },
+            },
+            required: ['title', 'date', 'startTime', 'endTime', 'description'],
+        },
+    };
+
+    const cacheKey = `studyPlan_${focusSubjects.join('_')}_${sessionDuration}`;
+    
+    return cachedGeminiCall(
+        cacheKey,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.7,
+            },
+        }),
+        (response) => JSON.parse(response.text.trim()),
+        null
+    );
+};

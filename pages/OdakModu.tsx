@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, Goal, AssignmentStatus } from '../types';

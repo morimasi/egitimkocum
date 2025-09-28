@@ -33,6 +33,8 @@ const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
 const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
 const Motivasyon = React.lazy(() => import('./pages/Motivasyon'));
 const OdakModu = React.lazy(() => import('./pages/OdakModu'));
+const AkilliPlanlayici = React.lazy(() => import('./pages/AkilliPlanlayici'));
+const SinavPerformansi = React.lazy(() => import('./pages/SinavPerformansi'));
 
 
 const AppSkeleton = () => (
@@ -113,6 +115,8 @@ const AppContent = () => {
                 case 'superadmin': return 'Süper Admin';
                 case 'motivation': return 'Motivasyon';
                 case 'odak': return 'Odak Modu';
+                case 'akilli-planlayici': return 'Akıllı Planlayıcı';
+                case 'sinav-performansi': return 'Sınav Performansı';
                 default: return 'Anasayfa';
             }
         };
@@ -134,6 +138,8 @@ const AppContent = () => {
             case 'superadmin': return <SuperAdminDashboard />;
             case 'motivation': return <Motivasyon />;
             case 'odak': return <OdakModu />;
+            case 'akilli-planlayici': return <AkilliPlanlayici />;
+            case 'sinav-performansi': return <SinavPerformansi />;
             default: return <Dashboard />;
         }
     };

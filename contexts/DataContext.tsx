@@ -11,43 +11,48 @@ const getInitialState = (): AppState => {
     // Deep copy to prevent mutation of the original seed data
     const seedData = JSON.parse(JSON.stringify(initialSeedData));
     
-    const adminId = uuid();
-    const coachId = uuid();
-    const student1Id = uuid();
-    const student2Id = uuid();
-
+    // Create static IDs for reproducible demo data
+    const userIDs = {
+        'SUPER_ADMIN_ID': uuid(),
+        'COACH_ID': uuid(),
+        'STUDENT_1_ID': uuid(),
+        'STUDENT_2_ID': uuid(),
+    };
+    
     const users: User[] = [
-        { id: adminId, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com` },
-        { id: coachId, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
-        { id: student1Id, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: coachId, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
-        { id: student2Id, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: coachId, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] }
+        { id: userIDs.SUPER_ADMIN_ID, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com` },
+        { id: userIDs.COACH_ID, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
+        { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
+        { id: userIDs.STUDENT_2_ID, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] }
     ];
 
-    const assignments: Assignment[] = seedData.assignments.map((a: any) => ({
-        ...a,
-        id: uuid(),
-        studentId: a.studentId === "STUDENT_1_ID" ? student1Id : student2Id,
-        coachId: coachId,
-        checklist: a.checklist?.map((c: any) => ({ ...c, id: uuid(), isCompleted: false })) || [],
-    }));
+    const replacePlaceholders = (data: any, key: string) => {
+        if (typeof data === 'string' && userIDs[data as keyof typeof userIDs]) {
+            return userIDs[data as keyof typeof userIDs];
+        }
+        if (Array.isArray(data)) {
+            return data.map(item => replacePlaceholders(item, key));
+        }
+        if (typeof data === 'object' && data !== null) {
+            Object.keys(data).forEach(k => {
+                data[k] = replacePlaceholders(data[k], k);
+            });
+        }
+        return data;
+    }
 
-    const conversations: Conversation[] = seedData.conversations.map((c: any) => ({
-        ...c,
-        participantIds: c.participantIds.map((p: string) => 
-            p === "COACH_ID" ? coachId : p === "STUDENT_1_ID" ? student1Id : student2Id
-        ),
-        adminId: c.adminId === "COACH_ID" ? coachId : c.adminId,
+    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
+    const assignments: Assignment[] = replacePlaceholders(seedData.assignments, 'assignments').map((a: any) => ({
+        ...a, id: uuid(), checklist: a.checklist?.map((c: any) => ({ ...c, id: uuid() })) || [],
     }));
-    
-    const messages: Message[] = seedData.messages.map((m: any) => ({
-        ...m,
-        id: uuid(),
-        senderId: m.senderId === "COACH_ID" ? coachId : student1Id,
-        readBy: [m.senderId === "COACH_ID" ? coachId : student1Id]
-    }));
-    
-    const goals: Goal[] = seedData.goals.map((g: any) => ({ ...g, id: uuid(), studentId: g.studentId === "STUDENT_1_ID" ? student1Id : student2Id }));
-    const resources: Resource[] = seedData.resources.map((r: any) => ({ ...r, id: uuid(), uploaderId: coachId, assignedTo: (r.assignedTo || []).map((id:string) => id === "STUDENT_2_ID" ? student2Id : id)}));
+    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
+    const conversations: Conversation[] = replacePlaceholders(seedData.conversations, 'conversations');
+    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
+    const messages: Message[] = replacePlaceholders(seedData.messages, 'messages').map((m: any) => ({ ...m, id: uuid(), readBy: [m.senderId] }));
+    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
+    const goals: Goal[] = replacePlaceholders(seedData.goals, 'goals').map((g: any) => ({ ...g, id: uuid() }));
+    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
+    const resources: Resource[] = replacePlaceholders(seedData.resources, 'resources').map((r: any) => ({ ...r, id: uuid() }));
     const templates: AssignmentTemplate[] = seedData.templates.map((t: any) => ({...t, id: uuid()}));
     
     return {
@@ -163,6 +168,7 @@ interface DataContextType {
     login: (email: string) => Promise<User | null>;
     logout: () => Promise<void>;
     register: (name: string, email: string, profilePictureFile: File | null) => Promise<void>;
+    inviteStudent: (name: string, email: string) => Promise<void>;
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesForConversation: (conversationId: string) => Message[];
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => Promise<void>;
@@ -200,6 +206,8 @@ interface DataContextType {
     endConversation: (conversationId: string) => Promise<void>;
     updateBadge: (updatedBadge: Badge) => Promise<void>;
     addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'userId'>) => Promise<void>;
+    // FIX: Add addMultipleCalendarEvents to the context type
+    addMultipleCalendarEvents: (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => Promise<void>;
     deleteCalendarEvent: (eventId: string) => Promise<void>;
     toggleTemplateFavorite: (templateId: string) => Promise<void>;
     seedDatabase: () => Promise<void>;
@@ -303,6 +311,66 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: newMessage } });
     }, [state.currentUser]);
+    
+    const findOrCreateConversation = useCallback(async (otherParticipantId: string) => {
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+
+        const existing = state.conversations.find(c => 
+            !c.isGroup &&
+            c.participantIds.length === 2 &&
+            c.participantIds.includes(currentUserId) &&
+            c.participantIds.includes(otherParticipantId)
+        );
+            
+        if (existing) return existing.id;
+        
+        const newConversation: Conversation = {
+            id: uuid(),
+            participantIds: [currentUserId, otherParticipantId],
+            isGroup: false,
+        };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
+        return newConversation.id;
+    }, [state.currentUser, state.conversations]);
+
+    const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
+        const userWithId = { ...newUser, id: uuid() };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: userWithId }});
+        return userWithId;
+    }, []);
+
+    const inviteStudent = useCallback(async (name: string, email: string) => {
+        if (!state.currentUser || state.currentUser.role !== UserRole.Coach) {
+            throw new Error("Only coaches can invite students.");
+        }
+        if (state.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+            throw new Error("This email address is already in use.");
+        }
+        
+        const newUser = await addUser({
+            name,
+            email,
+            role: UserRole.Student,
+            profilePicture: `https://i.pravatar.cc/150?u=${email}`,
+            assignedCoachId: state.currentUser.id,
+            gradeLevel: '12', // Default value, can be edited later
+            academicTrack: AcademicTrack.Sayisal, // Default value
+        });
+
+        if (newUser) {
+            const conversationId = await findOrCreateConversation(newUser.id);
+            if(conversationId) {
+                await sendMessage({
+                    senderId: state.currentUser.id,
+                    conversationId,
+                    text: `${state.currentUser.name}, sizi Eğitim Koçu platformuna davet etti. Başarıya giden bu yolda size destek olmaktan mutluluk duyacağım!`,
+                    type: 'system',
+                });
+            }
+        }
+
+    }, [state.currentUser, state.users, addUser, findOrCreateConversation, sendMessage]);
 
     const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
         studentIds.forEach(studentId => {
@@ -336,12 +404,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'users', id: userId } });
     }, []);
 
-    const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-        const userWithId = { ...newUser, id: uuid() };
-        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: userWithId }});
-        return userWithId;
-    }, []);
-    
     const markMessagesAsRead = useCallback(async (conversationId: string) => {
         if (!state.currentUser) return;
         const currentUserId = state.currentUser.id;
@@ -528,26 +590,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return newConversation.id;
     }, [state.currentUser, sendMessage]);
 
-    const findOrCreateConversation = useCallback(async (otherParticipantId: string) => {
-        if (!state.currentUser) return;
-        const currentUserId = state.currentUser.id;
-
-        const existing = state.conversations.find(c => 
-            !c.isGroup &&
-            c.participantIds.includes(currentUserId) &&
-            c.participantIds.includes(otherParticipantId)
-        );
-            
-        if (existing) return existing.id;
-        
-        const newConversation: Conversation = {
-            id: uuid(),
-            participantIds: [currentUserId, otherParticipantId],
-            isGroup: false,
-        };
-        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
-        return newConversation.id;
-    }, [state.currentUser, state.conversations]);
     const addUserToConversation = useCallback(async (conversationId: string, userId: string) => {
         const conv = state.conversations.find(c => c.id === conversationId);
         if(!conv) return;
@@ -574,6 +616,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const newEvent = { ...event, id: uuid(), userId: state.currentUser.id };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: newEvent }});
     }, [state.currentUser]);
+    // FIX: Implement addMultipleCalendarEvents to add an array of events to the state.
+    const addMultipleCalendarEvents = useCallback(async (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => {
+        if (!state.currentUser) return;
+        const newEvents = events.map(event => ({
+            ...event,
+            id: uuid(),
+            userId: state.currentUser!.id,
+        }));
+        dispatch({ type: 'SET_DATA', payload: { collection: 'calendarEvents', data: [...state.calendarEvents, ...newEvents] } });
+    }, [state.currentUser, state.calendarEvents]);
     const deleteCalendarEvent = useCallback(async (eventId: string) => {
         dispatch({ type: 'REMOVE_DOC', payload: { collection: 'calendarEvents', id: eventId }});
     }, []);
@@ -595,6 +647,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         login,
         logout,
         register,
+        inviteStudent,
         sendMessage,
         addAssignment,
         updateAssignment,
@@ -627,18 +680,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         endConversation,
         updateBadge,
         addCalendarEvent,
+        // FIX: Export addMultipleCalendarEvents from the context provider.
+        addMultipleCalendarEvents,
         deleteCalendarEvent,
         toggleTemplateFavorite,
         seedDatabase,
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         getAssignmentsForStudent, getMessagesForConversation, findMessageById,
-        login, logout, register, sendMessage, addAssignment, updateAssignment, deleteAssignments,
+        login, logout, register, inviteStudent, sendMessage, addAssignment, updateAssignment, deleteAssignments,
         updateUser, deleteUser, addUser, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
         getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, toggleResourceAssignment,
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
         uploadFile, updateStudentNotes, awardXp, startGroupChat, findOrCreateConversation, addUserToConversation,
-        removeUserFromConversation, endConversation, updateBadge, addCalendarEvent, deleteCalendarEvent,
+        removeUserFromConversation, endConversation, updateBadge, addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
         toggleTemplateFavorite, seedDatabase
     ]);
 
