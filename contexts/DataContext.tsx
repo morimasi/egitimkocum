@@ -1,54 +1,70 @@
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer } from 'react';
-// FIX: Added Poll to the import list.
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll, PollOption, AcademicTrack } from '../types';
 import { useUI } from './UIContext';
-import {
-    auth,
-    db,
-    storage,
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    updateProfile,
-    collection,
-    doc,
-    addDoc,
-    setDoc,
-    updateDoc,
-    deleteDoc,
-    onSnapshot,
-    query,
-    where,
-    orderBy,
-    writeBatch,
-    getDocs,
-    // FIX: Added getDoc to the import list.
-    getDoc,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    arrayUnion,
-    arrayRemove,
-} from '../services/firebase';
-import { seedData } from '../services/seedData';
+import { seedData as initialSeedData } from '../services/seedData';
 
+// --- App State and Reducer ---
 
-const getInitialState = (): AppState => ({
-    users: [],
-    assignments: [],
-    messages: [],
-    conversations: [],
-    notifications: [],
-    templates: [],
-    resources: [],
-    goals: [],
-    badges: [],
-    calendarEvents: [],
-    currentUser: null,
-    isLoading: true,
-    typingStatus: {},
-});
+const uuid = () => crypto.randomUUID();
+
+const getInitialState = (): AppState => {
+    // Deep copy to prevent mutation of the original seed data
+    const seedData = JSON.parse(JSON.stringify(initialSeedData));
+    
+    const coachId = uuid();
+    const student1Id = uuid();
+    const student2Id = uuid();
+
+    const users: User[] = [
+        { id: coachId, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
+        { id: student1Id, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: coachId, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
+        { id: student2Id, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: coachId, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] }
+    ];
+
+    const assignments: Assignment[] = seedData.assignments.map((a: any) => ({
+        ...a,
+        id: uuid(),
+        studentId: a.studentId === "STUDENT_1_ID" ? student1Id : student2Id,
+        coachId: coachId,
+        checklist: a.checklist?.map((c: any) => ({ ...c, id: uuid(), isCompleted: false })) || [],
+    }));
+
+    const conversations: Conversation[] = seedData.conversations.map((c: any) => ({
+        ...c,
+        participantIds: c.participantIds.map((p: string) => 
+            p === "COACH_ID" ? coachId : p === "STUDENT_1_ID" ? student1Id : student2Id
+        ),
+        adminId: c.adminId === "COACH_ID" ? coachId : c.adminId,
+    }));
+    
+    const messages: Message[] = seedData.messages.map((m: any) => ({
+        ...m,
+        id: uuid(),
+        senderId: m.senderId === "COACH_ID" ? coachId : student1Id,
+        readBy: [m.senderId === "COACH_ID" ? coachId : student1Id]
+    }));
+    
+    const goals: Goal[] = seedData.goals.map((g: any) => ({ ...g, id: uuid(), studentId: g.studentId === "STUDENT_1_ID" ? student1Id : student2Id }));
+    const resources: Resource[] = seedData.resources.map((r: any) => ({ ...r, id: uuid(), uploaderId: coachId, assignedTo: (r.assignedTo || []).map((id:string) => id === "STUDENT_2_ID" ? student2Id : id)}));
+    const templates: AssignmentTemplate[] = seedData.templates.map((t: any) => ({...t, id: uuid()}));
+    
+    return {
+        users,
+        assignments,
+        messages,
+        conversations,
+        notifications: [],
+        templates,
+        resources,
+        goals,
+        badges: seedData.badges,
+        calendarEvents: [],
+        currentUser: null,
+        isLoading: true,
+        typingStatus: {},
+    };
+};
+
 
 type AppState = {
     users: User[];
@@ -67,11 +83,11 @@ type AppState = {
 };
 
 type Action =
-    | { type: 'SET_DATA'; payload: { collection: keyof AppState, data: any[] } }
+    | { type: 'SET_DATA'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, data: any[] } }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_CURRENT_USER'; payload: User | null }
-    | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof AppState, data: any } }
-    | { type: 'REMOVE_DOC'; payload: { collection: keyof AppState, id: string } }
+    | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, data: any } }
+    | { type: 'REMOVE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, id: string } }
     | { type: 'RESET_STATE' }
     | { type: 'SET_TYPING_STATUS'; payload: { userId: string; isTyping: boolean } };
 
@@ -182,89 +198,23 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [state, dispatch] = useReducer(dataReducer, getInitialState());
     const { addToast } = useUI();
-
+    
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                
-                const unsubUser = onSnapshot(userDocRef, 
-                    // Success callback
-                    (docSnapshot) => {
-                        if (docSnapshot.exists()) {
-                            const appUser = { id: docSnapshot.id, ...docSnapshot.data() } as User;
-                            dispatch({ type: 'SET_CURRENT_USER', payload: appUser });
-                            dispatch({ type: 'SET_LOADING', payload: false });
-                        } else {
-                            // Auth user exists but no Firestore record. This is an inconsistent state.
-                            console.error(`Authenticated user with UID ${firebaseUser.uid} has no document in Firestore.`);
-                            addToast("Kullanıcı veritabanında bulunamadı. Lütfen yöneticiyle iletişime geçin.", "error");
-                            signOut(auth); // Sign out to prevent getting stuck. The 'else' block below will handle the state reset.
-                        }
-                    }, 
-                    // Error callback
-                    (error) => {
-                        console.error("Firestore error listening to user document:", error);
-                        addToast("Veritabanına bağlanılamadı. İnternet bağlantınızı veya Firebase yapılandırmanızı kontrol edin.", "error");
-                        signOut(auth); // Sign out if we can't connect to the DB.
-                        dispatch({ type: 'SET_LOADING', payload: false });
-                        dispatch({ type: 'SET_CURRENT_USER', payload: null });
-                    }
-                );
-                return () => unsubUser();
-            } else {
-                // User is signed out or became signed out due to an error above.
-                dispatch({ type: 'RESET_STATE' });
-                dispatch({ type: 'SET_LOADING', payload: false });
-            }
-        });
-        return () => unsubscribe();
+        // Simulate initial data loading time
+        const timer = setTimeout(() => {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+
+    const seedDatabase = useCallback(async () => {
+        dispatch({ type: 'RESET_STATE' });
+        setTimeout(() => {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }, 100);
+        addToast("Veritabanı deneme verileriyle dolduruldu.", "success");
     }, [addToast]);
-
-     useEffect(() => {
-        if (!state.currentUser) return;
-
-        const { id, role } = state.currentUser;
-        const subscriptions: (() => void)[] = [];
-
-        // Universal subscriptions
-        subscriptions.push(onSnapshot(collection(db, 'users'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'users', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-        subscriptions.push(onSnapshot(collection(db, 'badges'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'badges', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-        subscriptions.push(onSnapshot(query(collection(db, 'notifications'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'notifications', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-        subscriptions.push(onSnapshot(query(collection(db, 'conversations'), where('participantIds', 'array-contains', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'conversations', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-       
-        // Role-based subscriptions
-        if (role === UserRole.Student) {
-            subscriptions.push(onSnapshot(query(collection(db, 'assignments'), where('studentId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(query(collection(db, 'goals'), where('studentId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'goals', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(query(collection(db, 'resources'), where('assignedTo', 'array-contains', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'resources', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(query(collection(db, 'calendarEvents'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'calendarEvents', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-
-        } else if (role === UserRole.Coach || role === UserRole.SuperAdmin) {
-            const studentIds = state.users.filter(u => u.role === UserRole.Student && (role === UserRole.SuperAdmin || u.assignedCoachId === id)).map(s => s.id);
-            if (studentIds.length > 0) {
-                 subscriptions.push(onSnapshot(query(collection(db, 'assignments'), where('studentId', 'in', studentIds)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            } else {
-                 dispatch({ type: 'SET_DATA', payload: { collection: 'assignments', data: [] } });
-            }
-            subscriptions.push(onSnapshot(collection(db, 'templates'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'templates', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(collection(db, 'resources'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'resources', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(collection(db, 'goals'), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'goals', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-            subscriptions.push(onSnapshot(query(collection(db, 'calendarEvents'), where('userId', '==', id)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'calendarEvents', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-        }
-        
-        // Message subscription based on active conversations
-        if (state.conversations.length > 0) {
-            const conversationIds = state.conversations.map(c => c.id);
-            subscriptions.push(onSnapshot(query(collection(db, 'messages'), where('conversationId', 'in', conversationIds)), snapshot => dispatch({ type: 'SET_DATA', payload: { collection: 'messages', data: snapshot.docs.map(d => ({id: d.id, ...d.data()})) } })));
-        }
-
-
-        return () => {
-            subscriptions.forEach(unsub => unsub());
-        };
-
-    }, [state.currentUser, state.users, state.conversations.length]);
 
     const coach = useMemo(() => {
         if (state.currentUser?.role === UserRole.Student) {
@@ -285,7 +235,131 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
         return [];
     }, [state.users, state.currentUser]);
+    
+    // Simulates file upload by returning a blob URL. In a real app, this would upload to a service.
+    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                resolve(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        });
+    }, []);
 
+    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
+        const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (user) {
+            dispatch({ type: 'SET_CURRENT_USER', payload: user });
+            return user;
+        }
+        throw new Error("Kullanıcı bulunamadı veya şifre yanlış.");
+    }, [state.users]);
+
+    const logout = useCallback(async () => {
+        dispatch({ type: 'SET_CURRENT_USER', payload: null });
+    }, []);
+
+    const register = useCallback(async (name: string, email: string, pass: string, profilePictureFile: File | null) => {
+        if (state.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+            throw new Error("Bu e-posta adresi zaten kullanılıyor.");
+        }
+
+        let profilePictureUrl = `https://i.pravatar.cc/150?u=${email}`;
+        if(profilePictureFile) {
+            profilePictureUrl = await uploadFile(profilePictureFile, `profile-pictures/${email}`);
+        }
+
+        const isFirstUser = state.users.length === 0;
+        const newUser: User = {
+            id: uuid(),
+            name,
+            email,
+            role: isFirstUser ? UserRole.SuperAdmin : UserRole.Student,
+            profilePicture: profilePictureUrl,
+        };
+
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: newUser } });
+        dispatch({ type: 'SET_CURRENT_USER', payload: newUser });
+
+    }, [state.users, uploadFile]);
+    
+     const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
+        if (!state.currentUser) return;
+        const newMessage: Message = {
+            ...messageData,
+            id: uuid(),
+            timestamp: new Date().toISOString(),
+            readBy: [messageData.senderId],
+        };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: newMessage } });
+    }, [state.currentUser]);
+
+    const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
+        studentIds.forEach(studentId => {
+            const newAssignment = {
+                ...assignmentData,
+                id: uuid(),
+                studentId,
+            };
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: newAssignment }});
+        });
+    }, []);
+
+    const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: updatedAssignment }});
+    }, []);
+
+    const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
+        assignmentIds.forEach(id => {
+            dispatch({ type: 'REMOVE_DOC', payload: { collection: 'assignments', id }});
+        });
+    }, []);
+    
+    const updateUser = useCallback(async (updatedUser: User) => {
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser }});
+        if (state.currentUser?.id === updatedUser.id) {
+            dispatch({ type: 'SET_CURRENT_USER', payload: updatedUser });
+        }
+    }, [state.currentUser]);
+
+    const deleteUser = useCallback(async (userId: string) => {
+       dispatch({ type: 'REMOVE_DOC', payload: { collection: 'users', id: userId } });
+    }, []);
+
+    const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
+        const userWithId = { ...newUser, id: uuid() };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: userWithId }});
+        return userWithId;
+    }, []);
+    
+    const markMessagesAsRead = useCallback(async (conversationId: string) => {
+        // Mock implementation
+    }, []);
+    
+     const addReaction = useCallback(async (messageId: string, emoji: string) => {
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+        const message = state.messages.find(m => m.id === messageId);
+        if(!message) return;
+
+        const reactions = { ...(message.reactions || {}) };
+        Object.keys(reactions).forEach(key => {
+            reactions[key] = reactions[key].filter(uid => uid !== currentUserId);
+            if (reactions[key].length === 0) delete reactions[key];
+        });
+        
+        if (!reactions[emoji]) reactions[emoji] = [];
+        if (!reactions[emoji].includes(currentUserId)) {
+            reactions[emoji].push(currentUserId);
+        } else {
+             reactions[emoji] = reactions[emoji].filter(uid => uid !== currentUserId);
+             if (reactions[emoji].length === 0) delete reactions[emoji];
+        }
+
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: { ...message, reactions } }});
+    }, [state.currentUser, state.messages]);
+    
     const getAssignmentsForStudent = useCallback((studentId: string) => state.assignments.filter(a => a.studentId === studentId), [state.assignments]);
     const getGoalsForStudent = useCallback((studentId: string) => state.goals.filter(g => g.studentId === studentId), [state.goals]);
     const findMessageById = useCallback((messageId: string) => state.messages.find(m => m.id === messageId), [state.messages]);
@@ -321,392 +395,165 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return map;
     }, [state.messages]);
     
-     const awardBadge = useCallback(async (studentId: string, badgeId: BadgeID) => {
-        const student = state.users.find(u => u.id === studentId);
-        const badge = state.badges.find(b => b.id === badgeId);
-        if (!student || !badge || student.earnedBadgeIds?.includes(badgeId)) {
-            return;
-        }
-        const userRef = doc(db, 'users', studentId);
-        await updateDoc(userRef, {
-            earnedBadgeIds: arrayUnion(badgeId),
-            xp: (student.xp || 0) + 50
-        });
-        addToast(`Yeni rozet kazandın: ${badge.name}! (+50 XP)`, 'xp');
-    }, [state.users, state.badges, addToast]);
-
-    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
-        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        const appUser = state.users.find(u => u.email === userCredential.user.email);
-        return appUser || null;
-    }, [state.users]);
-
-    const logout = useCallback(async () => {
-        await signOut(auth);
-    }, []);
-
-    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, file);
-        return await getDownloadURL(storageRef);
-    }, []);
-
-    const register = useCallback(async (name: string, email: string, pass: string, profilePictureFile: File | null) => {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const isFirstUser = usersSnapshot.empty;
-        
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        await updateProfile(userCredential.user, { displayName: name });
-        
-        let profilePictureUrl = `https://i.pravatar.cc/150?u=${email}`;
-        if (profilePictureFile) {
-            profilePictureUrl = await uploadFile(profilePictureFile, `profile-pictures/${userCredential.user.uid}`);
-        }
-
-        const newUser: User = {
-            id: userCredential.user.uid,
-            name,
-            email,
-            role: isFirstUser ? UserRole.SuperAdmin : UserRole.Student,
-            profilePicture: profilePictureUrl,
-        };
-        
-        await setDoc(doc(db, "users", userCredential.user.uid), newUser);
-    }, [uploadFile]);
-    
-    const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
-        if (!state.currentUser) return;
-        const newMessage = {
-            ...messageData,
-            timestamp: new Date().toISOString(),
-            readBy: [messageData.senderId],
-        };
-        await addDoc(collection(db, 'messages'), newMessage);
-    }, [state.currentUser]);
-
-    const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
-        const batch = writeBatch(db);
-        studentIds.forEach(studentId => {
-            const newAssignment = { ...assignmentData, studentId };
-            const docRef = doc(collection(db, 'assignments'));
-            batch.set(docRef, newAssignment);
-        });
-        await batch.commit();
-    }, []);
-
-    const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
-        const { id, ...dataToUpdate } = updatedAssignment;
-        await updateDoc(doc(db, 'assignments', id), dataToUpdate);
-    }, []);
-
-    const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
-        const batch = writeBatch(db);
-        assignmentIds.forEach(id => {
-            batch.delete(doc(db, 'assignments', id));
-        });
-        await batch.commit();
-    }, []);
-    
-    const updateUser = useCallback(async (updatedUser: User) => {
-         const { id, ...dataToUpdate } = updatedUser;
-         await updateDoc(doc(db, 'users', id), dataToUpdate);
-    }, []);
-
-    const deleteUser = useCallback(async (userId: string) => {
-         await deleteDoc(doc(db, 'users', userId));
-    }, []);
-
-    const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-        const userRef = await addDoc(collection(db, 'users'), newUser);
-        return { ...newUser, id: userRef.id };
-    }, []);
-
-    const markMessagesAsRead = useCallback(async (conversationId: string) => {
-        if (!state.currentUser) return;
-        const currentUserId = state.currentUser.id;
-        const q = query(collection(db, 'messages'), where('conversationId', '==', conversationId));
-        const messagesSnapshot = await getDocs(q);
-        const batch = writeBatch(db);
-        messagesSnapshot.forEach(messageDoc => {
-            const msg = messageDoc.data() as Message;
-            if (msg.senderId !== currentUserId && !msg.readBy.includes(currentUserId)) {
-                batch.update(messageDoc.ref, { readBy: arrayUnion(currentUserId) });
-            }
-        });
-        await batch.commit();
-    }, [state.currentUser]);
-
-    const markNotificationsAsRead = useCallback(async () => {
-        if (!state.currentUser) return;
-        const q = query(collection(db, 'notifications'), where('userId', '==', state.currentUser.id), where('isRead', '==', false));
-        const snapshot = await getDocs(q);
-        const batch = writeBatch(db);
-        snapshot.forEach(doc => batch.update(doc.ref, { isRead: true }));
-        await batch.commit();
-    }, [state.currentUser]);
-
+    const markNotificationsAsRead = useCallback(async () => {}, []);
     const updateTypingStatus = useCallback(async (isTyping: boolean) => {}, []);
     
-    const updateGoal = useCallback(async (updatedGoal: Goal) => { 
-        const { id, ...data } = updatedGoal;
-        await updateDoc(doc(db, 'goals', id), data);
+    const updateGoal = useCallback(async (updatedGoal: Goal) => {
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'goals', data: updatedGoal }});
     }, []);
-
-    const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => { 
-        await addDoc(collection(db, 'goals'), newGoal);
+    const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => {
+        const goalWithId = { ...newGoal, id: uuid() };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'goals', data: goalWithId }});
     }, []);
-
-    const addReaction = useCallback(async (messageId: string, emoji: string) => {
-         if (!state.currentUser) return;
-         const msgRef = doc(db, 'messages', messageId);
-         // This is complex with Firestore security rules, simplified for now
-         const msgDoc = await getDoc(msgRef);
-         if (!msgDoc.exists()) return;
-
-         const reactions = msgDoc.data().reactions || {};
-         // Remove previous reactions by the user
-         Object.keys(reactions).forEach(key => {
-            reactions[key] = reactions[key].filter((uid: string) => uid !== state.currentUser!.id);
-            if (reactions[key].length === 0) delete reactions[key];
-         });
-         
-         if (!reactions[emoji]) reactions[emoji] = [];
-         reactions[emoji].push(state.currentUser.id);
-         
-         await updateDoc(msgRef, { reactions });
-    }, [state.currentUser]);
-
     const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
-        if (!state.currentUser) return;
-        const msgRef = doc(db, 'messages', messageId);
-        const msgDoc = await getDoc(msgRef);
-        if (!msgDoc.exists() || !msgDoc.data().poll) return;
-        
-        const poll = msgDoc.data().poll as Poll;
+        if(!state.currentUser) return;
+        const message = state.messages.find(m => m.id === messageId);
+        if(!message || !message.poll) return;
+        const newPoll = JSON.parse(JSON.stringify(message.poll));
         const userId = state.currentUser.id;
-
-        const alreadyVoted = poll.options[optionIndex]?.votes.includes(userId);
         
-        poll.options.forEach(opt => {
+        newPoll.options.forEach((opt: PollOption) => {
             opt.votes = opt.votes.filter(vId => vId !== userId);
         });
+        newPoll.options[optionIndex].votes.push(userId);
+        
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: { ...message, poll: newPoll } }});
+    }, [state.currentUser, state.messages]);
 
-        if (!alreadyVoted) {
-            poll.options[optionIndex].votes.push(userId);
-        }
-
-        await updateDoc(msgRef, { poll });
-    }, [state.currentUser]);
-    
     const toggleResourceAssignment = useCallback(async (resourceId: string, studentId: string) => {
-        const resRef = doc(db, 'resources', resourceId);
-        const resDoc = await getDoc(resRef);
-        if(!resDoc.exists()) return;
-        const isAssigned = resDoc.data().assignedTo?.includes(studentId);
-        await updateDoc(resRef, {
-            assignedTo: isAssigned ? arrayRemove(studentId) : arrayUnion(studentId)
-        });
-    }, []);
+        const resource = state.resources.find(r => r.id === resourceId);
+        if(!resource) return;
+        const assignedTo = resource.assignedTo || [];
+        const isAssigned = assignedTo.includes(studentId);
+        const newAssignedTo = isAssigned ? assignedTo.filter(id => id !== studentId) : [...assignedTo, studentId];
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: { ...resource, assignedTo: newAssignedTo } }});
+    }, [state.resources]);
 
     const assignResourceToStudents = useCallback(async (resourceId: string, studentIds: string[]) => {
-         const resRef = doc(db, 'resources', resourceId);
-         await updateDoc(resRef, { assignedTo: arrayUnion(...studentIds) });
-    }, []);
+        const resource = state.resources.find(r => r.id === resourceId);
+        if(!resource) return;
+        const assignedTo = new Set([...(resource.assignedTo || []), ...studentIds]);
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: { ...resource, assignedTo: Array.from(assignedTo) } }});
+    }, [state.resources]);
 
     const addResource = useCallback(async (resourceData: Omit<Resource, 'id' | 'uploaderId'>) => {
         if (!state.currentUser) return;
-        const newResource = { ...resourceData, uploaderId: state.currentUser.id };
-        await addDoc(collection(db, 'resources'), newResource);
+        const newResource = { ...resourceData, id: uuid(), uploaderId: state.currentUser.id };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: newResource }});
     }, [state.currentUser]);
 
     const deleteResource = useCallback(async (resourceId: string) => {
-        await deleteDoc(doc(db, 'resources', resourceId));
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'resources', id: resourceId }});
     }, []);
 
     const addTemplate = useCallback(async (templateData: Omit<AssignmentTemplate, 'id'>) => {
-        await addDoc(collection(db, 'templates'), templateData);
+        const newTemplate = { ...templateData, id: uuid() };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: newTemplate }});
     }, []);
 
     const updateTemplate = useCallback(async (template: AssignmentTemplate) => {
-        const { id, ...data } = template;
-        await updateDoc(doc(db, 'templates', id), data);
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: template }});
     }, []);
 
     const deleteTemplate = useCallback(async (templateId: string) => {
-        await deleteDoc(doc(db, 'templates', templateId));
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'templates', id: templateId }});
     }, []);
-    
+
     const updateStudentNotes = useCallback(async (studentId: string, notes: string) => {
-         await updateDoc(doc(db, 'users', studentId), { notes });
-    }, []);
+        const user = state.users.find(u => u.id === studentId);
+        if (user) {
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: { ...user, notes } }});
+        }
+    }, [state.users]);
 
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string) => {
         if (!state.currentUser) return;
-        const newConversation = {
-            participantIds,
+        const newConversation: Conversation = {
+            id: uuid(),
+            participantIds: [state.currentUser.id, ...participantIds],
             isGroup: true,
             groupName,
             adminId: state.currentUser.id,
         };
-        const docRef = await addDoc(collection(db, 'conversations'), newConversation);
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
+        
         await sendMessage({
             senderId: state.currentUser.id,
-            conversationId: docRef.id,
+            conversationId: newConversation.id,
             text: `${state.currentUser.name}, ${groupName} grubunu oluşturdu.`,
             type: 'system',
         });
-        return docRef.id;
+        return newConversation.id;
     }, [state.currentUser, sendMessage]);
-    
+
     const findOrCreateConversation = useCallback(async (otherParticipantId: string) => {
         if (!state.currentUser) return;
         const currentUserId = state.currentUser.id;
 
-        const q = query(
-            collection(db, 'conversations'),
-            where('isGroup', '==', false),
-            where('participantIds', 'array-contains', currentUserId)
+        const existing = state.conversations.find(c => 
+            !c.isGroup &&
+            c.participantIds.includes(currentUserId) &&
+            c.participantIds.includes(otherParticipantId)
         );
-        const snapshot = await getDocs(q);
-        const existing = snapshot.docs.find(d => d.data().participantIds.includes(otherParticipantId));
-
+            
         if (existing) return existing.id;
         
-        const newConversation = {
+        const newConversation: Conversation = {
+            id: uuid(),
             participantIds: [currentUserId, otherParticipantId],
             isGroup: false,
         };
-        const docRef = await addDoc(collection(db, 'conversations'), newConversation);
-        return docRef.id;
-    }, [state.currentUser]);
-
-
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
+        return newConversation.id;
+    }, [state.currentUser, state.conversations]);
     const addUserToConversation = useCallback(async (conversationId: string, userId: string) => {
-        await updateDoc(doc(db, 'conversations', conversationId), {
-            participantIds: arrayUnion(userId)
-        });
-    }, []);
-
+        const conv = state.conversations.find(c => c.id === conversationId);
+        if(!conv) return;
+        const newParticipants = Array.from(new Set([...conv.participantIds, userId]));
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: { ...conv, participantIds: newParticipants } }});
+    }, [state.conversations]);
     const removeUserFromConversation = useCallback(async (conversationId: string, userId: string) => {
-        await updateDoc(doc(db, 'conversations', conversationId), {
-            participantIds: arrayRemove(userId)
-        });
-    }, []);
-
+        const conv = state.conversations.find(c => c.id === conversationId);
+        if(!conv) return;
+        const newParticipants = conv.participantIds.filter(id => id !== userId);
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: { ...conv, participantIds: newParticipants } }});
+    }, [state.conversations]);
     const endConversation = useCallback(async (conversationId: string) => {
-        await updateDoc(doc(db, 'conversations', conversationId), { isArchived: true });
-    }, []);
-    
+        const conv = state.conversations.find(c => c.id === conversationId);
+        if (conv) {
+             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: { ...conv, isArchived: true } }});
+        }
+    }, [state.conversations]);
     const updateBadge = useCallback(async (updatedBadge: Badge) => {
-        const { id, ...data } = updatedBadge;
-        await updateDoc(doc(db, 'badges', id), data);
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'badges', data: updatedBadge }});
     }, []);
-
     const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id' | 'userId'>) => {
         if (!state.currentUser) return;
-        await addDoc(collection(db, 'calendarEvents'), { ...event, userId: state.currentUser.id });
+        const newEvent = { ...event, id: uuid(), userId: state.currentUser.id };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: newEvent }});
     }, [state.currentUser]);
-
     const deleteCalendarEvent = useCallback(async (eventId: string) => {
-        await deleteDoc(doc(db, 'calendarEvents', eventId));
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'calendarEvents', id: eventId }});
     }, []);
-
     const toggleTemplateFavorite = useCallback(async (templateId: string) => {
-        const templateRef = doc(db, 'templates', templateId);
-        const templateDoc = await getDoc(templateRef);
-        if (templateDoc.exists()) {
-            await updateDoc(templateRef, { isFavorite: !templateDoc.data().isFavorite });
-        }
-    }, []);
-
-    const seedDatabase = useCallback(async () => {
-        if (!state.currentUser || state.currentUser.role !== UserRole.SuperAdmin) {
-            addToast("Sadece Süper Adminler bu işlemi yapabilir.", "error");
-            return;
-        }
-
-        const assignmentsCheck = await getDocs(collection(db, 'assignments'));
-        if (!assignmentsCheck.empty) {
-            addToast("Veritabanı zaten dolu. Bu işlem yalnızca boş bir veritabanında çalıştırılabilir.", "info");
-            return;
-        }
-        
-        addToast("Deneme verileri ekleniyor, lütfen bekleyin...", "info");
-
-        try {
-            const coach = state.users.find(u => u.email === 'koc@deneme.com');
-            const student1 = state.users.find(u => u.email === 'leyla.tek@deneme.com');
-            const student2 = state.users.find(u => u.email === 'can.yurt@deneme.com');
-
-            if (!coach || !student1 || !student2) {
-                addToast("Lütfen önce deneme hesaplarını oluşturun: koc@deneme.com, leyla.tek@deneme.com, can.yurt@deneme.com", "error");
-                return;
-            }
-
-            const batch = writeBatch(db);
-
-            batch.update(doc(db, 'users', student1.id), { assignedCoachId: coach.id });
-            batch.update(doc(db, 'users', student2.id), { assignedCoachId: coach.id });
-
-            const idMap: { [key: string]: string } = {
-                COACH_ID: coach.id,
-                STUDENT_1_ID: student1.id,
-                STUDENT_2_ID: student2.id,
-            };
-
-            const processItem = (item: any) => {
-                const processed = { ...item };
-                for (const key in processed) {
-                    if (key.endsWith('Id') && idMap[processed[key]]) {
-                        processed[key] = idMap[processed[key]];
-                    } else if (key.endsWith('Ids') && Array.isArray(processed[key])) {
-                        processed[key] = processed[key].map((id: string) => idMap[id] || id);
-                    }
-                }
-                if (processed.assignedTo && Array.isArray(processed.assignedTo)) {
-                     processed.assignedTo = processed.assignedTo.map((id: string) => idMap[id] || id);
-                }
-                return processed;
-            };
-
-            seedData.assignments.map(processItem).forEach(item => batch.set(doc(collection(db, 'assignments')), item));
-            seedData.conversations.map(processItem).forEach(item => batch.set(doc(db, 'conversations', item.id), item));
-            seedData.messages.map(processItem).forEach(item => batch.set(doc(collection(db, 'messages')), item));
-            seedData.goals.map(processItem).forEach(item => batch.set(doc(collection(db, 'goals')), item));
-            seedData.resources.map(processItem).forEach(item => batch.set(doc(collection(db, 'resources')), item));
-            seedData.templates.forEach(item => batch.set(doc(collection(db, 'templates')), item));
-            seedData.badges.forEach(item => batch.set(doc(db, 'badges', item.id), item));
-
-            await batch.commit();
-            addToast("Deneme verileri başarıyla eklendi!", "success");
-
-        } catch (error) {
-            console.error("Error seeding database:", error);
-            addToast("Veritabanı doldurulurken bir hata oluştu.", "error");
-        }
-    }, [state.currentUser, addToast, state.users]);
-
+        const template = state.templates.find(t => t.id === templateId);
+        if(!template) return;
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: { ...template, isFavorite: !template.isFavorite } }});
+    }, [state.templates]);
+    
+    // FIX: A comma was used instead of a closing parenthesis for the factory function, causing a syntax error.
     const value = useMemo(() => ({
-        currentUser: state.currentUser,
-        users: state.users,
-        assignments: state.assignments,
-        messages: state.messages,
-        conversations: state.conversations,
-        notifications: state.notifications,
-        templates: state.templates,
-        resources: state.resources,
-        goals: state.goals,
-        badges: state.badges,
-        calendarEvents: state.calendarEvents,
-        isLoading: state.isLoading,
-        typingStatus: state.typingStatus,
+        ...state,
         coach,
         students,
+        getAssignmentsForStudent,
+        getMessagesForConversation,
+        unreadCounts,
+        lastMessagesMap,
+        findMessageById,
         login,
         logout,
         register,
-        getAssignmentsForStudent,
-        getMessagesForConversation,
         sendMessage,
         addAssignment,
         updateAssignment,
@@ -722,7 +569,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addGoal,
         addReaction,
         voteOnPoll,
-        findMessageById,
         toggleResourceAssignment,
         assignResourceToStudents,
         addResource,
@@ -732,8 +578,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         deleteTemplate,
         uploadFile,
         updateStudentNotes,
-        unreadCounts,
-        lastMessagesMap,
         startGroupChat,
         findOrCreateConversation,
         addUserToConversation,
@@ -746,15 +590,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         seedDatabase,
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
-        login, logout, register, getAssignmentsForStudent, getMessagesForConversation,
-        sendMessage, addAssignment, updateAssignment, deleteAssignments, updateUser, deleteUser, addUser,
-        markMessagesAsRead, markNotificationsAsRead, updateTypingStatus, getGoalsForStudent,
-        updateGoal, addGoal, addReaction, voteOnPoll, findMessageById, toggleResourceAssignment,
-        assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate, uploadFile, updateStudentNotes, startGroupChat,
-        findOrCreateConversation, addUserToConversation, removeUserFromConversation, endConversation,
-        updateBadge, addCalendarEvent, deleteCalendarEvent, toggleTemplateFavorite, seedDatabase
+        getAssignmentsForStudent, getMessagesForConversation, findMessageById,
+        login, logout, register, sendMessage, addAssignment, updateAssignment, deleteAssignments,
+        updateUser, deleteUser, addUser, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
+        getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, toggleResourceAssignment,
+        assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
+        uploadFile, updateStudentNotes, startGroupChat, findOrCreateConversation, addUserToConversation,
+        removeUserFromConversation, endConversation, updateBadge, addCalendarEvent, deleteCalendarEvent,
+        toggleTemplateFavorite, seedDatabase
     ]);
-
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

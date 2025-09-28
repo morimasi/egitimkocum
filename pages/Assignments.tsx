@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack } from '../types';
+import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon } from '../components/Icons';
@@ -699,7 +698,7 @@ export default function Assignments() {
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>

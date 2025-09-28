@@ -391,7 +391,8 @@ export default function Library() {
                 </div>
                  <div className="flex flex-col md:flex-row gap-4 pt-4">
                     <input type="text" placeholder="Kaynak adı ile ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
-                    <select value={filterType} onChange={e => setFilterType(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    {/* Fix: Property 'value' does not exist on type 'unknown'. */}
+                    <select value={filterType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterType(e.target.value as 'all' | Resource['type'])} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="all">Tüm Türler</option>
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>

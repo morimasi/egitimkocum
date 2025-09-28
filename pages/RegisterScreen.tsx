@@ -6,7 +6,7 @@ interface RegisterScreenProps {
     onSwitchToLogin: () => void;
 }
 
-const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
+export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps) {
     const { register } = useDataContext();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -39,16 +39,21 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
             return;
         }
 
+        if (password.length < 6) {
+            setError('Şifre en az 6 karakter olmalıdır.');
+            return;
+        }
+
         setError('');
         setIsLoading(true);
 
         try {
             await register(name, email, password, profilePicture);
-            // On successful registration, onAuthStateChanged will automatically log the user in.
-            // The isLoading state will persist until the App component detects the new currentUser.
+            // On successful registration, user is automatically logged in.
         } catch (err: any) {
-             setIsLoading(false); // Only stop loading on error.
-             if (err.code === 'auth/email-already-in-use') {
+             setIsLoading(false);
+             console.error("Registration failed:", err.message || err);
+             if (err.message && err.message.includes('zaten kullanılıyor')) {
                 setError('Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.');
             } else {
                  setError('Kayıt sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
@@ -165,6 +170,4 @@ const RegisterScreen = ({ onSwitchToLogin }: RegisterScreenProps) => {
             </div>
         </div>
     );
-};
-
-export default RegisterScreen;
+}

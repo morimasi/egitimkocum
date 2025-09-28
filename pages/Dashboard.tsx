@@ -6,7 +6,7 @@ import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
 import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon, XIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
-import { generateStudentFocusSuggestion, generatePersonalCoachSummary } from '../services/geminiService';
+import { generateStudentFocusSuggestion, generatePersonalCoachSummary, suggestFocusAreas } from '../services/geminiService';
 import AnnouncementModal from '../components/AnnouncementModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -171,6 +171,46 @@ const ProgressOverview = React.memo(() => {
     );
 });
 
+const FocusAreasCard = React.memo(() => {
+    const { currentUser, getAssignmentsForStudent } = useDataContext();
+    const [focusSuggestion, setFocusSuggestion] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSuggestion = async () => {
+            if (!currentUser) return;
+            setIsLoading(true);
+            try {
+                const assignments = getAssignmentsForStudent(currentUser.id);
+                const suggestion = await suggestFocusAreas(currentUser.name, assignments);
+                setFocusSuggestion(suggestion);
+            } catch (error) {
+                console.error("Error fetching focus suggestion:", error);
+                setFocusSuggestion("Odak önerisi alınırken bir hata oluştu. Lütfen tüm derslerine eşit önem ver.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSuggestion();
+    }, [currentUser, getAssignmentsForStudent]);
+
+    return (
+        <Card title="Bu Haftaki Odak Alanların" icon={<TargetIcon />}>
+            {isLoading ? (
+                <div className="space-y-2">
+                    <SkeletonText className="h-4 w-full" />
+                    <SkeletonText className="h-4 w-full" />
+                    <SkeletonText className="h-4 w-3/4" />
+                </div>
+            ) : (
+                <p className="text-sm text-gray-700 dark:text-gray-300">{focusSuggestion}</p>
+            )}
+        </Card>
+    );
+});
+
+
 const StudentDashboard = () => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const { setActivePage } = useUI();
@@ -220,7 +260,10 @@ const StudentDashboard = () => {
                         </div>
                     )}
                 </Card>
-                <ProgressOverview />
+                <div className="space-y-6">
+                    <ProgressOverview />
+                    <FocusAreasCard />
+                </div>
             </div>
             <AnnouncementsCard />
         </div>

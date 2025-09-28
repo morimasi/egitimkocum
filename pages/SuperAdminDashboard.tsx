@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, UserRole, AssignmentStatus, Badge } from '../types';
@@ -7,6 +6,7 @@ import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { StudentsIcon, AssignmentsIcon, LibraryIcon, TargetIcon, TrophyIcon, EditIcon } from '../components/Icons';
+import AddStudentForm from '../components/AddStudentForm';
 
 const KpiCard = React.memo(({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
     <Card className="flex items-center">
@@ -19,72 +19,6 @@ const KpiCard = React.memo(({ title, value, icon, color }: { title: string, valu
         </div>
     </Card>
 ));
-
-const NewUserModal = ({ onClose }: { onClose: () => void }) => {
-    const { addUser, users } = useDataContext();
-    const { addToast } = useUI();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState<UserRole>(UserRole.Student);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if(users.some(u => u.email === email)) {
-            addToast("Bu e-posta adresi zaten kullanımda.", "error");
-            return;
-        }
-        setIsLoading(true);
-        try {
-            await addUser({ 
-                name, 
-                email, 
-                role, 
-                profilePicture: `https://i.pravatar.cc/150?u=${email}` 
-            });
-            addToast("Kullanıcı başarıyla oluşturuldu.", "success");
-            onClose();
-        } catch (error) {
-             addToast("Kullanıcı oluşturulurken bir hata oluştu.", "error");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={true} onClose={onClose} title="Yeni Kullanıcı Ekle">
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Ad Soyad</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">E-posta</label>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Şifre (Geçici)</label>
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Rol</label>
-                    <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                        <option value={UserRole.Student}>Öğrenci</option>
-                        <option value={UserRole.Coach}>Koç</option>
-                        <option value={UserRole.SuperAdmin}>Süper Admin</option>
-                    </select>
-                </div>
-                <div className="flex justify-end pt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
-                    <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed" disabled={isLoading}>
-                        {isLoading ? 'Oluşturuluyor...' : 'Kullanıcı Oluştur'}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
-};
 
 const EditBadgeModal = ({ badge, onClose }: { badge: Badge; onClose: () => void }) => {
     const { updateBadge } = useDataContext();
@@ -141,6 +75,7 @@ export default function SuperAdminDashboard() {
     
     const handleConfirmSeed = () => {
         seedDatabase();
+        setIsConfirmSeedOpen(false);
     };
     
     return (
@@ -166,7 +101,7 @@ export default function SuperAdminDashboard() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             Platformu test etmek için örnek öğrenciler, ödevler, mesajlar ve diğer verilerle doldurun.
                             <br/>
-                            <strong>Not:</strong> Bu işlem yalnızca veritabanı boşken yapılmalıdır.
+                            <strong>Not:</strong> Bu işlem mevcut oturumdaki tüm verileri sıfırlar.
                         </p>
                     </div>
                     <button 
@@ -220,7 +155,7 @@ export default function SuperAdminDashboard() {
                 </Card>
             </div>
             
-            {isNewUserModalOpen && <NewUserModal onClose={() => setIsNewUserModalOpen(false)} />}
+            {isNewUserModalOpen && <Modal isOpen={isNewUserModalOpen} onClose={() => setIsNewUserModalOpen(false)} title="Yeni Kullanıcı Ekle"><AddStudentForm onClose={() => setIsNewUserModalOpen(false)}/></Modal>}
             {userToDelete && <ConfirmationModal isOpen={!!userToDelete} onClose={() => setUserToDelete(null)} onConfirm={handleUserDelete} title="Kullanıcıyı Sil" message={`'${userToDelete.name}' adlı kullanıcıyı silmek istediğinizden emin misiniz?`} />}
             {badgeToEdit && <EditBadgeModal badge={badgeToEdit} onClose={() => setBadgeToEdit(null)} />}
             {isConfirmSeedOpen && (
@@ -228,9 +163,9 @@ export default function SuperAdminDashboard() {
                     isOpen={isConfirmSeedOpen}
                     onClose={() => setIsConfirmSeedOpen(false)}
                     onConfirm={handleConfirmSeed}
-                    title="Veritabanını Doldur"
-                    message="Bu işlem, veritabanını deneme verileriyle dolduracaktır. Bu yalnızca boş bir veritabanında yapılmalıdır. Emin misiniz?"
-                    confirmText="Evet, Doldur"
+                    title="Veritabanını Sıfırla"
+                    message="Bu işlem, tüm mevcut verileri silecek ve uygulamayı başlangıçtaki deneme verileriyle yeniden yükleyecektir. Emin misiniz?"
+                    confirmText="Evet, Sıfırla"
                 />
             )}
         </div>

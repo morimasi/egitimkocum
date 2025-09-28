@@ -5,7 +5,7 @@ interface LoginScreenProps {
     onSwitchToRegister: () => void;
 }
 
-const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
+export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
     const { login } = useDataContext();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -18,14 +18,11 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
         setIsLoading(true);
 
         try {
+            // Using mock users for login
             await login(email, password);
-            // On successful login, AppContent will automatically switch views via onAuthStateChanged
+            // On successful login, AppContent will automatically switch views
         } catch (err: any) {
-             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                 setError('E-posta veya şifre hatalı.');
-            } else {
-                 setError('Giriş sırasında bir hata oluştu.');
-            }
+             setError('E-posta veya şifre hatalı.');
              setIsLoading(false);
         }
     };
@@ -91,6 +88,4 @@ const LoginScreen = ({ onSwitchToRegister }: LoginScreenProps) => {
             </div>
         </div>
     );
-};
-
-export default LoginScreen;
+}

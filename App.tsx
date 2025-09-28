@@ -1,5 +1,3 @@
-
-
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -17,8 +15,6 @@ import PageSkeleton from './components/PageSkeleton';
 import CommandPalette from './components/CommandPalette';
 import TabBar from './components/TabBar';
 import AIChatbot from './components/AIChatbot';
-import { firebaseConfig } from './services/firebase';
-import SetupWizard from './components/SetupWizard';
 
 
 // Lazy load pages for better initial performance
@@ -71,164 +67,108 @@ const AppSkeleton = () => (
 
 
 const AppContent = () => {
-    const { activePage, setActivePage } = useUI();
+    const { activePage, setActivePage, startTour } = useUI();
     const { currentUser, isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
     const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
-    const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
-
-     useEffect(() => {
-        // Check if the Firebase config has been changed from the default placeholder.
-        if (firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("AIzaSyA...")) {
-            setIsFirebaseConfigured(true);
-        }
-    }, []);
-
+    
     useEffect(() => {
         if (currentUser && currentUser.role === UserRole.Student) {
             const lastReportDate = localStorage.getItem(`weeklyReport_${currentUser.id}`);
             const now = new Date();
             const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            
+
             if (!lastReportDate || new Date(lastReportDate) < oneWeekAgo) {
-                 setShowWeeklyReport(true);
+                setShowWeeklyReport(true);
+                localStorage.setItem(`weeklyReport_${currentUser.id}`, now.toISOString());
             }
         }
     }, [currentUser]);
 
-     useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-                event.preventDefault();
-                setCommandPaletteOpen(k => !k);
+    useEffect(() => {
+        if (currentUser) {
+            const hasCompletedTour = localStorage.getItem('tourCompleted');
+            if (!hasCompletedTour) {
+                // Delay tour start slightly to allow app to render fully
+                setTimeout(() => startTour(), 1000);
             }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-    
-    const handleCloseReport = () => {
-        setShowWeeklyReport(false);
-        if(currentUser) {
-            localStorage.setItem(`weeklyReport_${currentUser.id}`, new Date().toISOString());
         }
-    };
+    }, [currentUser, startTour]);
 
     const renderPage = () => {
-        // SuperAdmin can access coach pages.
-        if (currentUser?.role === UserRole.SuperAdmin && activePage !== 'superadmin') {
-             switch (activePage) {
-                case 'dashboard': return <Dashboard />;
-                case 'assignments': return <Assignments />;
-                case 'students': return <Students />;
-                case 'messages': return <Messages />;
-                case 'analytics': return <Analytics />;
-                case 'library': return <Library />;
-                case 'calendar': return <Calendar />;
-                case 'templates': return <TemplateManager />;
-                case 'settings': return <Settings />;
-                default: // Fallback to their own dashboard
-                    setActivePage('superadmin');
-                    return <SuperAdminDashboard />;
-            }
-        }
-        
         switch (activePage) {
-            case 'dashboard':
-                if (currentUser?.role === UserRole.Parent) return <ParentPortal />;
-                return <Dashboard />;
-            case 'assignments':
-                return <Assignments />;
-            case 'students':
-                return <Students />;
-            case 'messages':
-                return <Messages />;
-            case 'analytics':
-                return <Analytics />;
-            case 'library':
-                return <Library />;
-            case 'calendar':
-                return <Calendar />;
-            case 'templates':
-                if (currentUser?.role === UserRole.Coach) return <TemplateManager />;
-                return <Dashboard />; // Fallback for others
-             case 'parent':
-                 if (currentUser?.role === UserRole.Parent) return <ParentPortal />;
-                 return <Dashboard />; // Fallback for others
-            case 'motivation':
-                if (currentUser?.role === UserRole.Student) return <Motivasyon />;
-                return <Dashboard />; // Fallback for others
-            case 'odak':
-                if (currentUser?.role === UserRole.Student) return <OdakModu />;
-                return <Dashboard />; // Fallback for others
-            case 'settings':
-                return <Settings />;
-            case 'superadmin':
-                if (currentUser?.role === UserRole.SuperAdmin) {
-                    return <SuperAdminDashboard />;
-                }
-                // Fallback for non-superadmins trying to access the page
-                return <Dashboard />; 
-            default:
-                return <Dashboard />;
+            case 'dashboard': return <Dashboard />;
+            case 'assignments': return <Assignments />;
+            case 'students': return <Students />;
+            case 'messages': return <Messages />;
+            case 'analytics': return <Analytics />;
+            case 'settings': return <Settings />;
+            case 'library': return <Library />;
+            case 'calendar': return <Calendar />;
+            case 'parent': return <ParentPortal />;
+            case 'templates': return <TemplateManager />;
+            case 'superadmin': return <SuperAdminDashboard />;
+            case 'motivation': return <Motivasyon />;
+            case 'odak': return <OdakModu />;
+            default: return <Dashboard />;
         }
     };
-    
-    if (!isFirebaseConfigured) {
-        return <SetupWizard />;
-    }
 
     if (isLoading) {
-       return <AppSkeleton />;
+        return <AppSkeleton />;
     }
 
     if (!currentUser) {
         return (
             <Suspense fallback={<AppSkeleton />}>
-                {showRegister 
-                    ? <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} /> 
-                    : <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />
-                }
+                {showRegister ? (
+                    <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} />
+                ) : (
+                    <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />
+                )}
             </Suspense>
         );
     }
-    
+
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-3 sm:p-6 animate-fade-in pb-20 lg:pb-8">
-                    <div className="max-w-7xl mx-auto">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+                     <div className="max-w-7xl mx-auto pb-16 lg:pb-0">
                         <Suspense fallback={<PageSkeleton />}>
-                            {renderPage()}
+                           {renderPage()}
                         </Suspense>
                     </div>
                 </main>
             </div>
             <TabBar />
-            <ToastContainer />
-            <Tour />
             <VideoCallModal />
-            {showWeeklyReport && <WeeklyReportModal onClose={handleCloseReport} />}
-            <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
             <AIChatbot />
+            {showWeeklyReport && <WeeklyReportModal onClose={() => setShowWeeklyReport(false)}/>}
+            <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
         </div>
     );
 };
 
-const App = () => {
-    return (
+
+const AppWrapper = () => (
+    <ErrorBoundary>
         <UIProvider>
             <DataProvider>
-                <ErrorBoundary>
-                    <AppContent />
-                </ErrorBoundary>
+                <AppContent />
+                <ToastContainer />
+                <Tour />
             </DataProvider>
         </UIProvider>
-    );
+    </ErrorBoundary>
+);
+
+const App = () => {
+  return <AppWrapper />;
 };
 
 export default App;

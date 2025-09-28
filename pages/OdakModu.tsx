@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, Goal, AssignmentStatus } from '../types';
@@ -92,7 +91,14 @@ const OdakModu = () => {
                 setTimeLeft(savedDurations[mode]);
             }
         } catch (e) { console.error("Could not load settings", e); }
-    }, [currentUser?.id, mode]);
+    }, [currentUser?.id]);
+
+    useEffect(() => {
+        // This effect runs whenever the mode changes, to update the timer to the correct duration from settings
+        setTimeLeft(durations[mode]);
+        setIsActive(false); // Stop timer when mode changes
+    }, [mode, durations]);
+
 
     useEffect(() => {
         try {
@@ -115,12 +121,18 @@ const OdakModu = () => {
         const openGoals = getGoalsForStudent(currentUser.id).filter(g => !g.isCompleted);
         return [...assignmentsToday, ...openGoals];
     }, [currentUser, getAssignmentsForStudent, getGoalsForStudent]);
+    
+    const selectMode = (newMode: TimerMode) => {
+        setIsActive(false);
+        setMode(newMode);
+        // TimeLeft will be updated by the useEffect that watches 'mode'
+    };
 
     useEffect(() => {
         let interval: number | undefined;
         if (isActive && timeLeft > 0) {
             interval = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0) {
+        } else if (isActive && timeLeft === 0) {
             setIsActive(false);
             audioRef.current?.play();
             if (mode === 'work') {
@@ -133,7 +145,7 @@ const OdakModu = () => {
             }
         }
         return () => clearInterval(interval);
-    }, [isActive, timeLeft, mode, pomodoros]);
+    }, [isActive, timeLeft, mode, pomodoros, selectMode]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -142,12 +154,6 @@ const OdakModu = () => {
     };
 
     const toggleTimer = () => setIsActive(!isActive);
-
-    const selectMode = (newMode: TimerMode) => {
-        setIsActive(false);
-        setMode(newMode);
-        setTimeLeft(durations[newMode]);
-    };
 
     const handleTaskToggle = (task: Assignment | Goal) => {
         if ('isCompleted' in task) { // It's a Goal

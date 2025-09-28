@@ -65,6 +65,20 @@ const cachedGeminiCall = async <T>(
     }
 };
 
+// Helper to find subject from title, used by multiple functions
+const getSubject = (title: string): string => {
+    const subjectKeywords: { [key: string]: string[] } = {
+        'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç'], 'Kimya': ['kimya', 'formül', 'organik'], 'Biyoloji': ['biyoloji', 'hücre', 'çizim'],
+        'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap'], 'Tarih': ['tarih', 'ihtilal', 'araştırma'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum'], 'İngilizce': ['ingilizce', 'kelime'], 'Felsefe': ['felsefe']
+    };
+    for (const subject in subjectKeywords) {
+        if (subjectKeywords[subject].some(keyword => title.toLowerCase().includes(keyword))) {
+            return subject;
+        }
+    }
+    return 'Genel';
+};
+
 export const generateAssignmentDescription = (title: string): Promise<string> => {
     return cachedGeminiCall(
         `genDesc_${title}`,
@@ -82,20 +96,6 @@ export const generateAssignmentDescription = (title: string): Promise<string> =>
 export const generateSmartFeedback = (assignmentToGrade: Assignment, allStudentAssignments: Assignment[]): Promise<string> => {
     const { title, grade } = assignmentToGrade;
     const studentId = assignmentToGrade.studentId;
-
-    // Helper to find subject from title
-    const getSubject = (title: string) => {
-        const subjectKeywords: { [key: string]: string[] } = {
-            'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç'], 'Kimya': ['kimya', 'formül', 'organik'], 'Biyoloji': ['biyoloji', 'hücre', 'çizim'],
-            'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap'], 'Tarih': ['tarih', 'ihtilal', 'araştırma'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum'], 'İngilizce': ['ingilizce', 'kelime'], 'Felsefe': ['felsefe']
-        };
-        for (const subject in subjectKeywords) {
-            if (subjectKeywords[subject].some(keyword => title.toLowerCase().includes(keyword))) {
-                return subject;
-            }
-        }
-        return 'Genel';
-    };
 
     const currentSubject = getSubject(title);
     
@@ -218,6 +218,53 @@ export const generateStudentFocusSuggestion = (studentName: string, assignments:
         "Önceliklerini belirlemeye ve ödevlerini zamanında yapmaya odaklanarak harika bir hafta geçirebilirsin!"
     );
 };
+
+export const suggestFocusAreas = (studentName: string, assignments: Assignment[]): Promise<string> => {
+    const graded = assignments.filter(a => a.status === AssignmentStatus.Graded && a.grade !== null);
+
+    if (graded.length < 3) {
+        return Promise.resolve("Odaklanılacak bir alan önermek için henüz yeterli veri yok. Ödevlerini tamamlamaya devam et!");
+    }
+
+    const subjectGrades: { [key: string]: number[] } = {};
+    graded.forEach(a => {
+        const subject = getSubject(a.title);
+        if (subject !== 'Genel') {
+            if (!subjectGrades[subject]) subjectGrades[subject] = [];
+            subjectGrades[subject].push(a.grade!);
+        }
+    });
+
+    const subjectAverages = Object.entries(subjectGrades).map(([subject, grades]) => ({
+        subject,
+        average: Math.round(grades.reduce((a, b) => a + b, 0) / grades.length)
+    })).filter(s => subjectGrades[s.subject].length > 1); // Only consider subjects with more than one grade for a more reliable average
+
+    if (subjectAverages.length < 2) {
+        return Promise.resolve("Harika gidiyorsun! Tüm derslerde tutarlı bir performans sergiliyorsun. Böyle devam et.");
+    }
+
+    const performanceSummary = subjectAverages
+        .sort((a, b) => a.average - b.average) // Sort by lowest average first
+        .map(s => `${s.subject} (ortalama: ${s.average})`)
+        .join(', ');
+
+    const prompt = `Bir öğrencinin derslerdeki not ortalamaları şu şekilde: ${performanceSummary}. 
+    Öğrencinin adı ${studentName}. 
+    Bu verilere dayanarak, öğrencinin odaklanması gereken 1 veya 2 dersi belirle. 
+    Neden bu derslere odaklanması gerektiğini açıklayan kısa, motive edici ve yapıcı bir tavsiye yaz. 
+    Tavsiyen doğrudan öğrenciye hitap etmeli ve "Bu hafta..." veya "Önümüzdeki günlerde..." gibi zaman ifadeleriyle eyleme geçirilebilir olmalı.
+    Sadece tavsiye metnini döndür.`;
+    
+    return cachedGeminiCall(
+        `suggestFocusAreas_v2_${studentName}_${graded.length}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } }),
+        (response) => response.text,
+        "Bu hafta tüm derslerine eşit derecede önem vererek dengeli bir çalışma programı izleyebilirsin."
+    );
+};
+
 
 export const generatePersonalCoachSummary = (coachName: string, students: User[], assignments: Assignment[]): Promise<string> => {
     const now = new Date();

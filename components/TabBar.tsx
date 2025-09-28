@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
-import { Page, UserRole } from '../types';
+import { Page, UserRole, User } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon
 } from './Icons';
@@ -45,7 +44,7 @@ const TabItem = React.memo(({ page, label, icon, badge }: TabItemProps) => {
 const TabBar = () => {
     const { currentUser, unreadCounts } = useDataContext();
 
-    const totalUnreadMessages = Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0);
+    const totalUnreadMessages = Array.from(unreadCounts.values()).reduce((sum, count) => sum + count, 0);
 
     const tabItems: TabItemProps[] = [];
 

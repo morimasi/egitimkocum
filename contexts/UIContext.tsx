@@ -1,6 +1,7 @@
 
 
 
+
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } from '../types';
 
@@ -74,14 +75,6 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    useEffect(() => {
-        const hasCompletedTour = localStorage.getItem('tourCompleted');
-        if (!hasCompletedTour) {
-            // Delay tour start slightly to allow app to render
-            setTimeout(() => startTour(), 1000);
-        }
-    }, []);
-    
     const startTour = useCallback(() => {
         setActivePage('dashboard');
         setTourStep(0);
