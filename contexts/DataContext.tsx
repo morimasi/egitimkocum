@@ -88,7 +88,7 @@ type Action =
     | { type: 'SET_CURRENT_USER'; payload: User | null }
     | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, data: any } }
     | { type: 'REMOVE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, id: string } }
-    | { type: 'RESET_STATE' }
+    | { type: 'RESET_STATE'; payload: { currentUserEmail: string | null } }
     | { type: 'SET_TYPING_STATUS'; payload: { userId: string; isTyping: boolean } };
 
 
@@ -100,8 +100,17 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, isLoading: action.payload };
         case 'SET_CURRENT_USER':
             return { ...state, currentUser: action.payload };
-        case 'RESET_STATE':
-            return getInitialState();
+        case 'RESET_STATE': {
+            const initialState = getInitialState();
+            const rehydratedUser = action.payload.currentUserEmail 
+                ? initialState.users.find(u => u.email === action.payload.currentUserEmail) || null 
+                : null;
+            return {
+                ...initialState,
+                currentUser: rehydratedUser, 
+                isLoading: false,
+            };
+        }
         case 'ADD_OR_UPDATE_DOC': {
             const collectionName = action.payload.collection;
             const docData = action.payload.data;
@@ -149,9 +158,9 @@ interface DataContextType {
     calendarEvents: CalendarEvent[];
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
-    login: (email: string, pass: string) => Promise<User | null>;
+    login: (email: string) => Promise<User | null>;
     logout: () => Promise<void>;
-    register: (name: string, email: string, pass: string, profilePictureFile: File | null) => Promise<void>;
+    register: (name: string, email: string, profilePictureFile: File | null) => Promise<void>;
     getAssignmentsForStudent: (studentId: string) => Assignment[];
     getMessagesForConversation: (conversationId: string) => Message[];
     sendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => Promise<void>;
@@ -209,12 +218,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
 
     const seedDatabase = useCallback(async () => {
-        dispatch({ type: 'RESET_STATE' });
-        setTimeout(() => {
-            dispatch({ type: 'SET_LOADING', payload: false });
-        }, 100);
+        dispatch({ type: 'RESET_STATE', payload: { currentUserEmail: state.currentUser?.email || null } });
         addToast("Veritabanı deneme verileriyle dolduruldu.", "success");
-    }, [addToast]);
+    }, [addToast, state.currentUser]);
 
     const coach = useMemo(() => {
         if (state.currentUser?.role === UserRole.Student) {
@@ -247,7 +253,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         });
     }, []);
 
-    const login = useCallback(async (email: string, pass: string): Promise<User | null> => {
+    const login = useCallback(async (email: string): Promise<User | null> => {
         const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (user) {
             dispatch({ type: 'SET_CURRENT_USER', payload: user });
@@ -260,7 +266,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         dispatch({ type: 'SET_CURRENT_USER', payload: null });
     }, []);
 
-    const register = useCallback(async (name: string, email: string, pass: string, profilePictureFile: File | null) => {
+    const register = useCallback(async (name: string, email: string, profilePictureFile: File | null) => {
         if (state.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
             throw new Error("Bu e-posta adresi zaten kullanılıyor.");
         }
@@ -334,8 +340,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, []);
     
     const markMessagesAsRead = useCallback(async (conversationId: string) => {
-        // Mock implementation
-    }, []);
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+        const updatedMessages = state.messages.map(msg => {
+            if (msg.conversationId === conversationId && msg.senderId !== currentUserId && !msg.readBy.includes(currentUserId)) {
+                return { ...msg, readBy: [...msg.readBy, currentUserId] };
+            }
+            return msg;
+        });
+        dispatch({ type: 'SET_DATA', payload: { collection: 'messages', data: updatedMessages } });
+    }, [state.currentUser, state.messages]);
     
      const addReaction = useCallback(async (messageId: string, emoji: string) => {
         if (!state.currentUser) return;
@@ -395,7 +409,18 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return map;
     }, [state.messages]);
     
-    const markNotificationsAsRead = useCallback(async () => {}, []);
+    const markNotificationsAsRead = useCallback(async () => {
+        if (!state.currentUser) return;
+        const currentUserId = state.currentUser.id;
+        const updatedNotifications = state.notifications.map(n => {
+            if (n.userId === currentUserId && !n.isRead) {
+                return { ...n, isRead: true };
+            }
+            return n;
+        });
+        dispatch({ type: 'SET_DATA', payload: { collection: 'notifications', data: updatedNotifications } });
+    }, [state.currentUser, state.notifications]);
+
     const updateTypingStatus = useCallback(async (isTyping: boolean) => {}, []);
     
     const updateGoal = useCallback(async (updatedGoal: Goal) => {
@@ -541,7 +566,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: { ...template, isFavorite: !template.isFavorite } }});
     }, [state.templates]);
     
-    // FIX: A comma was used instead of a closing parenthesis for the factory function, causing a syntax error.
     const value = useMemo(() => ({
         ...state,
         coach,

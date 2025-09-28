@@ -52,6 +52,15 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
         setActiveTab('overview');
         setSaveStatus('idle');
     }, [student]);
+    
+    useEffect(() => {
+        // On unmount, clear any pending save timeout to prevent memory leaks
+        return () => {
+            if (notesTimeoutRef.current) {
+                clearTimeout(notesTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newNotes = e.target.value;

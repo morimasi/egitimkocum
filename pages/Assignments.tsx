@@ -448,11 +448,15 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     
     const handleSuggestGrade = async () => {
         setIsSuggestingGrade(true);
+        setGradeRationale('');
         try {
             const result = await suggestGrade(assignment);
             if (result) {
                 setGrade(result.suggestedGrade.toString());
                 setGradeRationale(result.rationale);
+                addToast("Not önerisi oluşturuldu.", "info");
+            } else {
+                 throw new Error("AI'dan geçerli bir yanıt alınamadı.");
             }
         } catch(e) {
             addToast("Not önerisi alınamadı.", "error");

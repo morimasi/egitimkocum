@@ -48,11 +48,10 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
         setIsLoading(true);
 
         try {
-            await register(name, email, password, profilePicture);
+            await register(name, email, profilePicture);
             // On successful registration, user is automatically logged in.
         } catch (err: any) {
              setIsLoading(false);
-             console.error("Registration failed:", err.message || err);
              if (err.message && err.message.includes('zaten kullanılıyor')) {
                 setError('Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.');
             } else {

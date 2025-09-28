@@ -10,7 +10,6 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [gradeLevel, setGradeLevel] = useState('');
     const [academicTrack, setAcademicTrack] = useState<AcademicTrack | ''>('');
     const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
@@ -43,7 +42,7 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !password || !gradeLevel || !academicTrack) {
+        if (!name || !email || !gradeLevel || !academicTrack) {
             addToast("Lütfen tüm zorunlu alanları doldurun.", "error");
             return;
         }
@@ -128,17 +127,6 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
                         required
                     />
                 </div>
-            </div>
-             <div>
-                <label htmlFor="student-password" className="block text-sm font-medium mb-1">Başlangıç Şifresi</label>
-                <input
-                    id="student-password"
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                    required
-                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

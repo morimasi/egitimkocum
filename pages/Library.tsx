@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -240,7 +239,7 @@ const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClos
                 </select>
             </div>
             <div className="max-h-80 overflow-y-auto">
-                <p className="text-sm text-gray-500 mb-4">Bu özel kaynağı atamak istediğiniz öğrencileri seçin.</p>
+                <p className="text-sm text-gray-500 mb-4">Bu özel kaynağı atamak istediğiniz öğrenciler seçin.</p>
                 <ul className="space-y-2">
                     {availableStudents.map(student => {
                         const isAssigned = resource.assignedTo?.includes(student.id);
@@ -391,7 +390,6 @@ export default function Library() {
                 </div>
                  <div className="flex flex-col md:flex-row gap-4 pt-4">
                     <input type="text" placeholder="Kaynak adı ile ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
-                    {/* Fix: Property 'value' does not exist on type 'unknown'. */}
                     <select value={filterType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterType(e.target.value as 'all' | Resource['type'])} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="all">Tüm Türler</option>
                         <option value="link">Bağlantı</option>

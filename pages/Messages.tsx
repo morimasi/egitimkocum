@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
@@ -563,7 +565,6 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
     );
 };
 
-// Fix: Changed component export to a function declaration to solve lazy loading issue.
 export default function Messages() {
     const { conversations, currentUser, markMessagesAsRead, findOrCreateConversation } = useDataContext();
     const { initialFilters, setInitialFilters } = useUI();

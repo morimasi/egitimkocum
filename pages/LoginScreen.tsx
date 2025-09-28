@@ -18,11 +18,10 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
         setIsLoading(true);
 
         try {
-            // Using mock users for login
-            await login(email, password);
+            await login(email);
             // On successful login, AppContent will automatically switch views
         } catch (err: any) {
-             setError('E-posta veya şifre hatalı.');
+             setError('Kullanıcı bulunamadı veya şifre yanlış.');
              setIsLoading(false);
         }
     };
