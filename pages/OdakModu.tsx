@@ -42,15 +42,15 @@ const SettingsModal = ({ isOpen, onClose, durations, setDurations, alertSound, s
                 <h4 className="font-semibold">Zamanlayıcı Süreleri (dakika)</h4>
                 <div>
                     <label className="block text-sm font-medium mb-1">Çalışma</label>
-                    <input type="number" value={localDurations.work / 60} onChange={e => setLocalDurations(d => ({...d, work: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    <input type="number" min="1" value={localDurations.work / 60} onChange={e => setLocalDurations(d => ({...d, work: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Kısa Mola</label>
-                    <input type="number" value={localDurations.shortBreak / 60} onChange={e => setLocalDurations(d => ({...d, shortBreak: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    <input type="number" min="1" value={localDurations.shortBreak / 60} onChange={e => setLocalDurations(d => ({...d, shortBreak: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Uzun Mola</label>
-                    <input type="number" value={localDurations.longBreak / 60} onChange={e => setLocalDurations(d => ({...d, longBreak: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    <input type="number" min="1" value={localDurations.longBreak / 60} onChange={e => setLocalDurations(d => ({...d, longBreak: Number(e.target.value) * 60}))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
                 </div>
                 <h4 className="font-semibold pt-4 border-t dark:border-gray-600">Uyarı Sesi</h4>
                 <select value={localSound} onChange={e => setLocalSound(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
@@ -68,7 +68,7 @@ const SettingsModal = ({ isOpen, onClose, durations, setDurations, alertSound, s
 };
 
 const OdakModu = () => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, updateGoal } = useDataContext();
+    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, awardXp } = useDataContext();
     
     const [durations, setDurations] = useState<Record<TimerMode, number>>({
         work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60
@@ -79,6 +79,8 @@ const OdakModu = () => {
     const [isActive, setIsActive] = useState(false);
     const [pomodoros, setPomodoros] = useState(0);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<Assignment | Goal | null>(null);
+    const [sessionLog, setSessionLog] = useState<{ taskTitle: string; timestamp: string }[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     
     useEffect(() => {
@@ -88,15 +90,13 @@ const OdakModu = () => {
                 const { savedDurations, savedAlertSound } = JSON.parse(savedSettings);
                 setDurations(savedDurations);
                 setAlertSound(savedAlertSound);
-                setTimeLeft(savedDurations[mode]);
             }
         } catch (e) { console.error("Could not load settings", e); }
     }, [currentUser?.id]);
 
     useEffect(() => {
-        // This effect runs whenever the mode changes, to update the timer to the correct duration from settings
         setTimeLeft(durations[mode]);
-        setIsActive(false); // Stop timer when mode changes
+        setIsActive(false);
     }, [mode, durations]);
 
 
@@ -115,37 +115,47 @@ const OdakModu = () => {
 
     const tasks: (Assignment | Goal)[] = useMemo(() => {
         if (!currentUser) return [];
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
         const assignmentsToday = getAssignmentsForStudent(currentUser.id)
-            .filter(a => new Date(a.dueDate).toISOString().split('T')[0] === today && a.status === AssignmentStatus.Pending);
+            .filter(a => new Date(a.dueDate) <= today && a.status === AssignmentStatus.Pending);
         const openGoals = getGoalsForStudent(currentUser.id).filter(g => !g.isCompleted);
         return [...assignmentsToday, ...openGoals];
     }, [currentUser, getAssignmentsForStudent, getGoalsForStudent]);
     
-    const selectMode = (newMode: TimerMode) => {
+    const selectMode = useCallback((newMode: TimerMode) => {
         setIsActive(false);
         setMode(newMode);
-        // TimeLeft will be updated by the useEffect that watches 'mode'
-    };
+    }, []);
 
     useEffect(() => {
         let interval: number | undefined;
         if (isActive && timeLeft > 0) {
             interval = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         } else if (isActive && timeLeft === 0) {
-            setIsActive(false);
             audioRef.current?.play();
             if (mode === 'work') {
                 const newPomodoroCount = pomodoros + 1;
                 setPomodoros(newPomodoroCount);
+                awardXp(25, 'Odak seansını tamamladın!');
+                setSessionLog(prev => [
+                    ...prev,
+                    {
+                        taskTitle: selectedTask ? ('title' in selectedTask ? selectedTask.title : selectedTask.text) : 'Genel Çalışma',
+                        timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+                    }
+                ]);
+                
                 if (newPomodoroCount % 4 === 0) selectMode('longBreak');
                 else selectMode('shortBreak');
             } else {
                 selectMode('work');
             }
+            setIsActive(false);
         }
         return () => clearInterval(interval);
-    }, [isActive, timeLeft, mode, pomodoros, selectMode]);
+    }, [isActive, timeLeft, mode, pomodoros, selectMode, awardXp, selectedTask]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -153,23 +163,13 @@ const OdakModu = () => {
         return `${mins}:${secs}`;
     };
 
-    const toggleTimer = () => setIsActive(!isActive);
-
-    const handleTaskToggle = (task: Assignment | Goal) => {
-        if ('isCompleted' in task) { // It's a Goal
-            updateGoal({ ...task, isCompleted: !task.isCompleted });
+    const toggleTimer = () => {
+        if (!selectedTask && tasks.length > 0) {
+            alert("Lütfen odaklanmak için bir görev seçin.");
+            return;
         }
+        setIsActive(!isActive);
     };
-    
-    const xpToNextLevel = (level: number) => (level * level) * 100;
-    const currentLevel = useMemo(() => currentUser?.xp ? Math.floor(Math.sqrt(currentUser.xp / 100)) + 1 : 1, [currentUser?.xp]);
-    const xpForCurrentLevel = useMemo(() => xpToNextLevel(currentLevel - 1), [currentLevel]);
-    const xpForNextLevel = useMemo(() => xpToNextLevel(currentLevel), [currentLevel]);
-    const levelProgress = useMemo(() => {
-        const totalXpForLevel = xpForNextLevel - xpForCurrentLevel;
-        const currentXpInLevel = (currentUser?.xp || 0) - xpForCurrentLevel;
-        return totalXpForLevel > 0 ? (currentXpInLevel / totalXpForLevel) * 100 : 0;
-    }, [currentUser?.xp, xpForCurrentLevel, xpForNextLevel]);
 
     const MODE_CONFIG: Record<TimerMode, { label: string; color: string }> = {
         work: { label: 'Çalışma', color: 'text-primary-500' },
@@ -182,7 +182,7 @@ const OdakModu = () => {
             <div className="lg:col-span-2">
                 <Card>
                     <div className="flex flex-col items-center justify-center p-4 sm:p-8">
-                        <div className="flex items-center gap-2 sm:gap-4 mb-6">
+                        <div className="flex items-center gap-2 sm:gap-4 mb-4">
                              {(Object.keys(MODE_CONFIG) as TimerMode[]).map(m => (
                                 <button
                                     key={m}
@@ -195,6 +195,11 @@ const OdakModu = () => {
                             <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
                                 <SettingsIcon className="w-5 h-5"/>
                             </button>
+                        </div>
+
+                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg text-center mb-4 w-full max-w-md">
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">Odaklanılan Görev</p>
+                            <p className="text-sm text-gray-500 truncate">{selectedTask ? ('title' in selectedTask ? selectedTask.title : selectedTask.text) : 'Lütfen bir görev seçin'}</p>
                         </div>
                         
                         <div className="relative w-60 h-60 sm:w-64 sm:h-64">
@@ -209,79 +214,47 @@ const OdakModu = () => {
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-5xl sm:text-6xl font-bold font-mono tracking-tighter">{formatTime(timeLeft)}</span>
-                                <span className="text-gray-500 font-semibold">{MODE_CONFIG[mode].label}</span>
                             </div>
                         </div>
 
                         <button
                             onClick={toggleTimer}
-                            className="mt-8 px-10 py-3 sm:px-12 sm:py-4 text-xl sm:text-2xl font-bold bg-primary-600 text-white rounded-full hover:bg-primary-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-3"
+                            className="mt-6 px-10 py-3 sm:px-12 sm:py-4 text-xl sm:text-2xl font-bold bg-primary-600 text-white rounded-full hover:bg-primary-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-3"
                         >
                             {isActive ? <PauseIcon className="w-8 h-8"/> : <PlayIcon className="w-8 h-8"/>}
                             {isActive ? 'DURAKLAT' : 'BAŞLAT'}
                         </button>
                         
-                        <div className="mt-6 text-center">
+                        <div className="mt-4 text-center">
                             <p className="font-semibold">Tamamlanan Pomodoro: {pomodoros}</p>
-                            <p className="text-sm text-gray-500">Her 4 çalışmadan sonra uzun mola verilir.</p>
                         </div>
                     </div>
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-6">
-                 <Card>
-                    <h3 className="text-lg font-semibold mb-2">Seviye İlerlemen</h3>
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-primary-500 text-white rounded-full flex flex-col items-center justify-center font-bold flex-shrink-0">
-                            <span className="text-xs">SEVİYE</span>
-                            <span className="text-3xl">{currentLevel}</span>
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex justify-between text-xs mb-1">
-                                <span>{currentUser?.xp || 0} XP</span>
-                                <span className="text-gray-500">{xpForNextLevel} XP</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                                <div className="bg-gradient-to-r from-primary-400 to-primary-600 h-3 rounded-full" style={{ width: `${levelProgress}%` }}></div>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-                <Card title="Bugünkü Odak Listesi" className="h-full">
-                    <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto">
-                        {tasks.length > 0 ? tasks.map(task => {
+                 <Card title="Odaklanılacak Görevi Seç">
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {tasks.map(task => {
                             const isGoal = 'isCompleted' in task;
-                            const isCompleted = isGoal && task.isCompleted;
+                            const title = isGoal ? task.text : task.title;
                              return (
-                                 <div key={task.id} className={`flex items-center p-3 rounded-lg transition-colors ${isCompleted ? 'bg-green-50 dark:bg-green-900/50' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
-                                    {isGoal ? (
-                                        <>
-                                            <button onClick={() => handleTaskToggle(task)} className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-200 hover:border-primary-500 ${isCompleted ? 'border-primary-500 bg-primary-500' : 'border-gray-400 dark:border-gray-500'}`}>
-                                                {isCompleted && <CheckIcon className="w-3.5 h-3.5 text-white" />}
-                                            </button>
-                                            <div className="ml-3">
-                                                <p className={`font-medium text-sm ${isCompleted ? 'line-through text-gray-500' : ''}`}>Hedef: {task.text}</p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex-shrink-0">
-                                                <ClipboardListIcon className="w-5 h-5 text-primary-500" />
-                                            </div>
-                                            <div className="ml-3">
-                                                <p className="font-medium text-sm">Ödev: {task.title}</p>
-                                            </div>
-                                        </>
-                                    )}
+                                 <button key={task.id} onClick={() => setSelectedTask(task)} className={`w-full text-left p-3 rounded-lg transition-colors ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                    <p className="font-medium text-sm">{isGoal ? 'Hedef' : 'Ödev'}: {title}</p>
                                 </div>
                              )
-                        }) : (
-                             <div className="text-center py-10">
-                                <TargetIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" />
-                                <p className="mt-2 text-sm text-gray-500">Bugün için planlanmış bir görevin yok. Harika!</p>
-                            </div>
-                        )}
+                        })}
+                        {tasks.length === 0 && <p className="text-sm text-center text-gray-500 py-4">Harika! Odaklanılacak aktif bir görevin yok.</p>}
                     </div>
+                </Card>
+                <Card title="Seans Günlüğü">
+                    <ul className="space-y-2 max-h-60 overflow-y-auto">
+                        {sessionLog.length > 0 ? sessionLog.map((log, index) => (
+                            <li key={index} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md flex justify-between items-center text-sm">
+                                <span className="truncate pr-2">{log.taskTitle}</span>
+                                <span className="flex-shrink-0 font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">{log.timestamp}</span>
+                            </li>
+                        )) : <p className="text-sm text-center text-gray-500 py-4">Henüz tamamlanan seans yok.</p>}
+                    </ul>
                 </Card>
             </div>
             <SettingsModal 

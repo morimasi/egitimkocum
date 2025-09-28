@@ -97,6 +97,28 @@ const AppContent = () => {
         }
     }, [currentUser, startTour]);
 
+    useEffect(() => {
+        const getPageTitle = () => {
+            switch (activePage) {
+                case 'dashboard': return 'Anasayfa';
+                case 'assignments': return 'Ödevler';
+                case 'students': return 'Öğrenciler';
+                case 'messages': return 'Mesajlar';
+                case 'analytics': return 'Analitik';
+                case 'settings': return 'Ayarlar';
+                case 'library': return 'Kütüphane';
+                case 'calendar': return 'Takvim';
+                case 'parent': return 'Veli Portalı';
+                case 'templates': return 'Şablonlar';
+                case 'superadmin': return 'Süper Admin';
+                case 'motivation': return 'Motivasyon';
+                case 'odak': return 'Odak Modu';
+                default: return 'Anasayfa';
+            }
+        };
+        document.title = `Eğitim Koçu - ${getPageTitle()}`;
+    }, [activePage]);
+
     const renderPage = () => {
         switch (activePage) {
             case 'dashboard': return <Dashboard />;

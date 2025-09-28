@@ -11,11 +11,13 @@ const getInitialState = (): AppState => {
     // Deep copy to prevent mutation of the original seed data
     const seedData = JSON.parse(JSON.stringify(initialSeedData));
     
+    const adminId = uuid();
     const coachId = uuid();
     const student1Id = uuid();
     const student2Id = uuid();
 
     const users: User[] = [
+        { id: adminId, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com` },
         { id: coachId, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
         { id: student1Id, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: coachId, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
         { id: student2Id, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: coachId, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] }
@@ -188,6 +190,7 @@ interface DataContextType {
     deleteTemplate: (templateId: string) => Promise<void>;
     uploadFile: (file: File, path: string) => Promise<string>;
     updateStudentNotes: (studentId: string, notes: string) => Promise<void>;
+    awardXp: (amount: number, reason: string) => Promise<void>;
     unreadCounts: Map<string, number>;
     lastMessagesMap: Map<string, Message>;
     startGroupChat: (participantIds: string[], groupName: string) => Promise<string | undefined>;
@@ -491,6 +494,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     }, [state.users]);
 
+    const awardXp = useCallback(async (amount: number, reason: string) => {
+        if (!state.currentUser || state.currentUser.role !== UserRole.Student) return;
+        
+        const updatedUser = {
+            ...state.currentUser,
+            xp: (state.currentUser.xp || 0) + amount,
+        };
+        
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser }});
+        dispatch({ type: 'SET_CURRENT_USER', payload: updatedUser });
+        
+        addToast(`+${amount} XP! ${reason}`, 'xp');
+    }, [state.currentUser, addToast]);
+
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string) => {
         if (!state.currentUser) return;
         const newConversation: Conversation = {
@@ -602,6 +619,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         deleteTemplate,
         uploadFile,
         updateStudentNotes,
+        awardXp,
         startGroupChat,
         findOrCreateConversation,
         addUserToConversation,
@@ -619,7 +637,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         updateUser, deleteUser, addUser, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
         getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, toggleResourceAssignment,
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
-        uploadFile, updateStudentNotes, startGroupChat, findOrCreateConversation, addUserToConversation,
+        uploadFile, updateStudentNotes, awardXp, startGroupChat, findOrCreateConversation, addUserToConversation,
         removeUserFromConversation, endConversation, updateBadge, addCalendarEvent, deleteCalendarEvent,
         toggleTemplateFavorite, seedDatabase
     ]);

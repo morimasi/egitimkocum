@@ -128,6 +128,66 @@ export const seedData = {
       title: "Türkçe: Kitap Özeti",
       description: "Belirtilen kitabı oku ve bir sayfalık özetini çıkar.",
       checklist: [{ text: "Kitap okundu." }, { text: "Ana fikir belirlendi." }, { text: "Özet yazıldı." }]
+    },
+    {
+      title: "Fizik: Optik Konu Tekrarı ve Soru Çözümü",
+      description: "Optik ünitesindeki (Gölge, Aydınlanma, Düzlem Ayna, Küresel Aynalar) konularını tekrar et ve ilgili konulardan en az 40 soru çöz.",
+      checklist: [
+        { text: "Konu anlatım videosu izlendi veya notlar tekrar edildi." },
+        { text: "En az 40 adet karışık optik sorusu çözüldü." },
+        { text: "Yapılamayan soruların çözümleri öğrenildi." },
+        { text: "Önemli formüller ve kurallar not defterine yazıldı." }
+      ]
+    },
+    {
+      title: "Kimya: Organik Kimyaya Giriş",
+      description: "Organik Kimya ünitesinin başlangıç konularını (Basit formül, molekül formülü, hibritleşme, molekül geometrisi) çalış ve temel alıştırmaları yap.",
+      checklist: [
+        { text: "Konu anlatımı tamamlandı." },
+        { text: "Hibritleşme (sp, sp2, sp3) türleri tekrar edildi." },
+        { text: "VSEPR gösterimleri ve molekül geometrileri ezberlendi." },
+        { text: "En az 20 alıştırma sorusu çözüldü." }
+      ]
+    },
+    {
+      title: "Biyoloji: Hücre Bölünmeleri (Mitoz ve Mayoz)",
+      description: "Mitoz ve Mayoz bölünmenin evrelerini karşılaştırmalı olarak çalış. Farklılıkları ve ortak yönleri belirten bir tablo hazırla.",
+      checklist: [
+        { text: "Mitoz bölünme evreleri ve özellikleri çalışıldı." },
+        { text: "Mayoz bölünme evreleri ve özellikleri çalışıldı." },
+        { text: "Karşılaştırma tablosu oluşturuldu." },
+        { text: "İki bölünme türüyle ilgili 20 soru çözüldü." }
+      ]
+    },
+    {
+      title: "Tarih: Kurtuluş Savaşı Cepheler",
+      description: "Kurtuluş Savaşı'ndaki Doğu, Güney ve Batı cephelerini, önemli komutanları, yapılan savaşları ve sonuçlarını detaylı bir şekilde çalış.",
+      checklist: [
+        { text: "Doğu ve Güney cepheleri çalışıldı." },
+        { text: "Batı cephesi savaşları (I. İnönü, II. İnönü, vb.) sırasıyla öğrenildi." },
+        { text: "Savaşların sonuçları ve imzalanan antlaşmalar not alındı." },
+        { text: "Konuyla ilgili zaman çizelgesi oluşturuldu." }
+      ]
+    },
+    {
+      title: "Coğrafya: Türkiye'nin İklimi",
+      description: "Türkiye'de görülen iklim tiplerini, etkileyen faktörleri ve bu iklimlerin bitki örtüsü üzerindeki etkilerini harita üzerinden inceleyerek çalış.",
+      checklist: [
+        { text: "Türkiye'nin iklimini etkileyen faktörler tekrar edildi." },
+        { text: "İklim tipleri (Akdeniz, Karadeniz, Karasal) ve dağılışları incelendi." },
+        { text: "İklim ve bitki örtüsü ilişkisi kuruldu." },
+        { text: "Dilsiz harita üzerine iklim tipleri ve bitki örtüleri işlendi." }
+      ]
+    },
+    {
+      title: "Genel: TYT Deneme Sınavı Analizi",
+      description: "Son çözdüğün TYT deneme sınavının detaylı analizini yap. Yanlış ve boş bıraktığın soruların konularını belirle ve bu konular için bir tekrar planı oluştur.",
+      checklist: [
+        { text: "Deneme sınavındaki tüm yanlışlar incelendi." },
+        { text: "Boş bırakılan soruların nedenleri analiz edildi." },
+        { text: "Yanlış ve boşların konu dağılımı çıkarıldı." },
+        { text: "Eksik konular için haftalık bir tekrar programı hazırlandı." }
+      ]
     }
   ],
   badges: [

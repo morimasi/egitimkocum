@@ -49,6 +49,9 @@ Uygulamayı yerel ortamınızda çalıştırmak için aşağıdaki adımları iz
 
 1.  API anahtarını ayarladıktan sonra uygulamayı başlatın veya tarayıcıda sayfayı yenileyin.
 2.  Uygulama, önceden tanımlanmış örnek kullanıcılar ve verilerle başlayacaktır. Aşağıdaki örnek kullanıcı bilgileriyle giriş yapabilirsiniz:
+    *   **Admin Girişi:**
+        *   **E-posta:** `admin@egitim.com`
+        *   **Şifre:** Herhangi bir şey yazabilirsiniz (örn: `123456`)
     *   **Koç Girişi:**
         *   **E-posta:** `ahmet.yilmaz@egitim.com`
         *   **Şifre:** Herhangi bir şey yazabilirsiniz (örn: `123456`)

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
@@ -9,6 +8,8 @@ import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentFocusSuggestion, generatePersonalCoachSummary, suggestFocusAreas } from '../services/geminiService';
 import AnnouncementModal from '../components/AnnouncementModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import GoalsCard from '../components/GoalsCard';
+import OnboardingWizard from '../components/OnboardingWizard';
 
 
 const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void }) => {
@@ -135,42 +136,6 @@ const StudentStatCard = ({ title, value, icon, color }: { title: string, value: 
     </Card>
 );
 
-const ProgressOverview = React.memo(() => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent } = useDataContext();
-    if(!currentUser) return null;
-
-    const assignments = getAssignmentsForStudent(currentUser.id);
-    const completionRate = assignments.length > 0 ? (assignments.filter(a => a.status !== AssignmentStatus.Pending).length / assignments.length) * 100 : 0;
-    
-    const goals = getGoalsForStudent(currentUser.id);
-    const goalsRate = goals.length > 0 ? (goals.filter(g => g.isCompleted).length / goals.length) * 100 : 0;
-    
-    return (
-        <Card title="Genel İlerleme Durumu">
-            <div className="space-y-4">
-                 <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ödev Tamamlama</span>
-                        <span className="text-sm font-bold text-primary-500">{completionRate.toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${completionRate}%` }}></div>
-                    </div>
-                </div>
-                 <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Hedefler</span>
-                        <span className="text-sm font-bold text-yellow-500">{goalsRate.toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${goalsRate}%` }}></div>
-                    </div>
-                </div>
-            </div>
-        </Card>
-    );
-});
-
 const FocusAreasCard = React.memo(() => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const [focusSuggestion, setFocusSuggestion] = useState('');
@@ -214,6 +179,18 @@ const FocusAreasCard = React.memo(() => {
 const StudentDashboard = () => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
     const { setActivePage } = useUI();
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    useEffect(() => {
+        if (currentUser) {
+            const dismissed = localStorage.getItem(`onboarding_wizard_dismissed_${currentUser.id}`);
+            if (!dismissed) {
+                setShowOnboarding(true);
+            }
+        }
+    }, [currentUser]);
+
+
     if (!currentUser) return null;
     
     const assignments = getAssignmentsForStudent(currentUser.id);
@@ -230,6 +207,7 @@ const StudentDashboard = () => {
 
     return (
         <div className="space-y-6">
+            {showOnboarding && <OnboardingWizard onCompleteOrDismiss={() => setShowOnboarding(false)} />}
             <StudentWelcomeHeader />
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
                 <StudentStatCard title="Bekleyen Ödev" value={pendingCount} icon={<AssignmentsIcon />} color="text-yellow-500"/>
@@ -261,7 +239,7 @@ const StudentDashboard = () => {
                     )}
                 </Card>
                 <div className="space-y-6">
-                    <ProgressOverview />
+                    <GoalsCard />
                     <FocusAreasCard />
                 </div>
             </div>
