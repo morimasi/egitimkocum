@@ -2,14 +2,16 @@ import { UserRole, AssignmentStatus, BadgeID, AcademicTrack } from '../types';
 
 export const seedData = {
   assignments: [
+    // --- LEYLA'NIN ÖDEVLERİ ---
     {
       title: "Matematik: Türev Alma Kuralları Testi",
-      description: "Türev alma kurallarını içeren 20 soruluk testi çözün ve sonuçlarınızı yükleyin.",
+      description: "Türev alma kurallarını içeren 20 soruluk testi çözün ve sonuçlarınızı yükleyin. Özellikle çarpım ve bölüm türevine odaklanın.",
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       status: AssignmentStatus.Pending,
       studentId: "STUDENT_1_ID",
       coachId: "COACH_ID",
       submissionType: 'file',
+      checklist: [ { text: "Konu tekrarı yapıldı." }, { text: "20 soru çözüldü." }, { text: "Yanlışlar kontrol edildi." } ],
       grade: null, feedback: '', fileUrl: null, submittedAt: null,
     },
     {
@@ -20,11 +22,22 @@ export const seedData = {
       studentId: "STUDENT_1_ID",
       coachId: "COACH_ID",
       submissionType: 'completed',
-      grade: 95, feedback: 'Harika bir iş çıkardın Leyla! Paragraf anlama hızın ve doğruluğun gözle görülür şekilde artmış.', fileUrl: null, submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      grade: 95, feedback: 'Harika bir iş çıkardın Leyla! Paragraf anlama hızın ve doğruluğun gözle görülür şekilde artmış. Bu tempoyu koru!', fileUrl: null, submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     },
+     {
+      title: "Biyoloji: Hücre Bölünmeleri Karşılaştırma",
+      description: "Mitoz ve Mayoz bölünmenin evrelerini Venn şeması kullanarak karşılaştırın. Farklılıkları ve ortak yönleri belirtin.",
+      dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Pending,
+      studentId: "STUDENT_1_ID",
+      coachId: "COACH_ID",
+      submissionType: 'file',
+      grade: null, feedback: '', fileUrl: null, submittedAt: null,
+    },
+    // --- MEHMET'İN ÖDEVLERİ ---
     {
       title: "Fizik: Vektörler Konu Özeti",
-      description: "Fizik dersi vektörler konusunun özetini çıkarıp metin olarak gönderin.",
+      description: "Fizik dersi vektörler konusunun özetini çıkarıp metin olarak gönderin. Bileşke vektör bulma yöntemlerine özellikle değinin.",
       dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       status: AssignmentStatus.Pending,
       studentId: "STUDENT_2_ID",
@@ -41,24 +54,77 @@ export const seedData = {
       coachId: "COACH_ID",
       submissionType: 'completed',
       grade: null, feedback: '', fileUrl: null, submittedAt: new Date().toISOString(),
-    }
+    },
+    {
+      title: "Tarih: Kurtuluş Savaşı Cepheler Sunumu",
+      description: "Kurtuluş Savaşı cephelerini özetleyen kısa bir sunum hazırla. Her cephe için önemli bir olayı vurgula.",
+      dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Graded,
+      studentId: "STUDENT_2_ID",
+      coachId: "COACH_ID",
+      submissionType: 'file',
+      grade: 88, feedback: 'Mehmet, sunumun içeriği gayet iyiydi. Görsel kullanımı ve sadelik konuyu daha anlaşılır kılmış. Zaman yönetimi konusunda biraz daha pratik yapabilirsin. Eline sağlık.', fileUrl: null, submittedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    // --- ALİ'NİN ÖDEVLERİ ---
+     {
+      title: "Geometri: Üçgenlerde Alan Formülleri",
+      description: "Tüm üçgenlerde alan formüllerini bir kağıda yaz ve örnek birer soru çözümü ekle.",
+      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Pending,
+      studentId: "STUDENT_3_ID",
+      coachId: "COACH_ID",
+      submissionType: 'file',
+      grade: null, feedback: '', fileUrl: null, submittedAt: null,
+    },
+     {
+      title: "Edebiyat: Divan Edebiyatı Sanatçıları",
+      description: "17. Yüzyıl Divan Edebiyatı'nın 3 önemli şairini ve eserlerini araştırarak kısa bir metin hazırla.",
+      dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Graded,
+      studentId: "STUDENT_3_ID",
+      coachId: "COACH_ID",
+      submissionType: 'text',
+      grade: 92, feedback: "Ali, araştrman çok detaylı ve bilgilendirici olmuş. Özellikle Nabi'nin üslubunu iyi yakalamışsın. Böyle devam et!", fileUrl: null, submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    // --- ELİF'İN ÖDEVLERİ ---
+    {
+      title: "Coğrafya: Türkiye'nin Gölleri",
+      description: "Türkiye'nin tektonik, karstik ve volkanik göllerine 3'er örnek vererek harita üzerinde göster.",
+      dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Pending,
+      studentId: "STUDENT_4_ID",
+      coachId: "COACH_2_ID",
+      submissionType: 'file',
+      grade: null, feedback: '', fileUrl: null, submittedAt: null,
+    },
+    {
+      title: "İngilizce: Kelime Çalışması",
+      description: "Verilen 20 kelimeyi ezberle ve her biriyle birer cümle kur.",
+      dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      status: AssignmentStatus.Submitted,
+      studentId: "STUDENT_4_ID",
+      coachId: "COACH_2_ID",
+      submissionType: 'text',
+      grade: null, feedback: '', fileUrl: null, submittedAt: new Date(Date.now() - 1 * 12 * 60 * 60 * 1000).toISOString(),
+    },
   ],
   conversations: [
-    {
-      id: "conv-1",
-      participantIds: ["COACH_ID", "STUDENT_1_ID"],
-      isGroup: false,
-    },
-    {
-      id: "conv-2",
-      participantIds: ["COACH_ID", "STUDENT_2_ID"],
-      isGroup: false,
-    },
+    { id: "conv-1", participantIds: ["COACH_ID", "STUDENT_1_ID"], isGroup: false },
+    { id: "conv-2", participantIds: ["COACH_ID", "STUDENT_2_ID"], isGroup: false },
+    { id: "conv-3", participantIds: ["COACH_ID", "STUDENT_3_ID"], isGroup: false },
+    { id: "conv-4", participantIds: ["COACH_2_ID", "STUDENT_4_ID"], isGroup: false },
     {
       id: 'conv-announcements',
-      participantIds: ["COACH_ID", "STUDENT_1_ID", "STUDENT_2_ID"],
+      participantIds: ["COACH_ID", "STUDENT_1_ID", "STUDENT_2_ID", "STUDENT_3_ID"],
       isGroup: true,
-      groupName: "📢 Duyurular",
+      groupName: "📢 Ahmet Hoca Duyurular",
+      adminId: "COACH_ID",
+    },
+    {
+      id: 'conv-group-1',
+      participantIds: ["COACH_ID", "STUDENT_1_ID", "STUDENT_3_ID"],
+      isGroup: true,
+      groupName: "Sayısal Çalışma Grubu",
       adminId: "COACH_ID",
     }
   ],
@@ -68,180 +134,75 @@ export const seedData = {
       conversationId: "conv-1",
       text: "Merhaba Leyla, haftalık programını gözden geçirdim. Matematik netlerin yükselişte, tebrikler!",
       timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      type: 'text',
-      readBy: [],
+      type: 'text', readBy: [],
     },
     {
       senderId: "STUDENT_1_ID",
       conversationId: "conv-1",
       text: "Teşekkür ederim öğretmenim! Türev testinde biraz zorlandım ama halledeceğim.",
       timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      type: 'text',
-      readBy: [],
+      type: 'text', readBy: [],
     },
-     {
+    {
       senderId: "COACH_ID",
       conversationId: "conv-announcements",
       text: "Arkadaşlar, yarınki deneme sınavı için son tekrar yapmayı unutmayın! Başarılar dilerim.",
       timestamp: new Date().toISOString(),
-      type: 'announcement',
+      type: 'announcement', readBy: [],
+    },
+     {
+      senderId: "COACH_2_ID",
+      conversationId: "conv-4",
+      text: "Elif merhaba, platforma hoş geldin! İlk ödevlerini atadım, takıldığın bir yer olursa çekinme sorabilirsin.",
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      type: 'text', readBy: [],
+    },
+     {
+      senderId: "STUDENT_4_ID",
+      conversationId: "conv-4",
+      text: "Hoş buldum hocam, teşekkür ederim. Kelime ödevini teslim ettim.",
+      timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+      type: 'text', readBy: [],
+    },
+    {
+      senderId: "COACH_ID",
+      conversationId: "conv-group-1",
+      text: "Bu hafta sonu hangi konudan ortak bir soru çözüm saati yapalım?",
+      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      type: 'poll',
+      poll: {
+        question: "Hafta sonu soru çözüm konusu:",
+        options: [ { text: "Limit ve Süreklilik", votes: ["STUDENT_1_ID"] }, { text: "Organik Kimya", votes: [] }, { text: "Modern Fizik", votes: ["STUDENT_3_ID"] } ]
+      },
       readBy: [],
     }
   ],
   goals: [
     { studentId: "STUDENT_1_ID", text: "Haftada 200 matematik sorusu çözmek.", isCompleted: true },
     { studentId: "STUDENT_1_ID", text: "Türkçe deneme netini 35'in üzerine çıkarmak.", isCompleted: false },
+    { studentId: "STUDENT_1_ID", text: "Biyoloji kalıtım konusunu bitirmek.", isCompleted: false },
     { studentId: "STUDENT_2_ID", text: "Fizik Vektörler konusunu tamamen bitirmek.", isCompleted: false },
+    { studentId: "STUDENT_2_ID", text: "Her gün 20 paragraf sorusu çözmek.", isCompleted: true },
+    { studentId: "STUDENT_3_ID", text: "Geometri katı cisimler konusuna başlamak.", isCompleted: false },
+    { studentId: "STUDENT_4_ID", text: "Günde 10 yeni İngilizce kelime öğrenmek.", isCompleted: false },
   ],
   resources: [
-    {
-      name: "Türev Konu Anlatımı PDF",
-      type: 'pdf',
-      url: "#",
-      isPublic: true,
-      uploaderId: "COACH_ID",
-    },
-    {
-      name: "Paragraf Çözme Taktikleri Videosu",
-      type: 'video',
-      url: "#",
-      isPublic: true,
-      uploaderId: "COACH_ID",
-    },
-    {
-      name: "Organik Kimya Özel Notları",
-      type: 'document',
-      url: "#",
-      isPublic: false,
-      uploaderId: "COACH_ID",
-      assignedTo: ["STUDENT_2_ID"]
-    }
+    { name: "Türev Konu Anlatımı PDF", type: 'pdf', url: "#", isPublic: true, uploaderId: "COACH_ID" },
+    { name: "Paragraf Çözme Taktikleri Videosu", type: 'video', url: "#", isPublic: true, uploaderId: "COACH_ID" },
+    { name: "Limit ve Süreklilik Ders Notları", type: 'document', url: "#", isPublic: true, uploaderId: "COACH_ID" },
+    { name: "Organik Kimya Özel Notları", type: 'document', url: "#", isPublic: false, uploaderId: "COACH_ID", assignedTo: ["STUDENT_2_ID", "STUDENT_3_ID"] },
+    { name: "AYT Fizik Denemeleri", type: 'pdf', url: "#", isPublic: false, uploaderId: "COACH_2_ID", assignedTo: ["STUDENT_4_ID"] },
+    { name: "Coğrafya Harita Çalışması", type: 'image', url: "#", isPublic: true, uploaderId: "COACH_2_ID" },
   ],
   templates: [
-    {
-      title: "Matematik: Haftalık Tekrar Testi",
-      description: "Bu haftanın konularını içeren tekrar testini çöz.",
-      checklist: [{ text: "Konu tekrarı yapıldı." }, { text: "20 soru çözüldü." }, { text: "Yanlışlar kontrol edildi." }]
-    },
-    {
-      title: "Türkçe: Kitap Özeti",
-      description: "Belirtilen kitabı oku ve bir sayfalık özetini çıkar.",
-      checklist: [{ text: "Kitap okundu." }, { text: "Ana fikir belirlendi." }, { text: "Özet yazıldı." }]
-    },
-    {
-      title: "Fizik: Optik Konu Tekrarı ve Soru Çözümü",
-      description: "Optik ünitesindeki (Gölge, Aydınlanma, Düzlem Ayna, Küresel Aynalar) konularını tekrar et ve ilgili konulardan en az 40 soru çöz.",
-      checklist: [
-        { text: "Konu anlatım videosu izlendi veya notlar tekrar edildi." },
-        { text: "En az 40 adet karışık optik sorusu çözüldü." },
-        { text: "Yapılamayan soruların çözümleri öğrenildi." },
-        { text: "Önemli formüller ve kurallar not defterine yazıldı." }
-      ]
-    },
-    {
-      title: "Kimya: Organik Kimyaya Giriş",
-      description: "Organik Kimya ünitesinin başlangıç konularını (Basit formül, molekül formülü, hibritleşme, molekül geometrisi) çalış ve temel alıştırmaları yap.",
-      checklist: [
-        { text: "Konu anlatımı tamamlandı." },
-        { text: "Hibritleşme (sp, sp2, sp3) türleri tekrar edildi." },
-        { text: "VSEPR gösterimleri ve molekül geometrileri ezberlendi." },
-        { text: "En az 20 alıştırma sorusu çözüldü." }
-      ]
-    },
-    {
-      title: "Biyoloji: Hücre Bölünmeleri (Mitoz ve Mayoz)",
-      description: "Mitoz ve Mayoz bölünmenin evrelerini karşılaştırmalı olarak çalış. Farklılıkları ve ortak yönleri belirten bir tablo hazırla.",
-      checklist: [
-        { text: "Mitoz bölünme evreleri ve özellikleri çalışıldı." },
-        { text: "Mayoz bölünme evreleri ve özellikleri çalışıldı." },
-        { text: "Karşılaştırma tablosu oluşturuldu." },
-        { text: "İki bölünme türüyle ilgili 20 soru çözüldü." }
-      ]
-    },
-    {
-      title: "Tarih: Kurtuluş Savaşı Cepheler",
-      description: "Kurtuluş Savaşı'ndaki Doğu, Güney ve Batı cephelerini, önemli komutanları, yapılan savaşları ve sonuçlarını detaylı bir şekilde çalış.",
-      checklist: [
-        { text: "Doğu ve Güney cepheleri çalışıldı." },
-        { text: "Batı cephesi savaşları (I. İnönü, II. İnönü, vb.) sırasıyla öğrenildi." },
-        { text: "Savaşların sonuçları ve imzalanan antlaşmalar not alındı." },
-        { text: "Konuyla ilgili zaman çizelgesi oluşturuldu." }
-      ]
-    },
-    {
-      title: "Coğrafya: Türkiye'nin İklimi",
-      description: "Türkiye'de görülen iklim tiplerini, etkileyen faktörleri ve bu iklimlerin bitki örtüsü üzerindeki etkilerini harita üzerinden inceleyerek çalış.",
-      checklist: [
-        { text: "Türkiye'nin iklimini etkileyen faktörler tekrar edildi." },
-        { text: "İklim tipleri (Akdeniz, Karadeniz, Karasal) ve dağılışları incelendi." },
-        { text: "İklim ve bitki örtüsü ilişkisi kuruldu." },
-        { text: "Dilsiz harita üzerine iklim tipleri ve bitki örtüleri işlendi." }
-      ]
-    },
-    {
-      title: "Genel: TYT Deneme Sınavı Analizi",
-      description: "Son çözdüğün TYT deneme sınavının detaylı analizini yap. Yanlış ve boş bıraktığın soruların konularını belirle ve bu konular için bir tekrar planı oluştur.",
-      checklist: [
-        { text: "Deneme sınavındaki tüm yanlışlar incelendi." },
-        { text: "Boş bırakılan soruların nedenleri analiz edildi." },
-        { text: "Yanlış ve boşların konu dağılımı çıkarıldı." },
-        { text: "Eksik konular için haftalık bir tekrar programı hazırlandı." }
-      ]
-    },
-    {
-      title: "Fizik: Basit Sarkaç Deneyi Raporu",
-      description: "Evde bulabileceğin basit malzemelerle bir sarkaç düzeneği kur. Sarkacın periyodunu etkileyen faktörleri (ip uzunluğu, kütle, salınım açısı) gözlemle. Deney adımlarını, gözlemlerini ve sonuçlarını içeren bir rapor hazırla.",
-      checklist: [
-        { text: "Deney düzeneği kuruldu ve fotoğrafı çekildi." },
-        { text: "İp uzunluğu değiştirilerek periyot ölçümleri yapıldı ve tabloya kaydedildi." },
-        { text: "Kütle değiştirilerek periyot ölçümleri yapıldı ve tabloya kaydedildi." },
-        { text: "Gözlemler ve sonuçlar yorumlandı." },
-        { text: "Deney raporu tamamlandı ve yüklendi." }
-      ]
-    },
-    {
-      title: "Edebiyat: Deneme Türü İncelemesi",
-      description: "Belirtilen deneme metnini oku. Yazarın üslubunu, ana fikrini, kullandığı dil ve anlatım özelliklerini analiz eden bir inceleme yazısı yaz.",
-      checklist: [
-        { text: "Deneme metni dikkatlice okundu." },
-        { text: "Metnin ana fikri ve yardımcı fikirleri belirlendi." },
-        { text: "Yazarın kullandığı söz sanatları ve dil özellikleri tespit edildi." },
-        { text: "İnceleme yazısı taslağı oluşturuldu." },
-        { text: "Yazım ve noktalama kurallarına dikkat edilerek inceleme yazısı tamamlandı." }
-      ]
-    },
-    {
-      title: "Tarih: İstanbul'un Fethi Araştırma Ödevi",
-      description: "İstanbul'un Fethi'nin nedenlerini, önemli olaylarını ve dünya tarihi açısından sonuçlarını araştırarak kapsamlı bir araştırma yazısı hazırlayın. En az üç farklı kaynak kullanın.",
-      checklist: [
-        { text: "Araştırma konusuyla ilgili en az üç güvenilir kaynak (kitap, makale, belgesel) bulundu." },
-        { text: "Fethin nedenleri ve sonuçları hakkında notlar alındı." },
-        { text: "Fatih Sultan Mehmet'in rolü ve kullandığı teknolojiler araştırıldı." },
-        { text: "Araştırma yazısı planı oluşturuldu." },
-        { text: "Kaynaklar belirtilerek araştırma yazısı tamamlandı." }
-      ]
-    },
-    {
-      title: "İngilizce: Kelime Çalışması ve Cümle Kurma",
-      description: "Verilen 20 İngilizce kelimenin anlamlarını öğrenin. Her kelimeyi içeren özgün birer cümle yazın.",
-      checklist: [
-        { text: "Kelimelerin Türkçe anlamları öğrenildi." },
-        { text: "Kelimelerin İngilizce telaffuzları çalışıldı." },
-        { text: "Her kelime için birer cümle yazıldı." },
-        { text: "Cümlelerin gramer doğruluğu kontrol edildi." }
-      ]
-    },
-    {
-      title: "Felsefe: Varlık Felsefesi Üzerine Kompozisyon",
-      description: "'Varlık nedir?' sorusuna Platon ve Aristoteles'in verdiği cevapları karşılaştırarak, kendi görüşlerinizi de içeren bir kompozisyon yazın.",
-      checklist: [
-        { text: "Platon'un 'İdealar Kuramı' araştırıldı." },
-        { text: "Aristoteles'in 'Madde-Form' öğretisi araştırıldı." },
-        { text: "İki filozofun varlık anlayışları arasındaki temel farklar belirlendi." },
-        { text: "Kompozisyon planı yapıldı." },
-        { text: "Kendi düşüncelerinizi de ekleyerek kompozisyon yazıldı." }
-      ]
-    }
+    { title: "Matematik: Haftalık Tekrar Testi", description: "Bu haftanın konularını içeren tekrar testini çöz.", checklist: [{ text: "Konu tekrarı yapıldı." }, { text: "20 soru çözüldü." }, { text: "Yanlışlar kontrol edildi." }] },
+    { title: "Türkçe: Kitap Özeti", description: "Belirtilen kitabı oku ve bir sayfalık özetini çıkar.", checklist: [{ text: "Kitap okundu." }, { text: "Ana fikir belirlendi." }, { text: "Özet yazıldı." }] },
+    { title: "Fizik: Optik Konu Tekrarı ve Soru Çözümü", description: "Optik ünitesindeki (Gölge, Aydınlanma, Düzlem Ayna, Küresel Aynalar) konularını tekrar et ve ilgili konulardan en az 40 soru çöz.", checklist: [ { text: "Konu anlatım videosu izlendi veya notlar tekrar edildi." }, { text: "En az 40 adet karışık optik sorusu çözüldü." }, { text: "Yapılamayan soruların çözümleri öğrenildi." }, { text: "Önemli formüller ve kurallar not defterine yazıldı." } ] },
+    { title: "Kimya: Organik Kimyaya Giriş", description: "Organik Kimya ünitesinin başlangıç konularını (Basit formül, molekül formülü, hibritleşme, molekül geometrisi) çalış ve temel alıştırmaları yap.", checklist: [ { text: "Konu anlatımı tamamlandı." }, { text: "Hibritleşme (sp, sp2, sp3) türleri tekrar edildi." }, { text: "VSEPR gösterimleri ve molekül geometrileri ezberlendi." }, { text: "En az 20 alıştırma sorusu çözüldü." } ] },
+    { title: "Biyoloji: Hücre Bölünmeleri (Mitoz ve Mayoz)", description: "Mitoz ve Mayoz bölünmenin evrelerini karşılaştırmalı olarak çalış. Farklılıkları ve ortak yönleri belirten bir tablo hazırla.", checklist: [ { text: "Mitoz bölünme evreleri ve özellikleri çalışıldı." }, { text: "Mayoz bölünme evreleri ve özellikleri çalışıldı." }, { text: "Karşılaştırma tablosu oluşturuldu." }, { text: "İki bölünme türüyle ilgili 20 soru çözüldü." } ] },
+    { title: "Tarih: Kurtuluş Savaşı Cepheler", description: "Kurtuluş Savaşı'ndaki Doğu, Güney ve Batı cephelerini, önemli komutanları, yapılan savaşları ve sonuçlarını detaylı bir şekilde çalış.", checklist: [ { text: "Doğu ve Güney cepheleri çalışıldı." }, { text: "Batı cephesi savaşları (I. İnönü, II. İnönü, vb.) sırasıyla öğrenildi." }, { text: "Savaşların sonuçları ve imzalanan antlaşmalar not alındı." }, { text: "Konuyla ilgili zaman çizelgesi oluşturuldu." } ] },
+    { title: "Coğrafya: Türkiye'nin İklimi", description: "Türkiye'de görülen iklim tiplerini, etkileyen faktörleri ve bu iklimlerin bitki örtüsü üzerindeki etkilerini harita üzerinden inceleyerek çalış.", checklist: [ { text: "Türkiye'nin iklimini etkileyen faktörler tekrar edildi." }, { text: "İklim tipleri (Akdeniz, Karadeniz, Karasal) ve dağılışları incelendi." }, { text: "İklim ve bitki örtüsü ilişkisi kuruldu." }, { text: "Dilsiz harita üzerine iklim tipleri ve bitki örtüleri işlendi." } ] },
+    { title: "Genel: TYT Deneme Sınavı Analizi", description: "Son çözdüğün TYT deneme sınavının detaylı analizini yap. Yanlış ve boş bıraktığın soruların konularını belirle ve bu konular için bir tekrar planı oluştur.", checklist: [ { text: "Deneme sınavındaki tüm yanlışlar incelendi." }, { text: "Boş bırakılan soruların nedenleri analiz edildi." }, { text: "Yanlış ve boşların konu dağılımı çıkarıldı." }, { text: "Eksik konular için haftalık bir tekrar programı hazırlandı." } ] },
   ],
   badges: [
     { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },

@@ -4,7 +4,7 @@ import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, Bad
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon } from '../components/Icons';
+import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverviewTab from '../components/studentDetail/OverviewTab';
@@ -106,7 +106,7 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
 
     const handleAssignTask = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setActivePage('assignments', { studentId: student.id, openNewAssignmentModal: true });
+        setActivePage('assignments', { openNewAssignmentModal: true, studentId: student.id });
     };
 
     const handleAssignResource = (e: React.MouseEvent) => {
@@ -206,12 +206,14 @@ export default function Students() {
     const [filterCoach, setFilterCoach] = useState('all');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
-    const { initialFilters, setInitialFilters, addToast } = useUI();
+    const { initialFilters, setInitialFilters, addToast, setActivePage } = useUI();
     const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
     const [isConfirmGoalModalOpen, setIsConfirmGoalModalOpen] = useState(false);
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isAssignResourceModalOpen, setIsAssignResourceModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof (User & { avgGrade: number; overdueCount: number }); direction: 'asc' | 'desc' } | null>(null);
 
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
@@ -244,12 +246,18 @@ export default function Students() {
         [AcademicTrack.Dil]: 'Dil',
     };
 
-    const groupedStudents = useMemo(() => {
-        const gradeKeys = ['9', '10', '11', '12', 'mezun'];
-        const groups = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {} as Record<string, User[]>);
-        groups['Diğer'] = [];
+    const studentsWithStats = useMemo(() => {
+        return students.map(student => {
+            const assignments = getAssignmentsForStudent(student.id);
+            const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+            const graded = assignments.filter(a => a.grade !== null);
+            const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
+            return { ...student, overdueCount, avgGrade };
+        });
+    }, [students, getAssignmentsForStudent]);
 
-        students
+    const filteredStudents = useMemo(() => {
+        return studentsWithStats
             .filter(student => {
                 const matchesSearch = student.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
                 const matchesCoach = !isSuperAdmin || filterCoach === 'all' || 
@@ -257,23 +265,45 @@ export default function Students() {
                                     student.assignedCoachId === filterCoach;
                 const matchesTrack = filterTrack === 'all' || student.academicTrack === filterTrack;
                 return matchesSearch && matchesCoach && matchesTrack;
-            })
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .forEach(student => {
-                const grade = student.gradeLevel;
-                if (grade && gradeKeys.includes(grade)) {
-                    groups[grade].push(student);
-                } else {
-                    groups['Diğer'].push(student);
-                }
             });
+    }, [studentsWithStats, debouncedSearchTerm, isSuperAdmin, filterCoach, filterTrack]);
 
-        return groups;
-    }, [students, debouncedSearchTerm, isSuperAdmin, filterCoach, filterTrack]);
-    
-    const visibleStudents = useMemo(() => Object.values(groupedStudents).flat(), [groupedStudents]);
+    const sortedAndGroupedStudents = useMemo(() => {
+        const sorted = [...filteredStudents];
+        if (sortConfig !== null) {
+            sorted.sort((a, b) => {
+                if (a[sortConfig.key] < b[sortConfig.key]) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (a[sortConfig.key] > b[sortConfig.key]) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
 
-    const gradeOrder: (keyof typeof groupedStudents)[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
+        if (viewMode === 'grid' && !sortConfig) {
+             const gradeKeys = ['9', '10', '11', '12', 'mezun'];
+             const groups = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {} as Record<string, typeof sorted>);
+             groups['Diğer'] = [];
+
+             sorted.sort((a, b) => a.name.localeCompare(b.name))
+                 .forEach(student => {
+                     const grade = student.gradeLevel;
+                     if (grade && gradeKeys.includes(grade)) {
+                         groups[grade].push(student);
+                     } else {
+                         groups['Diğer'].push(student);
+                     }
+                 });
+             return { grouped: groups, flat: sorted };
+        }
+        
+        return { grouped: null, flat: sorted };
+    }, [filteredStudents, sortConfig, viewMode]);
+
+
+    const gradeOrder: (keyof NonNullable<typeof sortedAndGroupedStudents.grouped>)[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
 
     const handleSelectStudent = useCallback((student: User) => {
         setSelectedStudent(student);
@@ -319,10 +349,10 @@ export default function Students() {
     }, []);
 
     const handleSelectAll = () => {
-        if (selectedStudentIds.length === visibleStudents.length) {
+        if (selectedStudentIds.length === filteredStudents.length) {
             setSelectedStudentIds([]);
         } else {
-            setSelectedStudentIds(visibleStudents.map(s => s.id));
+            setSelectedStudentIds(filteredStudents.map(s => s.id));
         }
     };
 
@@ -337,6 +367,18 @@ export default function Students() {
         await assignResourceToStudents(resourceId, selectedStudentIds);
         addToast(`Kaynak ${selectedStudentIds.length} öğrenciye atandı.`, "success");
         setSelectedStudentIds([]);
+    };
+
+    const handleBatchAssignTask = () => {
+        setActivePage('assignments', { openNewAssignmentModal: true });
+    };
+    
+    const requestSort = (key: keyof (User & { avgGrade: number; overdueCount: number })) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
     };
 
     return (
@@ -356,13 +398,17 @@ export default function Students() {
                             type="checkbox"
                             id="select-all"
                             className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
-                            checked={visibleStudents.length > 0 && selectedStudentIds.length === visibleStudents.length}
+                            checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length}
                             onChange={handleSelectAll}
                         />
                         <label htmlFor="select-all" className="ml-2 text-sm">Tümünü Seç</label>
                     </div>
                  </div>
                 <div className="flex gap-2 w-full sm:w-auto">
+                     <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                        <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><GridIcon className="w-5 h-5"/></button>
+                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><ListIcon className="w-5 h-5"/></button>
+                    </div>
                     <select
                         value={filterTrack}
                         onChange={e => setFilterTrack(e.target.value as any)}
@@ -414,16 +460,16 @@ export default function Students() {
                     title={isSuperAdmin ? "Platformda Öğrenci Yok" : "Henüz Öğrenciniz Yok"}
                     description={isSuperAdmin ? "Süper Admin panelinden yeni kullanıcılar oluşturarak öğrenci ekleyebilirsiniz." : "Size yeni öğrenciler atandığında burada görünecekler."}
                  />
-            ) : Object.values(groupedStudents).every(group => group.length === 0) ? (
+            ) : filteredStudents.length === 0 ? (
                  <EmptyState
                     icon={<NoStudentsIcon className="w-10 h-10"/>}
                     title="Öğrenci Bulunamadı"
                     description="Arama kriterlerinizi değiştirmeyi deneyin veya tüm öğrencileri görmek için aramayı temizleyin."
                  />
-            ) : (
+            ) : viewMode === 'grid' ? (
                 <div className="space-y-8">
                     {gradeOrder.map(grade => {
-                        const studentGroup = groupedStudents[grade];
+                        const studentGroup = sortedAndGroupedStudents.grouped?.[grade];
                         if (studentGroup && studentGroup.length > 0) {
                             const gradeLabel = grade === 'mezun' ? 'Mezunlar' : grade === 'Diğer' ? 'Diğer' : `${grade}. Sınıf`;
                             return (
@@ -446,6 +492,42 @@ export default function Students() {
                         return null;
                     })}
                 </div>
+            ) : (
+                <Card>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th scope="col" className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600" checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length} onChange={handleSelectAll}/></th>
+                                    <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => requestSort('name')}>Öğrenci</th>
+                                    <th scope="col" className="px-4 py-3 cursor-pointer hidden md:table-cell" onClick={() => requestSort('avgGrade')}>Not Ort.</th>
+                                    <th scope="col" className="px-4 py-3 cursor-pointer hidden lg:table-cell" onClick={() => requestSort('overdueCount')}>Gecikmiş Ödev</th>
+                                    <th scope="col" className="px-4 py-3 hidden md:table-cell">Seviye/Bölüm</th>
+                                    <th scope="col" className="px-4 py-3">Eylemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedAndGroupedStudents.flat.map(student => (
+                                    <tr key={student.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                        <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleSelect(student.id)}/></td>
+                                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white cursor-pointer" onClick={() => handleSelectStudent(student)}>
+                                            <div className="flex items-center gap-3">
+                                                <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full"/>
+                                                {student.name}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 hidden md:table-cell">{student.avgGrade}</td>
+                                        <td className={`px-4 py-3 hidden lg:table-cell ${student.overdueCount > 0 ? 'text-red-500 font-semibold' : ''}`}>{student.overdueCount}</td>
+                                        <td className="px-4 py-3 hidden md:table-cell">{student.gradeLevel || 'N/A'} / {getAcademicTrackLabel(student.academicTrack as AcademicTrack)}</td>
+                                        <td className="px-4 py-3">
+                                            <button onClick={() => handleSelectStudent(student)} className="font-medium text-primary-600 dark:text-primary-500 hover:underline">Detaylar</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
             )}
         </div>
 
@@ -454,6 +536,10 @@ export default function Students() {
                 <div className="bg-white dark:bg-gray-800 p-4 flex items-center justify-between gap-4 border-t dark:border-gray-700 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] lg:rounded-lg lg:border lg:shadow-2xl">
                     <span className="text-sm font-semibold whitespace-nowrap">{selectedStudentIds.length} öğrenci seçildi</span>
                     <div className="flex items-center gap-2">
+                        <button onClick={handleBatchAssignTask} className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 flex items-center gap-1.5">
+                            <AssignmentsIcon className="w-4 h-4" />
+                            <span className="hidden sm:inline">Toplu Ödev Ata</span>
+                        </button>
                         <button onClick={() => setIsAssignResourceModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-1.5">
                            <LibraryIcon className="w-4 h-4"/>
                            <span className="hidden sm:inline">Kaynak Ata</span>

@@ -3,7 +3,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -93,7 +93,7 @@ const getAcademicTrackLabel = (track: AcademicTrack): string => {
     }
 };
 
-const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen: boolean; onClose: () => void; preselectedStudentId?: string | null; }) => {
+const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen: boolean; onClose: () => void; preselectedStudentIds?: string[] | null; }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
     const { addToast } = useUI();
     const [title, setTitle] = useState('');
@@ -109,14 +109,14 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
     const [filterGrade, setFilterGrade] = useState<string>('all');
 
     useEffect(() => {
-        if (isOpen && preselectedStudentId) {
-            setSelectedStudents([preselectedStudentId]);
-            const student = students.find(s => s.id === preselectedStudentId);
-            if (student?.gradeLevel) {
-                setFilterGrade(student.gradeLevel);
+        if (isOpen && preselectedStudentIds) {
+            setSelectedStudents(preselectedStudentIds);
+             if (preselectedStudentIds.length === 1) {
+                const student = students.find(s => s.id === preselectedStudentIds[0]);
+                if (student?.gradeLevel) setFilterGrade(student.gradeLevel);
             }
         }
-    }, [isOpen, preselectedStudentId, students]);
+    }, [isOpen, preselectedStudentIds, students]);
 
     const availableStudents = useMemo(() => {
         const gradeFiltered = filterGrade === 'all'
@@ -178,7 +178,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        const template = templates.find(t => t.id === templateId);
+        // FIX: Add explicit type for `t` to fix potential type inference issue.
+        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -292,39 +293,44 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
                 </div>
-                 <div>
-                    <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
-                    <select
-                        value={filterGrade}
-                        onChange={e => {
-                            setFilterGrade(e.target.value);
-                            setSelectedStudents([]); // Reset selection when filter changes
-                        }}
-                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                    >
-                        <option value="all">Tüm Sınıflar</option>
-                        <option value="9">9. Sınıf</option>
-                        <option value="10">10. Sınıf</option>
-                        <option value="11">11. Sınıf</option>
-                        <option value="12">12. Sınıf</option>
-                        <option value="mezun">Mezun</option>
-                    </select>
-                </div>
-                <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="block text-sm font-medium">Öğrenciler</label>
-                        <button type="button" onClick={handleSelectAll} className="text-sm font-medium text-primary-600 hover:text-primary-800">
-                            {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
-                        </button>
-                    </div>
-                    <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                        {Object.entries(availableStudents).map(([track, studentGroup]) => (
-                            <optgroup key={track} label={track}>
-                                {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </optgroup>
-                        ))}
-                    </select>
-                </div>
+                 {!preselectedStudentIds && (
+                    <>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
+                            <select
+                                value={filterGrade}
+                                // FIX: Add explicit type to event handler parameter `e`.
+                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                    setFilterGrade(e.target.value);
+                                    setSelectedStudents([]); // Reset selection when filter changes
+                                }}
+                                className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                            >
+                                <option value="all">Tüm Sınıflar</option>
+                                <option value="9">9. Sınıf</option>
+                                <option value="10">10. Sınıf</option>
+                                <option value="11">11. Sınıf</option>
+                                <option value="12">12. Sınıf</option>
+                                <option value="mezun">Mezun</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium">Öğrenciler</label>
+                                <button type="button" onClick={handleSelectAll} className="text-sm font-medium text-primary-600 hover:text-primary-800">
+                                    {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
+                                </button>
+                            </div>
+                            <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                {Object.entries(availableStudents).map(([track, studentGroup]) => (
+                                    <optgroup key={track} label={track}>
+                                        {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </optgroup>
+                                ))}
+                            </select>
+                        </div>
+                    </>
+                )}
                 <div className="flex justify-end pt-4">
                     <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
                     <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Oluştur</button>
@@ -335,7 +341,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentId }: { isOpen:
 };
 
 
-const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (next: boolean) => void }) => {
+const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, canNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (direction: 'next' | 'prev') => void, canNavigate?: { next: boolean, prev: boolean } }) => {
     const { currentUser, updateAssignment, uploadFile, getAssignmentsForStudent, assignments: allAssignments } = useDataContext();
     const { addToast } = useUI();
     const [grade, setGrade] = useState<string>('');
@@ -347,6 +353,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
     const [isUploading, setIsUploading] = useState(false);
     const [studentVideoSubmissionUrl, setStudentVideoSubmissionUrl] = useState<string | null>(null);
     const [videoFeedbackUrl, setVideoFeedbackUrl] = useState<string | null>(null);
+    const [studentAudioFeedbackResponseUrl, setStudentAudioFeedbackResponseUrl] = useState<string | null>(null);
+    const [studentVideoFeedbackResponseUrl, setStudentVideoFeedbackResponseUrl] = useState<string | null>(null);
 
     useEffect(() => {
         if (assignment) {
@@ -356,6 +364,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
             setGradeRationale('');
             setStudentVideoSubmissionUrl(assignment.studentVideoSubmissionUrl || null);
             setVideoFeedbackUrl(assignment.videoFeedbackUrl || null);
+            setStudentAudioFeedbackResponseUrl(assignment.studentAudioFeedbackResponseUrl || null);
+            setStudentVideoFeedbackResponseUrl(assignment.studentVideoFeedbackResponseUrl || null);
         }
     }, [assignment]);
 
@@ -422,8 +432,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         }
         await updateAssignment({ ...assignment, status: AssignmentStatus.Graded, grade: parseInt(grade, 10), feedback, gradedAt: new Date().toISOString(), videoFeedbackUrl });
         addToast("Ödev notlandırıldı.", "success");
-        if (onNavigate) {
-            onNavigate(true);
+        if (onNavigate && canNavigate?.next) {
+            onNavigate('next');
         } else {
             onClose();
         }
@@ -472,13 +482,26 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
         updateAssignment({ ...assignment, checklist: updatedChecklist });
     };
 
+    const handleSaveStudentResponse = async () => {
+        await updateAssignment({ ...assignment, studentAudioFeedbackResponseUrl, studentVideoFeedbackResponseUrl });
+        addToast("Yanıtınız koçunuza gönderildi.", "success");
+    };
+
     const isStudentViewing = currentUser.role === UserRole.Student;
     const isSubmitted = assignment.status === AssignmentStatus.Submitted || assignment.status === AssignmentStatus.Graded;
 
     return (
         <Modal isOpen={!!assignment} onClose={onClose} title={assignment.title} size="lg">
             <div className="space-y-4">
-                {isCoach && <p className="font-semibold">Öğrenci: {studentName}</p>}
+                <div className="flex justify-between items-center">
+                     {isCoach && <p className="font-semibold">Öğrenci: {studentName}</p>}
+                     {isCoach && onNavigate && (
+                        <div className="flex gap-2">
+                             <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5"/></button>
+                             <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
+                        </div>
+                     )}
+                </div>
                 
                 <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{assignment.description}</p>
                  <p className="text-xs text-gray-500">Teslim Tarihi: {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
@@ -553,14 +576,46 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate }:
                 )}
                 
                 {assignment.status === AssignmentStatus.Graded && (
-                     <div className="pt-4 border-t dark:border-gray-700">
-                        <h4 className="font-semibold mb-2">Sonuç</h4>
-                        <p><strong>Not:</strong> {assignment.grade}</p>
-                        <p><strong>Geri Bildirim:</strong> {assignment.feedback || "Geri bildirim yok."}</p>
-                         {assignment.videoFeedbackUrl && (
-                             <div className="mt-2">
-                                <h5 className="font-semibold text-sm mb-1">Video Geri Bildirim</h5>
-                                <VideoRecorder initialVideo={assignment.videoFeedbackUrl} readOnly />
+                     <div className="pt-4 border-t dark:border-gray-700 space-y-4">
+                        <div>
+                            <h4 className="font-semibold mb-2">Sonuç</h4>
+                            <p><strong>Not:</strong> {assignment.grade}</p>
+                            <p><strong>Geri Bildirim:</strong> {assignment.feedback || "Geri bildirim yok."}</p>
+                            {assignment.videoFeedbackUrl && (
+                                <div className="mt-2">
+                                    <h5 className="font-semibold text-sm mb-1">Video Geri Bildirim</h5>
+                                    <VideoRecorder initialVideo={assignment.videoFeedbackUrl} readOnly />
+                                </div>
+                            )}
+                            {isCoach && assignment.studentAudioFeedbackResponseUrl && (
+                                <div className="mt-2">
+                                    <h5 className="font-semibold text-sm mb-1">Öğrencinin Sesli Yanıtı</h5>
+                                    <AudioRecorder initialAudio={assignment.studentAudioFeedbackResponseUrl} readOnly />
+                                </div>
+                            )}
+                             {isCoach && assignment.studentVideoFeedbackResponseUrl && (
+                                <div className="mt-2">
+                                    <h5 className="font-semibold text-sm mb-1">Öğrencinin Görüntülü Yanıtı</h5>
+                                    <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
+                                </div>
+                            )}
+                        </div>
+                         {isStudentViewing && (
+                             <div>
+                                <h4 className="font-semibold mb-2">Geri Bildirime Yanıtın (İsteğe Bağlı)</h4>
+                                 <div className="space-y-3">
+                                    <div>
+                                        <h5 className="text-sm font-medium mb-1">Sesli Yanıt Gönder</h5>
+                                        <AudioRecorder onSave={setStudentAudioFeedbackResponseUrl} initialAudio={studentAudioFeedbackResponseUrl} />
+                                    </div>
+                                    <div>
+                                        <h5 className="text-sm font-medium mb-1">Görüntülü Yanıt Gönder</h5>
+                                        <VideoRecorder onSave={setStudentVideoFeedbackResponseUrl} initialVideo={studentVideoFeedbackResponseUrl} />
+                                    </div>
+                                     <button onClick={handleSaveStudentResponse} className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700">
+                                        Yanıtı Gönder
+                                    </button>
+                                </div>
                             </div>
                          )}
                     </div>
@@ -608,7 +663,7 @@ export default function Assignments() {
     const { currentUser, assignments, students, updateAssignment, deleteAssignments } = useDataContext();
     const { addToast, initialFilters, setInitialFilters } = useUI();
     const [isNewAssignmentModalOpen, setIsNewAssignmentModalOpen] = useState(initialFilters.openNewAssignmentModal || false);
-    const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+    const [selectedAssignmentIndex, setSelectedAssignmentIndex] = useState<number | null>(null);
     const [filterStatus, setFilterStatus] = useState<AssignmentStatus | 'all'>(initialFilters.status || 'all');
     const [filterStudent, setFilterStudent] = useState<string>(initialFilters.studentId || 'all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -616,24 +671,7 @@ export default function Assignments() {
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isBatchGradeModalOpen, setIsBatchGradeModalOpen] = useState(false);
 
-    useEffect(() => {
-        if (initialFilters.assignmentId) {
-            const assignmentToOpen = assignments.find(a => a.id === initialFilters.assignmentId);
-            if (assignmentToOpen) {
-                setSelectedAssignment(assignmentToOpen);
-            }
-        }
-        if (initialFilters.openNewAssignmentModal) {
-            setIsNewAssignmentModalOpen(true);
-        }
-        // Clear filters after applying them once
-        if (Object.keys(initialFilters).length > 0) {
-            setInitialFilters({});
-        }
-    }, [initialFilters, setInitialFilters, assignments]);
-
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
-
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
     
     const displayedAssignments = useMemo(() => {
@@ -653,9 +691,41 @@ export default function Assignments() {
         return filtered.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
     }, [assignments, currentUser, filterStatus, isCoach, filterStudent, searchTerm]);
 
+     useEffect(() => {
+        if (initialFilters.assignmentId) {
+            const index = displayedAssignments.findIndex(a => a.id === initialFilters.assignmentId);
+            if (index !== -1) {
+                setSelectedAssignmentIndex(index);
+            }
+        }
+        if (initialFilters.openNewAssignmentModal) {
+            setIsNewAssignmentModalOpen(true);
+        }
+        if (Object.keys(initialFilters).length > 0) {
+            setInitialFilters({});
+        }
+    }, [initialFilters, setInitialFilters, displayedAssignments]);
+
+    const selectedAssignment = selectedAssignmentIndex !== null ? displayedAssignments[selectedAssignmentIndex] : null;
+
     const handleSelectAssignment = (assignment: Assignment) => {
-        setSelectedAssignment(assignment);
+        const index = displayedAssignments.findIndex(a => a.id === assignment.id);
+        if (index !== -1) setSelectedAssignmentIndex(index);
     };
+
+    const handleNavigation = (direction: 'next' | 'prev') => {
+        if (selectedAssignmentIndex === null) return;
+        const newIndex = direction === 'next' ? selectedAssignmentIndex + 1 : selectedAssignmentIndex - 1;
+        if (newIndex >= 0 && newIndex < displayedAssignments.length) {
+            setSelectedAssignmentIndex(newIndex);
+        }
+    };
+    
+    const navigationState = useMemo(() => ({
+        prev: selectedAssignmentIndex !== null && selectedAssignmentIndex > 0,
+        next: selectedAssignmentIndex !== null && selectedAssignmentIndex < displayedAssignments.length - 1
+    }), [selectedAssignmentIndex, displayedAssignments.length]);
+
 
     const handleToggleSelect = (id: string) => {
         setSelectedAssignmentIds(prev => 
@@ -774,14 +844,16 @@ export default function Assignments() {
             <NewAssignmentModal 
                 isOpen={isNewAssignmentModalOpen} 
                 onClose={() => setIsNewAssignmentModalOpen(false)} 
-                preselectedStudentId={filterStudent !== 'all' ? filterStudent : null}
+                preselectedStudentIds={filterStudent !== 'all' ? [filterStudent] : null}
             />
 
             {selectedAssignment && (
                 <AssignmentDetailModal
                     assignment={selectedAssignment}
-                    onClose={() => setSelectedAssignment(null)}
+                    onClose={() => setSelectedAssignmentIndex(null)}
                     studentName={studentMap.get(selectedAssignment.studentId)}
+                    onNavigate={handleNavigation}
+                    canNavigate={navigationState}
                 />
             )}
 

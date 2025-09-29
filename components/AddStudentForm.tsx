@@ -10,6 +10,7 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [role, setRole] = useState<UserRole>(UserRole.Student);
     const [gradeLevel, setGradeLevel] = useState('');
     const [academicTrack, setAcademicTrack] = useState<AcademicTrack | ''>('');
     const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
@@ -42,12 +43,18 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !gradeLevel || !academicTrack) {
-            addToast("Lütfen tüm zorunlu alanları doldurun.", "error");
+        
+        const isStudent = role === UserRole.Student;
+        if (!name || !email) {
+            addToast("Lütfen ad ve e-posta alanlarını doldurun.", "error");
             return;
         }
-        if (currentUser?.role === UserRole.SuperAdmin && !assignedCoachId) {
-            addToast("Lütfen bir koç atayın.", "error");
+        if (isStudent && (!gradeLevel || !academicTrack)) {
+             addToast("Öğrenciler için sınıf ve bölüm zorunludur.", "error");
+            return;
+        }
+        if (currentUser?.role === UserRole.SuperAdmin && isStudent && !assignedCoachId) {
+            addToast("Lütfen öğrenci için bir koç atayın.", "error");
             return;
         }
 
@@ -61,19 +68,19 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
             const newUser: Omit<User, 'id'> = {
                 name,
                 email,
-                role: UserRole.Student,
+                role,
                 profilePicture: profilePictureUrl,
-                assignedCoachId,
-                gradeLevel,
-                academicTrack,
+                assignedCoachId: isStudent ? assignedCoachId : null,
+                gradeLevel: isStudent ? gradeLevel : undefined,
+                academicTrack: isStudent ? (academicTrack as AcademicTrack || undefined) : undefined,
             };
 
             await addUser(newUser);
-            addToast("Öğrenci başarıyla eklendi!", "success");
+            addToast("Kullanıcı başarıyla eklendi!", "success");
             onClose();
         } catch (error) {
             console.error(error);
-            addToast("Öğrenci eklenirken bir hata oluştu.", "error");
+            addToast("Kullanıcı eklenirken bir hata oluştu.", "error");
         } finally {
             setIsLoading(false);
         }
@@ -128,63 +135,84 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
                     />
                 </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="grade-level" className="block text-sm font-medium mb-1">Sınıf</label>
-                    <select
-                        id="grade-level"
-                        value={gradeLevel}
-                        onChange={e => setGradeLevel(e.target.value)}
-                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                        required
-                    >
-                        <option value="" disabled>Sınıf seçin</option>
-                        <option value="9">9. Sınıf</option>
-                        <option value="10">10. Sınıf</option>
-                        <option value="11">11. Sınıf</option>
-                        <option value="12">12. Sınıf</option>
-                        <option value="mezun">Mezun</option>
-                    </select>
-                </div>
-                 <div>
-                    <label htmlFor="academic-track" className="block text-sm font-medium mb-1">Bölüm</label>
-                    <select
-                        id="academic-track"
-                        value={academicTrack}
-                        onChange={e => setAcademicTrack(e.target.value as AcademicTrack)}
-                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                        required
-                    >
-                        <option value="" disabled>Bölüm seçin</option>
-                        {Object.values(AcademicTrack).map(track => (
-                            <option key={track} value={track}>{academicTrackLabels[track]}</option>
-                         ))}
-                    </select>
-                </div>
-            </div>
-
+            
             {currentUser?.role === UserRole.SuperAdmin && (
                  <div>
-                    <label htmlFor="assigned-coach" className="block text-sm font-medium mb-1">Koç Ata</label>
+                    <label htmlFor="user-role" className="block text-sm font-medium mb-1">Rol</label>
                     <select
-                        id="assigned-coach"
-                        value={assignedCoachId || ''}
-                        onChange={e => setAssignedCoachId(e.target.value)}
+                        id="user-role"
+                        value={role}
+                        onChange={e => setRole(e.target.value as UserRole)}
                         className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
                         required
                     >
-                        <option value="" disabled>Bir koç seçin</option>
-                        {coaches.map(coach => (
-                            <option key={coach.id} value={coach.id}>{coach.name}</option>
-                        ))}
+                        <option value={UserRole.Student}>Öğrenci</option>
+                        <option value={UserRole.Coach}>Koç</option>
                     </select>
                 </div>
             )}
+
+            {role === UserRole.Student && (
+            <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="grade-level" className="block text-sm font-medium mb-1">Sınıf</label>
+                        <select
+                            id="grade-level"
+                            value={gradeLevel}
+                            onChange={e => setGradeLevel(e.target.value)}
+                            className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                            <option value="" disabled>Sınıf seçin</option>
+                            <option value="9">9. Sınıf</option>
+                            <option value="10">10. Sınıf</option>
+                            <option value="11">11. Sınıf</option>
+                            <option value="12">12. Sınıf</option>
+                            <option value="mezun">Mezun</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label htmlFor="academic-track" className="block text-sm font-medium mb-1">Bölüm</label>
+                        <select
+                            id="academic-track"
+                            value={academicTrack}
+                            onChange={e => setAcademicTrack(e.target.value as AcademicTrack)}
+                            className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                            <option value="" disabled>Bölüm seçin</option>
+                            {Object.values(AcademicTrack).map(track => (
+                                <option key={track} value={track}>{academicTrackLabels[track]}</option>
+                             ))}
+                        </select>
+                    </div>
+                </div>
+
+                {currentUser?.role === UserRole.SuperAdmin && (
+                     <div>
+                        <label htmlFor="assigned-coach" className="block text-sm font-medium mb-1">Koç Ata</label>
+                        <select
+                            id="assigned-coach"
+                            value={assignedCoachId || ''}
+                            onChange={e => setAssignedCoachId(e.target.value)}
+                            className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                            <option value="" disabled>Bir koç seçin</option>
+                            {coaches.map(coach => (
+                                <option key={coach.id} value={coach.id}>{coach.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+            </>
+            )}
+
             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
                 <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" disabled={isLoading}>İptal</button>
                 <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50" disabled={isLoading}>
-                    {isLoading ? 'Ekleniyor...' : 'Öğrenci Ekle'}
+                    {isLoading ? 'Ekleniyor...' : 'Kullanıcı Ekle'}
                 </button>
             </div>
         </form>

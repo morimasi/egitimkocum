@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole, User } from '../types';
@@ -44,7 +44,10 @@ const TabItem = React.memo(({ page, label, icon, badge }: TabItemProps) => {
 const TabBar = () => {
     const { currentUser, unreadCounts } = useDataContext();
 
-    const totalUnreadMessages = Array.from(unreadCounts.values()).reduce((sum, count) => sum + count, 0);
+    // FIX: Add explicit types to reduce function to prevent type inference issues.
+    const totalUnreadMessages = useMemo(() =>
+        Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0),
+    [unreadCounts]);
 
     const tabItems: TabItemProps[] = [];
 

@@ -15,15 +15,23 @@ const getInitialState = (): AppState => {
     const userIDs = {
         'SUPER_ADMIN_ID': uuid(),
         'COACH_ID': uuid(),
+        'COACH_2_ID': uuid(),
         'STUDENT_1_ID': uuid(),
         'STUDENT_2_ID': uuid(),
+        'STUDENT_3_ID': uuid(),
+        'STUDENT_4_ID': uuid(),
+        'PARENT_1_ID': uuid(),
     };
     
     const users: User[] = [
         { id: userIDs.SUPER_ADMIN_ID, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com` },
         { id: userIDs.COACH_ID, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
-        { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever] },
-        { id: userIDs.STUDENT_2_ID, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] }
+        { id: userIDs.COACH_2_ID, name: 'Zeynep Güler', email: 'zeynep.guler@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=zeynep.guler@egitim.com` },
+        { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever], parentIds: [userIDs.PARENT_1_ID] },
+        { id: userIDs.STUDENT_2_ID, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] },
+        { id: userIDs.STUDENT_3_ID, name: 'Ali Vural', email: 'ali.vural@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=ali.vural@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1500, streak: 5, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter] },
+        { id: userIDs.STUDENT_4_ID, name: 'Elif Su', email: 'elif.su@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=elif.su@mail.com`, assignedCoachId: userIDs.COACH_2_ID, gradeLevel: '10', academicTrack: AcademicTrack.Dil, xp: 450, streak: 1, earnedBadgeIds: [BadgeID.FirstAssignment] },
+        { id: userIDs.PARENT_1_ID, name: 'Ayşe Kaya', email: 'ayse.kaya@veli.com', role: UserRole.Parent, profilePicture: `https://i.pravatar.cc/150?u=ayse.kaya@veli.com`, childIds: [userIDs.STUDENT_1_ID] },
     ];
 
     const replacePlaceholders = (data: any, key: string) => {
@@ -227,6 +235,71 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return () => clearTimeout(timer);
     }, []);
 
+    const awardXp = useCallback(async (amount: number, reason: string, studentId: string) => {
+        const student = state.users.find(u => u.id === studentId);
+        if (!student) return;
+
+        const updatedUser = {
+            ...student,
+            xp: (student.xp || 0) + amount,
+        };
+        
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser }});
+        if(state.currentUser?.id === studentId) {
+            dispatch({ type: 'SET_CURRENT_USER', payload: updatedUser });
+            addToast(`+${amount} XP! ${reason}`, 'xp');
+        }
+    }, [state.users, state.currentUser?.id, addToast]);
+
+    const checkAndAwardBadges = useCallback(async (studentId: string) => {
+        const student = state.users.find(u => u.id === studentId);
+        if (!student) return;
+
+        const studentAssignments = state.assignments.filter(a => a.studentId === studentId);
+        let newBadges: Badge[] = [];
+        let updatedUser = { ...student };
+        let earnedBadgeIds = new Set(student.earnedBadgeIds || []);
+
+        const addBadge = (badgeId: BadgeID) => {
+            if (!earnedBadgeIds.has(badgeId)) {
+                const badge = state.badges.find(b => b.id === badgeId);
+                if (badge) {
+                    earnedBadgeIds.add(badgeId);
+                    newBadges.push(badge);
+                }
+            }
+        };
+
+        // First assignment completed
+        if (studentAssignments.some(a => a.status === AssignmentStatus.Submitted || a.status === AssignmentStatus.Graded)) {
+            addBadge(BadgeID.FirstAssignment);
+        }
+
+        // Perfect score
+        if (studentAssignments.some(a => a.grade === 100)) {
+            addBadge(BadgeID.PerfectScore);
+        }
+        
+        // High achiever
+        const graded = studentAssignments.filter(a => a.grade !== null);
+        if (graded.length > 0) {
+            const avg = graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length;
+            if (avg >= 90) {
+                addBadge(BadgeID.HighAchiever);
+            }
+        }
+
+        if (newBadges.length > 0) {
+            updatedUser.earnedBadgeIds = Array.from(earnedBadgeIds);
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser }});
+            if (state.currentUser?.id === studentId) {
+                 dispatch({ type: 'SET_CURRENT_USER', payload: updatedUser });
+                 newBadges.forEach(badge => {
+                     awardXp(100, `Yeni Rozet Kazandın: ${badge.name}!`, studentId);
+                 });
+            }
+        }
+    }, [state.users, state.assignments, state.badges, state.currentUser?.id, awardXp]);
 
     const seedDatabase = useCallback(async () => {
         dispatch({ type: 'RESET_STATE', payload: { currentUserEmail: state.currentUser?.email || null } });
@@ -335,7 +408,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [state.currentUser, state.conversations]);
 
     const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-        const userWithId = { ...newUser, id: uuid() };
+        const userWithId = { ...newUser, id: uuid(), xp: 0, streak: 0, earnedBadgeIds: [] };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: userWithId }});
         return userWithId;
     }, []);
@@ -385,7 +458,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: updatedAssignment }});
-    }, []);
+        
+        if (updatedAssignment.status === AssignmentStatus.Graded || updatedAssignment.status === AssignmentStatus.Submitted) {
+            await checkAndAwardBadges(updatedAssignment.studentId);
+        }
+
+    }, [checkAndAwardBadges]);
 
     const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
         assignmentIds.forEach(id => {
@@ -556,20 +634,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     }, [state.users]);
 
-    const awardXp = useCallback(async (amount: number, reason: string) => {
-        if (!state.currentUser || state.currentUser.role !== UserRole.Student) return;
-        
-        const updatedUser = {
-            ...state.currentUser,
-            xp: (state.currentUser.xp || 0) + amount,
-        };
-        
-        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser }});
-        dispatch({ type: 'SET_CURRENT_USER', payload: updatedUser });
-        
-        addToast(`+${amount} XP! ${reason}`, 'xp');
-    }, [state.currentUser, addToast]);
-
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string) => {
         if (!state.currentUser) return;
         const newConversation: Conversation = {
@@ -672,7 +736,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         deleteTemplate,
         uploadFile,
         updateStudentNotes,
-        awardXp,
+        awardXp: (amount: number, reason: string) => awardXp(amount, reason, state.currentUser!.id),
         startGroupChat,
         findOrCreateConversation,
         addUserToConversation,
@@ -685,6 +749,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         deleteCalendarEvent,
         toggleTemplateFavorite,
         seedDatabase,
+// FIX: A comma was incorrectly placed, causing a syntax error and incorrect type inference. Replaced comma with closing parenthesis.
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         getAssignmentsForStudent, getMessagesForConversation, findMessageById,

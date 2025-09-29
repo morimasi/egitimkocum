@@ -1,12 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, UserRole, AssignmentStatus, Badge } from '../types';
+import { User, UserRole, AssignmentStatus, Badge, AcademicTrack } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { StudentsIcon, AssignmentsIcon, LibraryIcon, TargetIcon, TrophyIcon, EditIcon } from '../components/Icons';
+import { StudentsIcon, AssignmentsIcon, EditIcon, TrashIcon } from '../components/Icons';
 import AddStudentForm from '../components/AddStudentForm';
+import EditUserModal from '../components/EditUserModal';
+
+const getAcademicTrackLabel = (track?: AcademicTrack): string => {
+    if (!track) return 'Belirtilmemiş';
+    switch (track) {
+        case AcademicTrack.Sayisal: return 'Sayısal';
+        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
+        case AcademicTrack.Sozel: return 'Sözel';
+        case AcademicTrack.Dil: return 'Dil';
+        default: return '';
+    }
+};
+
 
 const KpiCard = React.memo(({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
     <Card className="flex items-center">
@@ -55,16 +68,46 @@ const EditBadgeModal = ({ badge, onClose }: { badge: Badge; onClose: () => void 
 export default function SuperAdminDashboard() {
     const { users, assignments, badges, deleteUser, seedDatabase } = useDataContext();
     const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+    const [userToEdit, setUserToEdit] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [badgeToEdit, setBadgeToEdit] = useState<Badge | null>(null);
     const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
 
+    const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
+    const students = useMemo(() => users.filter(u => u.role === UserRole.Student), [users]);
+
     const kpis = useMemo(() => ({
-        totalStudents: users.filter(u => u.role === UserRole.Student).length,
-        totalCoaches: users.filter(u => u.role === UserRole.Coach).length,
+        totalStudents: students.length,
+        totalCoaches: coaches.length,
         totalAssignments: assignments.length,
         pendingAssignments: assignments.filter(a => a.status === AssignmentStatus.Submitted).length,
-    }), [users, assignments]);
+    }), [students, coaches, assignments]);
+
+    const coachData = useMemo(() => {
+        return coaches.map(coach => {
+            const assignedStudents = students.filter(s => s.assignedCoachId === coach.id);
+            const studentIds = assignedStudents.map(s => s.id);
+            const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
+            const gradedAssignments = coachAssignments.filter(a => a.grade !== null);
+            const avgGrade = gradedAssignments.length > 0
+                ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length)
+                : 'N/A';
+            return {
+                ...coach,
+                studentCount: assignedStudents.length,
+                avgGrade,
+            };
+        });
+    }, [coaches, students, assignments]);
+
+    const studentData = useMemo(() => {
+        const coachMap = new Map(coaches.map(c => [c.id, c.name]));
+        return students.map(student => ({
+            ...student,
+            coachName: student.assignedCoachId ? coachMap.get(student.assignedCoachId) || 'Atanmamış' : 'Atanmamış'
+        }));
+    }, [students, coaches]);
+
 
     const handleUserDelete = () => {
         if (userToDelete) {
@@ -93,53 +136,78 @@ export default function SuperAdminDashboard() {
                 <KpiCard title="Toplam Ödev" value={kpis.totalAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
                 <KpiCard title="Bekleyen Ödev" value={kpis.pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
             </div>
+            
+            <Card title="Koç Yönetimi">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            <tr>
+                                <th scope="col" className="px-4 py-3">Koç</th>
+                                <th scope="col" className="px-4 py-3 hidden md:table-cell">E-posta</th>
+                                <th scope="col" className="px-4 py-3 text-center">Öğrenci Sayısı</th>
+                                <th scope="col" className="px-4 py-3 text-center">Genel Ort.</th>
+                                <th scope="col" className="px-4 py-3 text-right">Eylemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {coachData.map(coach => (
+                                <tr key={coach.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                        <div className="flex items-center gap-3">
+                                            <img src={coach.profilePicture} alt={coach.name} className="w-8 h-8 rounded-full"/>
+                                            {coach.name}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 hidden md:table-cell">{coach.email}</td>
+                                    <td className="px-4 py-3 text-center">{coach.studentCount}</td>
+                                    <td className="px-4 py-3 text-center font-semibold">{coach.avgGrade}</td>
+                                    <td className="px-4 py-3 text-right space-x-2">
+                                        <button onClick={() => setUserToEdit(coach)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
+                                        <button onClick={() => setUserToDelete(coach)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
 
-            <Card title="Platform Yönetimi">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div>
-                        <h4 className="font-semibold">Deneme Verileri</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Platformu test etmek için örnek öğrenciler, ödevler, mesajlar ve diğer verilerle doldurun.
-                            <br/>
-                            <strong>Not:</strong> Bu işlem mevcut oturumdaki tüm verileri sıfırlar.
-                        </p>
-                    </div>
-                    <button 
-                        onClick={() => setIsConfirmSeedOpen(true)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold w-full sm:w-auto flex-shrink-0"
-                    >
-                        Deneme Verisi Ekle
-                    </button>
+            <Card title="Öğrenci Yönetimi">
+                <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-sm text-left">
+                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
+                            <tr>
+                                <th scope="col" className="px-4 py-3">Öğrenci</th>
+                                <th scope="col" className="px-4 py-3 hidden md:table-cell">Sınıf</th>
+                                <th scope="col" className="px-4 py-3 hidden lg:table-cell">Bölüm</th>
+                                <th scope="col" className="px-4 py-3">Atanmış Koç</th>
+                                <th scope="col" className="px-4 py-3 text-right">Eylemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                             {studentData.map(student => (
+                                <tr key={student.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                        <div className="flex items-center gap-3">
+                                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full"/>
+                                            {student.name}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 hidden md:table-cell">{student.gradeLevel || 'N/A'}</td>
+                                    <td className="px-4 py-3 hidden lg:table-cell">{getAcademicTrackLabel(student.academicTrack)}</td>
+                                    <td className="px-4 py-3">{student.coachName}</td>
+                                    <td className="px-4 py-3 text-right space-x-2">
+                                        <button onClick={() => setUserToEdit(student)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
+                                        <button onClick={() => setUserToDelete(student)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card title="Kullanıcı Yönetimi">
-                    <div className="max-h-96 overflow-y-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Kullanıcı</th>
-                                    <th scope="col" className="px-6 py-3">Rol</th>
-                                    <th scope="col" className="px-6 py-3">Eylem</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map(user => (
-                                    <tr key={user.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                                        <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                            {user.name}
-                                        </th>
-                                        <td className="px-6 py-4">{user.role}</td>
-                                        <td className="px-6 py-4">
-                                            <button onClick={() => setUserToDelete(user)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
                 <Card title="Rozet Yönetimi">
                      <div className="space-y-3 max-h-96 overflow-y-auto">
                         {badges.map(badge => (
@@ -153,9 +221,27 @@ export default function SuperAdminDashboard() {
                         ))}
                     </div>
                 </Card>
+                <Card title="Platform Yönetimi">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div>
+                            <h4 className="font-semibold">Deneme Verileri</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                Platformu test etmek için örnek verilerle doldurun.
+                                <strong> Not:</strong> Bu işlem mevcut oturumdaki tüm verileri sıfırlar.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setIsConfirmSeedOpen(true)}
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold w-full sm:w-auto flex-shrink-0"
+                        >
+                            Veri Ekle
+                        </button>
+                    </div>
+                </Card>
             </div>
             
             {isNewUserModalOpen && <Modal isOpen={isNewUserModalOpen} onClose={() => setIsNewUserModalOpen(false)} title="Yeni Kullanıcı Ekle"><AddStudentForm onClose={() => setIsNewUserModalOpen(false)}/></Modal>}
+            {userToEdit && <EditUserModal user={userToEdit} onClose={() => setUserToEdit(null)} />}
             {userToDelete && <ConfirmationModal isOpen={!!userToDelete} onClose={() => setUserToDelete(null)} onConfirm={handleUserDelete} title="Kullanıcıyı Sil" message={`'${userToDelete.name}' adlı kullanıcıyı silmek istediğinizden emin misiniz?`} />}
             {badgeToEdit && <EditBadgeModal badge={badgeToEdit} onClose={() => setBadgeToEdit(null)} />}
             {isConfirmSeedOpen && (
