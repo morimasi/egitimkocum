@@ -158,7 +158,6 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                             <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
                             <select
                                 value={filterGrade}
-                                // FIX: Add explicit type to event handler parameter `e`.
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                     setFilterGrade(e.target.value);
                                     setAssignedTo([]);
@@ -218,7 +217,7 @@ const AssignResourceModal = ({ resource, onClose }: { resource: Resource; onClos
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <select
                     value={filterGrade}
-                    onChange={e => setFilterGrade(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterGrade(e.target.value)}
                     className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
                 >
                     <option value="all">Tüm Sınıflar</option>

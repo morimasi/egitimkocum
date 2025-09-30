@@ -44,7 +44,6 @@ const TabItem = React.memo(({ page, label, icon, badge }: TabItemProps) => {
 const TabBar = () => {
     const { currentUser, unreadCounts } = useDataContext();
 
-    // FIX: Add explicit types to reduce function to prevent type inference issues.
     const totalUnreadMessages = useMemo(() =>
         Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0),
     [unreadCounts]);

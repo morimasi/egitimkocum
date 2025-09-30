@@ -178,7 +178,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        // FIX: Add explicit type for `t` to fix potential type inference issue.
         const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
@@ -299,7 +298,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                             <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
                             <select
                                 value={filterGrade}
-                                // FIX: Add explicit type to event handler parameter `e`.
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                     setFilterGrade(e.target.value);
                                     setSelectedStudents([]); // Reset selection when filter changes

@@ -1,12 +1,14 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, Sector } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { useDataContext } from '../contexts/DataContext';
-import { Assignment, AssignmentStatus, User, UserRole } from '../types';
+import { AssignmentStatus, UserRole } from '../types';
 import Card from '../components/Card';
 import { SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentAnalyticsInsight, generateCoachAnalyticsInsight } from '../services/geminiService';
 import { SparklesIcon } from '../components/Icons';
+import { useUI } from '../contexts/UIContext';
 
 const AnalyticsSkeleton = () => (
     <div className="space-y-6">
@@ -21,6 +23,7 @@ const AnalyticsSkeleton = () => (
 
 const StudentAnalytics = () => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
+    const { setActivePage } = useUI();
     const [insight, setInsight] = useState('');
     const [isLoadingInsight, setIsLoadingInsight] = useState(true);
 
@@ -58,6 +61,16 @@ const StudentAnalytics = () => {
                 .finally(() => setIsLoadingInsight(false));
         }
     }, [currentUser, stats]);
+    
+    const handlePieClick = (data: any) => {
+        if (data && data.name) {
+            if (data.name === 'Bekleyen') {
+                setActivePage('assignments', { status: AssignmentStatus.Pending });
+            } else {
+                setActivePage('assignments');
+            }
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -70,11 +83,29 @@ const StudentAnalytics = () => {
                 <div className="w-full h-64">
                      <ResponsiveContainer>
                         <PieChart>
-                            <Pie data={[{ name: 'Tamamlanan', value: stats.completionRate }, { name: 'Bekleyen', value: 100 - stats.completionRate }]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+                            <Pie 
+                                data={[{ name: 'Tamamlanan', value: stats.completionRate }, { name: 'Bekleyen', value: 100 - stats.completionRate }]} 
+                                dataKey="value" 
+                                nameKey="name" 
+                                cx="50%" 
+                                cy="50%" 
+                                outerRadius={100} 
+                                fill="#8884d8"
+                                onClick={handlePieClick}
+                                cursor="pointer"
+                            >
                                  <Cell fill="#3b82f6" />
                                  <Cell fill="#e5e7eb" />
                             </Pie>
-                            <Tooltip />
+                            <Tooltip
+                                formatter={(value: number) => `${value.toFixed(2)}%`}
+                                contentStyle={{ 
+                                    backgroundColor: 'rgba(31, 41, 55, 0.8)',
+                                    border: 'none', 
+                                    color: '#fff', 
+                                    borderRadius: '0.5rem' 
+                                }}
+                            />
                             <Legend />
                         </PieChart>
                     </ResponsiveContainer>
@@ -86,6 +117,7 @@ const StudentAnalytics = () => {
 
 const CoachAnalytics = () => {
     const { students, assignments } = useDataContext();
+    const { setActivePage } = useUI();
     const [insight, setInsight] = useState('');
     const [isLoadingInsight, setIsLoadingInsight] = useState(true);
 
@@ -95,7 +127,7 @@ const CoachAnalytics = () => {
         const avgGrade = graded.length > 0 ? Math.round(graded.reduce((sum, a) => sum + a.grade!, 0) / graded.length) : 0;
         const completionRate = studentAssignments.length > 0 ? (studentAssignments.filter(a => a.status !== AssignmentStatus.Pending).length / studentAssignments.length) * 100 : 0;
         const overdue = studentAssignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
-        return { name: s.name, avgGrade, completionRate, overdue };
+        return { id: s.id, name: s.name, avgGrade, completionRate, overdue };
     }), [students, assignments]);
 
     useEffect(() => {
@@ -105,6 +137,12 @@ const CoachAnalytics = () => {
                 .finally(() => setIsLoadingInsight(false));
         }
     }, [studentsData]);
+    
+    const handleBarClick = (data: any) => {
+        if (data && data.id) {
+            setActivePage('students', { studentId: data.id });
+        }
+    };
     
     return (
         <div className="space-y-6">
@@ -120,9 +158,23 @@ const CoachAnalytics = () => {
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                             <XAxis dataKey="name" />
                             <YAxis domain={[0, 100]} />
-                            <Tooltip />
+                            <Tooltip 
+                                contentStyle={{ 
+                                    backgroundColor: 'rgba(31, 41, 55, 0.8)', 
+                                    border: 'none', 
+                                    color: '#fff', 
+                                    borderRadius: '0.5rem' 
+                                }}
+                                cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                            />
                             <Legend />
-                            <Bar dataKey="avgGrade" name="Not Ortalaması" fill="#3b82f6" />
+                            <Bar 
+                                dataKey="avgGrade" 
+                                name="Not Ortalaması" 
+                                fill="#3b82f6" 
+                                onClick={handleBarClick}
+                                cursor="pointer"
+                            />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

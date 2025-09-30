@@ -49,17 +49,12 @@ const getInitialState = (): AppState => {
         return data;
     }
 
-    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
     const assignments: Assignment[] = replacePlaceholders(seedData.assignments, 'assignments').map((a: any) => ({
         ...a, id: uuid(), checklist: a.checklist?.map((c: any) => ({ ...c, id: uuid() })) || [],
     }));
-    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
     const conversations: Conversation[] = replacePlaceholders(seedData.conversations, 'conversations');
-    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
     const messages: Message[] = replacePlaceholders(seedData.messages, 'messages').map((m: any) => ({ ...m, id: uuid(), readBy: [m.senderId] }));
-    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
     const goals: Goal[] = replacePlaceholders(seedData.goals, 'goals').map((g: any) => ({ ...g, id: uuid() }));
-    // FIX: Expected 2 arguments, but got 1. Provided the missing second argument.
     const resources: Resource[] = replacePlaceholders(seedData.resources, 'resources').map((r: any) => ({ ...r, id: uuid() }));
     const templates: AssignmentTemplate[] = seedData.templates.map((t: any) => ({...t, id: uuid()}));
     
@@ -212,9 +207,9 @@ interface DataContextType {
     addUserToConversation: (conversationId: string, userId: string) => Promise<void>;
     removeUserFromConversation: (conversationId: string, userId: string) => Promise<void>;
     endConversation: (conversationId: string) => Promise<void>;
+    setConversationArchived: (conversationId: string, isArchived: boolean) => Promise<void>;
     updateBadge: (updatedBadge: Badge) => Promise<void>;
     addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'userId'>) => Promise<void>;
-    // FIX: Add addMultipleCalendarEvents to the context type
     addMultipleCalendarEvents: (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => Promise<void>;
     deleteCalendarEvent: (eventId: string) => Promise<void>;
     toggleTemplateFavorite: (templateId: string) => Promise<void>;
@@ -672,6 +667,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
              dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: { ...conv, isArchived: true } }});
         }
     }, [state.conversations]);
+
+    const setConversationArchived = useCallback(async (conversationId: string, isArchived: boolean) => {
+        const conv = state.conversations.find(c => c.id === conversationId);
+        if (conv) {
+             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: { ...conv, isArchived } }});
+        }
+    }, [state.conversations]);
+        
     const updateBadge = useCallback(async (updatedBadge: Badge) => {
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'badges', data: updatedBadge }});
     }, []);
@@ -680,7 +683,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const newEvent = { ...event, id: uuid(), userId: state.currentUser.id };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: newEvent }});
     }, [state.currentUser]);
-    // FIX: Implement addMultipleCalendarEvents to add an array of events to the state.
     const addMultipleCalendarEvents = useCallback(async (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => {
         if (!state.currentUser) return;
         const newEvents = events.map(event => ({
@@ -742,14 +744,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addUserToConversation,
         removeUserFromConversation,
         endConversation,
+        setConversationArchived,
         updateBadge,
         addCalendarEvent,
-        // FIX: Export addMultipleCalendarEvents from the context provider.
         addMultipleCalendarEvents,
         deleteCalendarEvent,
         toggleTemplateFavorite,
-        seedDatabase,
-// FIX: A comma was incorrectly placed, causing a syntax error and incorrect type inference. Replaced comma with closing parenthesis.
+        seedDatabase
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         getAssignmentsForStudent, getMessagesForConversation, findMessageById,
@@ -758,7 +759,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, toggleResourceAssignment,
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
         uploadFile, updateStudentNotes, awardXp, startGroupChat, findOrCreateConversation, addUserToConversation,
-        removeUserFromConversation, endConversation, updateBadge, addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
+        removeUserFromConversation, endConversation, setConversationArchived, updateBadge, addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
         toggleTemplateFavorite, seedDatabase
     ]);
 

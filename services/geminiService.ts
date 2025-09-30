@@ -502,7 +502,6 @@ export const generateExamPerformanceInsight = (
     );
 };
 
-// FIX: Export 'generateStudyPlan' function to be used in AkilliPlanlayici page.
 type StudyPlanParams = {
     targetExams: string[];
     focusSubjects: string[];
@@ -571,7 +570,7 @@ export const generateStudyPlan = async (params: StudyPlanParams): Promise<StudyP
                 temperature: 0.7,
             },
         }),
-        (response) => JSON.parse(response.text.trim()),
+        (response) => JSON.parse(response.text.trim()) as StudyPlanEvent[],
         null
     );
 };

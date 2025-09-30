@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
@@ -410,13 +404,21 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
         return [...conversations]
             .filter(c => c.participantIds.includes(currentUser!.id) && !c.isArchived)
             .sort((a, b) => {
+                // Pin announcements to the top
                 if (a.id === 'conv-announcements') return -1;
                 if (b.id === 'conv-announcements') return 1;
+
                 const lastMsgA = lastMessagesMap.get(a.id);
                 const lastMsgB = lastMessagesMap.get(b.id);
-                if (!lastMsgA) return 1;
-                if (!lastMsgB) return -1;
-                return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
+
+                // Conversations with messages should come before conversations without messages.
+                if (lastMsgA && !lastMsgB) return -1;
+                if (!lastMsgA && lastMsgB) return 1;
+                if (!lastMsgA && !lastMsgB) return 0; // Keep original order for conversations with no messages
+
+                // If both have messages, sort by last message timestamp, newest first.
+                // The non-null assertion (!) is safe here because we've handled the null cases above.
+                return new Date(lastMsgB!.timestamp).getTime() - new Date(lastMsgA!.timestamp).getTime();
             });
     }, [conversations, currentUser, lastMessagesMap]);
     

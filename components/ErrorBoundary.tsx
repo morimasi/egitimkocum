@@ -42,7 +42,6 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // FIX: Rewriting this line to ensure correctness, addressing a potential implicit 'any' issue or subtle bug.
     return this.props.children;
   }
 }

@@ -79,7 +79,7 @@ const AIChatbot = () => {
                     <div className="flex items-center justify-between p-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-2xl flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <BotIcon className="w-6 h-6 text-primary-500"/>
-                            <h3 className="font-bold text-lg">AI Yardımcı Bilge</h3>
+                            <h3 className="font-bold text-lg">Çalışma Arkadaşım Bilge</h3>
                         </div>
                         <button onClick={() => setIsOpen(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                             <XIcon className="w-5 h-5"/>

@@ -386,48 +386,41 @@ export const BotIcon = (props: IconProps) => (
     </svg>
 );
 
+// Fix: Add BrainCircuitIcon for AI-related features.
+export const BrainCircuitIcon = (props: IconProps) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M12 2a2.5 2.5 0 0 0-2.5 2.5v.7a1 1 0 0 1-1.3.9c-.8-.2-1.6-.3-2.4-.3-2.5 0-5 1.1-5 3.5v5c0 2.4 2.5 3.5 5 3.5.8 0 1.6-.1 2.4-.3a1 1 0 0 1 1.3.9v.7a2.5 2.5 0 0 0 5 0v-.7a1 1 0 0 1 1.3-.9c.8.2 1.6.3 2.4.3 2.5 0 5-1.1 5-3.5v-5c0-2.4-2.5-3.5-5-3.5-.8 0-1.6.1-2.4.3a1 1 0 0 1-1.3-.9v-.7A2.5 2.5 0 0 0 12 2Z"/>
+        <path d="M12 11v1"/><path d="M10 9v1"/><path d="M14 9v1"/><path d="M10 14v1"/><path d="M14 14v1"/><path d="M6 11v1"/><path d="M18 11v1"/><path d="M7 8v1"/><path d="M9 16v1"/><path d="M15 16v1"/><path d="M17 8v1"/>
+    </svg>
+);
+
+// Fix: Add GridIcon for view mode toggling.
+export const GridIcon = (props: IconProps) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <rect width="18" height="18" x="3" y="3" rx="2"/>
+        <path d="M3 9h18"/>
+        <path d="M3 15h18"/>
+        <path d="M9 3v18"/>
+        <path d="M15 3v18"/>
+    </svg>
+);
+
+// Fix: Add ListIcon for view mode toggling.
+export const ListIcon = (props: IconProps) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <line x1="8" x2="21" y1="6" y2="6"/>
+        <line x1="8" x2="21" y1="12" y2="12"/>
+        <line x1="8" x2="21" y1="18" y2="18"/>
+        <line x1="3" x2="3.01" y1="6" y2="6"/>
+        <line x1="3" x2="3.01" y1="12" y2="12"/>
+        <line x1="3" x2="3.01" y1="18" y2="18"/>
+    </svg>
+);
+
 export const ClipboardCheckIcon = (props: IconProps) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
         <path d="m9 14 2 2 4-4" />
-    </svg>
-);
-
-export const BrainCircuitIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M12 2a2.5 2.5 0 0 1 3 2.5" /><path d="M12 2a2.5 2.5 0 0 0-3 2.5" />
-        <path d="M12 22a2.5 2.5 0 0 1-3-2.5" /><path d="M12 22a2.5 2.5 0 0 0 3-2.5" />
-        <path d="M15 4.5a2.5 2.5 0 0 1 2.5 2.5" /><path d="M15 4.5a2.5 2.5 0 0 0-2.5 2.5" />
-        <path d="M9 4.5a2.5 2.5 0 0 1 2.5 2.5" /><path d="M9 4.5a2.5 2.5 0 0 0-2.5 2.5" />
-        <path d="M17.5 7a2.5 2.5 0 0 1 2.5 2.5" /><path d="M17.5 7a2.5 2.5 0 0 0-2.5 2.5" />
-        <path d="M6.5 7a2.5 2.5 0 0 1 2.5 2.5" /><path d="M6.5 7a2.5 2.5 0 0 0-2.5 2.5" />
-        <path d="M20 9.5a2.5 2.5 0 0 1 0 5" /><path d="M4 9.5a2.5 2.5 0 0 0 0 5" />
-        <path d="M12 12a2.5 2.5 0 0 1 2.5-2.5" /><path d="M12 12a2.5 2.5 0 0 0-2.5-2.5" />
-        <path d="M12 12a2.5 2.5 0 0 1 2.5 2.5" /><path d="M12 12a2.5 2.5 0 0 0-2.5 2.5" />
-        <path d="M15 19.5a2.5 2.5 0 0 1-2.5-2.5" /><path d="M15 19.5a2.5 2.5 0 0 0 2.5-2.5" />
-        <path d="M9 19.5a2.5 2.5 0 0 1-2.5-2.5" /><path d="M9 19.5a2.5 2.5 0 0 0 2.5-2.5" />
-        <path d="M6.5 17a2.5 2.5 0 0 1-2.5-2.5" /><path d="M6.5 17a2.5 2.5 0 0 0 2.5-2.5" />
-        <path d="M17.5 17a2.5 2.5 0 0 1-2.5-2.5" /><path d="M17.5 17a2.5 2.5 0 0 0 2.5-2.5" />
-    </svg>
-);
-
-export const ListIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <line x1="8" y1="6" x2="21" y2="6"></line>
-        <line x1="8" y1="12" x2="21" y2="12"></line>
-        <line x1="8" y1="18" x2="21" y2="18"></line>
-        <line x1="3" y1="6" x2="3.01" y2="6"></line>
-        <line x1="3" y1="12" x2="3.01" y2="12"></line>
-        <line x1="3" y1="18" x2="3.01" y2="18"></line>
-    </svg>
-);
-
-export const GridIcon = (props: IconProps) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <rect x="3" y="3" width="7" height="7"></rect>
-        <rect x="14" y="3" width="7" height="7"></rect>
-        <rect x="14" y="14" width="7" height="7"></rect>
-        <rect x="3" y="14" width="7" height="7"></rect>
     </svg>
 );

@@ -159,14 +159,14 @@ export default function TemplateManager() {
     }, [templates, searchTerm]);
 
     const groupedTemplates = useMemo(() => {
-        return filteredTemplates.reduce((acc, template) => {
+        return filteredTemplates.reduce((acc: { [key: string]: AssignmentTemplate[] }, template) => {
             const subject = template.title.split(':')[0] || 'Diğer';
             if (!acc[subject]) {
                 acc[subject] = [];
             }
             acc[subject].push(template);
             return acc;
-        }, {} as { [key: string]: AssignmentTemplate[] });
+        }, {});
     }, [filteredTemplates]);
 
     const handleEdit = (template: AssignmentTemplate) => {
@@ -207,11 +207,11 @@ export default function TemplateManager() {
 
                 {templates.length > 0 ? (
                     <div className="space-y-6">
-                        {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([subject, templates]) => (
+                        {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([subject, subjectTemplates]) => (
                             <div key={subject}>
                                 <h2 className="text-xl font-semibold border-b-2 border-primary-500 pb-1 mb-4">{subject}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {templates.map(template => (
+                                    {subjectTemplates.map(template => (
                                         <Card key={template.id} className="flex flex-col">
                                             <div className="flex-grow">
                                                 <h3 className="font-bold text-lg">{template.title.split(': ')[1] || template.title}</h3>
