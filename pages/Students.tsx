@@ -113,13 +113,13 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
         e.stopPropagation();
         const convId = await findOrCreateConversation(student.id);
         if (convId) {
-            setActivePage('messages', { contactId: convId });
+            setActivePage('messages', { conversationId: convId });
         }
     };
 
     const handleAssignTask = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setActivePage('assignments', { openNewAssignmentModal: true, studentId: student.id });
+        setActivePage('assignments', { openNewAssignmentModal: true, preselectedStudentIds: [student.id] });
     };
 
     const handleAssignResource = (e: React.MouseEvent) => {
@@ -408,7 +408,7 @@ export default function Students() {
     };
 
     const handleBatchAssignTask = () => {
-        setActivePage('assignments', { openNewAssignmentModal: true });
+        setActivePage('assignments', { openNewAssignmentModal: true, preselectedStudentIds: selectedStudentIds });
     };
     
     const requestSort = (key: keyof (User & { avgGrade: number; overdueCount: number })) => {

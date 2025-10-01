@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Assignment, AssignmentStatus, User } from "../types";
 
@@ -48,14 +49,13 @@ const getAi = () => {
 const cachedGeminiCall = async <T>(
     cacheKey: string,
     ttl: number,
-    apiCall: () => Promise<any>,
-    processResponse: (response: any) => T,
+    apiCall: () => Promise<GenerateContentResponse>,
+    processResponse: (response: GenerateContentResponse) => T,
     fallback: T
 ): Promise<T> => {
     const cached = getFromCache<T>(cacheKey, ttl);
     if (cached) return cached;
     try {
-        const aiInstance = getAi();
         const response = await apiCall();
         const result = processResponse(response);
         setInCache(cacheKey, result);
@@ -105,7 +105,6 @@ export const generateAssignmentDescription = (title: string): Promise<string> =>
 
 export const generateSmartFeedback = (assignmentToGrade: Assignment, allStudentAssignments: Assignment[]): Promise<string> => {
     const { title, grade } = assignmentToGrade;
-    const studentId = assignmentToGrade.studentId;
 
     const currentSubject = getSubject(title);
     

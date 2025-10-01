@@ -3,6 +3,7 @@ import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } f
 
 type Theme = 'light' | 'dark';
 type CallState = 'idle' | 'calling' | 'in-call' | 'ended';
+type CallType = 'video' | 'voice';
 
 interface InitialFilters {
     studentId?: string;
@@ -31,7 +32,8 @@ interface UIContextType {
     callState: CallState;
     callContact: User | null;
     callConversation: Conversation | null;
-    startCall: (contactOrConversation: User | Conversation) => void;
+    callType: CallType;
+    startCall: (contactOrConversation: User | Conversation, type: CallType) => void;
     answerCall: () => void;
     endCall: () => void;
 }
@@ -58,6 +60,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     const [callState, setCallState] = useState<CallState>('idle');
     const [callContact, setCallContact] = useState<User | null>(null);
     const [callConversation, setCallConversation] = useState<Conversation | null>(null);
+    const [callType, setCallType] = useState<CallType>('video');
 
 
     const setActivePage = useCallback((page: Page, filters: InitialFilters = {}) => {
@@ -102,7 +105,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
     }, []);
 
     // Call management
-    const startCall = useCallback((contactOrConversation: User | Conversation) => {
+    const startCall = useCallback((contactOrConversation: User | Conversation, type: CallType) => {
          if ('participantIds' in contactOrConversation) { // Duck typing to check if it's a Conversation
             setCallConversation(contactOrConversation);
             setCallContact(null);
@@ -110,6 +113,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
             setCallContact(contactOrConversation);
             setCallConversation(null);
         }
+        setCallType(type);
         setCallState('calling');
     }, []);
 
@@ -141,13 +145,14 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         callState,
         callContact,
         callConversation,
+        callType,
         startCall,
         answerCall,
         endCall,
     }), [
         theme, toggleTheme, activePage, setActivePage, toasts, addToast, removeToast, initialFilters, setInitialFilters,
         isTourActive, tourStep, startTour, nextTourStep, endTour,
-        callState, callContact, callConversation, startCall, answerCall, endCall
+        callState, callContact, callConversation, callType, startCall, answerCall, endCall
     ]);
 
     return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

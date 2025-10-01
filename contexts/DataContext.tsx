@@ -24,14 +24,14 @@ const getInitialState = (): AppState => {
     };
     
     const users: User[] = [
-        { id: userIDs.SUPER_ADMIN_ID, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com` },
-        { id: userIDs.COACH_ID, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com` },
-        { id: userIDs.COACH_2_ID, name: 'Zeynep Güler', email: 'zeynep.guler@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=zeynep.guler@egitim.com` },
-        { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever], parentIds: [userIDs.PARENT_1_ID] },
-        { id: userIDs.STUDENT_2_ID, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment] },
-        { id: userIDs.STUDENT_3_ID, name: 'Ali Vural', email: 'ali.vural@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=ali.vural@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1500, streak: 5, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter] },
-        { id: userIDs.STUDENT_4_ID, name: 'Elif Su', email: 'elif.su@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=elif.su@mail.com`, assignedCoachId: userIDs.COACH_2_ID, gradeLevel: '10', academicTrack: AcademicTrack.Dil, xp: 450, streak: 1, earnedBadgeIds: [BadgeID.FirstAssignment] },
-        { id: userIDs.PARENT_1_ID, name: 'Ayşe Kaya', email: 'ayse.kaya@veli.com', role: UserRole.Parent, profilePicture: `https://i.pravatar.cc/150?u=ayse.kaya@veli.com`, childIds: [userIDs.STUDENT_1_ID] },
+        { id: userIDs.SUPER_ADMIN_ID, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com`, isOnline: true },
+        { id: userIDs.COACH_ID, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com`, isOnline: true },
+        { id: userIDs.COACH_2_ID, name: 'Zeynep Güler', email: 'zeynep.guler@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=zeynep.guler@egitim.com`, isOnline: false },
+        { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever], parentIds: [userIDs.PARENT_1_ID], isOnline: true },
+        { id: userIDs.STUDENT_2_ID, name: 'Mehmet Öztürk', email: 'mehmet.ozturk@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '11', academicTrack: AcademicTrack.EsitAgirlik, xp: 850, streak: 0, earnedBadgeIds: [BadgeID.FirstAssignment], isOnline: false },
+        { id: userIDs.STUDENT_3_ID, name: 'Ali Vural', email: 'ali.vural@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=ali.vural@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1500, streak: 5, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter], isOnline: true },
+        { id: userIDs.STUDENT_4_ID, name: 'Elif Su', email: 'elif.su@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=elif.su@mail.com`, assignedCoachId: userIDs.COACH_2_ID, gradeLevel: '10', academicTrack: AcademicTrack.Dil, xp: 450, streak: 1, earnedBadgeIds: [BadgeID.FirstAssignment], isOnline: false },
+        { id: userIDs.PARENT_1_ID, name: 'Ayşe Kaya', email: 'ayse.kaya@veli.com', role: UserRole.Parent, profilePicture: `https://i.pravatar.cc/150?u=ayse.kaya@veli.com`, childIds: [userIDs.STUDENT_1_ID], isOnline: false },
     ];
 
     const replacePlaceholders = (data: any, key: string) => {
@@ -230,6 +230,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         return () => clearTimeout(timer);
     }, []);
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const usersToToggle = state.users.filter(u => u.id !== state.currentUser?.id && u.role !== UserRole.SuperAdmin);
+            if (usersToToggle.length > 0) {
+                const randomUser = usersToToggle[Math.floor(Math.random() * usersToToggle.length)];
+                const updatedUser = { ...randomUser, isOnline: !randomUser.isOnline };
+                dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: updatedUser } });
+            }
+        }, 15000); // Toggle a random user's status every 15 seconds
+
+        return () => clearInterval(interval);
+    }, [state.users, state.currentUser]);
+
     const awardXp = useCallback(async (amount: number, reason: string, studentId: string) => {
         const student = state.users.find(u => u.id === studentId);
         if (!student) return;
@@ -403,7 +416,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [state.currentUser, state.conversations]);
 
     const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
-        const userWithId = { ...newUser, id: uuid(), xp: 0, streak: 0, earnedBadgeIds: [] };
+        const userWithId = { ...newUser, id: uuid(), xp: 0, streak: 0, earnedBadgeIds: [], isOnline: false };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: userWithId }});
         return userWithId;
     }, []);

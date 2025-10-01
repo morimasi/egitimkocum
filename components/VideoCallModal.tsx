@@ -1,12 +1,11 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useUI } from '../contexts/UIContext';
-import { PhoneOffIcon, MicIcon, MicOffIcon, MoveIcon, MaximizeIcon, MinimizeIcon, VideoIcon as VideoOnIcon } from './Icons';
+import { PhoneOffIcon, MicIcon, MicOffIcon, MoveIcon, MaximizeIcon, MinimizeIcon, VideoIcon as VideoOnIcon, PhoneIcon } from './Icons';
 import { User, Conversation } from '../types';
 import { useDataContext } from '../contexts/DataContext';
 
 const VideoCallModal = () => {
-    const { callState, callContact, callConversation, endCall, answerCall } = useUI();
+    const { callState, callContact, callConversation, endCall, answerCall, callType } = useUI();
     const { users, currentUser } = useDataContext();
     const [isMuted, setIsMuted] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
@@ -123,14 +122,22 @@ const VideoCallModal = () => {
                 <div className="relative h-64 bg-black flex items-center justify-center">
                     {activeSpeaker ? (
                         <>
-                            <img src={activeSpeaker.profilePicture} alt={activeSpeaker.name} className="w-24 h-24 rounded-full" />
+                            {callType === 'voice' ? (
+                                <div className="flex flex-col items-center text-white">
+                                    <img src={activeSpeaker.profilePicture} alt={activeSpeaker.name} className="w-32 h-32 rounded-full mb-4 border-4 border-gray-600" />
+                                    <p className="font-semibold">{activeSpeaker.name}</p>
+                                    <p className="text-sm text-gray-300">Sesli Arama</p>
+                                </div>
+                            ) : (
+                                <img src={activeSpeaker.profilePicture} alt={activeSpeaker.name} className="w-24 h-24 rounded-full" />
+                            )}
                             <div className="absolute top-2 left-2 text-xs text-white bg-black/50 px-1.5 py-0.5 rounded">{activeSpeaker.name}</div>
                         </>
                     ) : (
                         <div className="text-white">Bağlanılıyor...</div>
                     )}
                     
-                    {!isGroupCall && currentUser && callContact && (
+                    {callType === 'video' && !isGroupCall && currentUser && callContact && (
                          <div className="absolute bottom-2 right-2 w-24 h-24 bg-gray-700 rounded-lg overflow-hidden shadow-lg border-2 border-gray-500 flex items-center justify-center">
                             <img src={currentUser.profilePicture} alt="Siz" className="w-full h-full object-cover" />
                         </div>

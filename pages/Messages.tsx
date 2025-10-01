@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
-import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon } from '../components/Icons';
+import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon, PhoneIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -457,6 +457,9 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                         <li key={conv.id} onClick={() => onSelectConversation(conv.id)} className={`flex items-center p-3 cursor-pointer group relative ${selectedConversationId === conv.id ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
                             <div className="relative">
                                 <img src={profilePic} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
+                                {!conv.isGroup && otherUser && (
+                                    <span className={`absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-800 ${otherUser.isOnline ? 'bg-green-500' : 'bg-gray-400'}`} title={otherUser.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}></span>
+                                )}
                                 {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>}
                             </div>
                             <div className="flex-1 ml-3 overflow-hidden">
@@ -564,7 +567,8 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
                         <button onClick={() => setIsGroupInfoOpen(true)} className="p-2 text-gray-500 hover:text-primary-500"><UserGroupIcon className="w-5 h-5" /></button>
                         </>
                     )}
-                    <button onClick={() => startCall(otherUser || conversation)} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
+                    <button onClick={() => startCall(otherUser || conversation, 'voice')} className="p-2 text-gray-500 hover:text-primary-500"><PhoneIcon className="w-5 h-5"/></button>
+                    <button onClick={() => startCall(otherUser || conversation, 'video')} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
                 </div>
             </header>
             <main className="flex-1 overflow-y-auto p-4">
