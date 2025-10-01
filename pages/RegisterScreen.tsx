@@ -81,7 +81,7 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
                             onClick={() => fileInputRef.current?.click()}
                         >
                             {previewUrl ? (
-                                <img src={previewUrl} alt="Profil önizlemesi" className="w-full h-full object-cover" />
+                                <img src={previewUrl} alt="Profil önizlemesi" className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                                 <ImageIcon className="w-10 h-10 text-gray-400" />
                             )}

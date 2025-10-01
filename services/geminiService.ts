@@ -1,6 +1,6 @@
 
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Assignment, AssignmentStatus, User } from "../types";
 
 // Caching helper functions
@@ -66,18 +66,27 @@ const cachedGeminiCall = async <T>(
     }
 };
 
+// Fix: Centralized and improved subject keywords for better maintainability and accuracy across the app.
+const SUBJECT_KEYWORDS: { [key: string]: string[] } = {
+    'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'],
+    'Fizik': ['fizik', 'deney', 'sarkaç', 'vektörler', 'optik', 'elektrik'],
+    'Kimya': ['kimya', 'formül', 'organik', 'mol'],
+    'Biyoloji': ['biyoloji', 'hücre', 'bölünme', 'çizim'],
+    'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap', 'edebiyat'],
+    'Tarih': ['tarih', 'ihtilal', 'araştırma', 'savaş'],
+    'Coğrafya': ['coğrafya', 'iklim', 'sunum', 'göller'],
+    'İngilizce': ['ingilizce', 'kelime', 'essay'],
+    'Felsefe': ['felsefe']
+};
+
 // Helper to find subject from title, used by multiple functions
 const getSubject = (title: string): string => {
-    const subjectKeywords: { [key: string]: string[] } = {
-        'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç'], 'Kimya': ['kimya', 'formül', 'organik'], 'Biyoloji': ['biyoloji', 'hücre', 'çizim'],
-        'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap'], 'Tarih': ['tarih', 'ihtilal', 'araştırma'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum'], 'İngilizce': ['ingilizce', 'kelime'], 'Felsefe': ['felsefe']
-    };
-    for (const subject in subjectKeywords) {
-        if (subjectKeywords[subject].some(keyword => title.toLowerCase().includes(keyword))) {
+    for (const subject in SUBJECT_KEYWORDS) {
+        if (SUBJECT_KEYWORDS[subject].some(keyword => title.toLowerCase().includes(keyword))) {
             return subject;
         }
     }
-    return 'Genel';
+    return 'Diğer';
 };
 
 export const generateAssignmentDescription = (title: string): Promise<string> => {
@@ -172,6 +181,35 @@ export const generateAssignmentChecklist = (title: string, description: string):
     );
 };
 
+export const getVisualAssignmentHelp = async (assignment: Assignment, image: { base64Data: string; mimeType: string }): Promise<string> => {
+    try {
+        const aiInstance = getAi();
+
+        const textPart = {
+            text: `Sen yardımsever bir öğretmen asistanısın. Bir öğrenci, "${assignment.title}" başlıklı ödevde zorlanıyor ve aşağıdaki resimle ilgili yardım istiyor. Ödevin açıklaması: "${assignment.description}". 
+            
+            Lütfen yüklenen görseli ve ödevin tanımını analiz ederek öğrenciye soruyu çözmesi için adım adım ipuçları ve yol gösterici bir kılavuz sun. Doğrudan son cevabı verme, bunun yerine öğrencinin çözüme kendi kendine ulaşmasını sağlayacak şekilde düşünme sürecini teşvik et. Örneğin, hangi formülü kullanması gerektiğini hatırlatabilir, ilk adımı gösterebilir veya sorudaki kilit noktaya dikkat çekebilirsin. Cevabın cesaretlendirici ve anlaşılır olsun.`
+        };
+
+        const imagePart = {
+            inlineData: {
+                mimeType: image.mimeType,
+                data: image.base64Data,
+            },
+        };
+
+        const response: GenerateContentResponse = await aiInstance.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [textPart, imagePart] },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error getting visual assignment help:", error);
+        return "Görsel analiz edilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
+    }
+};
+
 export const suggestStudentGoal = (studentName: string, averageGrade: number, overdueAssignments: number): Promise<string> => {
     const prompt = `Öğrenci ${studentName}'in mevcut durumu: Not ortalaması 100 üzerinden ${averageGrade} ve vadesi geçmiş ${overdueAssignments} ödevi var. Bu öğrenci için S.M.A.R.T. (Spesifik, Ölçülebilir, Ulaşılabilir, İlgili, Zaman-sınırlı) bir hedef öner. Hedef, öğrenciyi motive etmeli ve performansını artırmaya yönelik olmalı. Sadece tek cümlelik hedefin metnini döndür.`;
     return cachedGeminiCall(
@@ -230,7 +268,7 @@ export const suggestFocusAreas = (studentName: string, assignments: Assignment[]
     const subjectGrades: { [key: string]: number[] } = {};
     graded.forEach(a => {
         const subject = getSubject(a.title);
-        if (subject !== 'Genel') {
+        if (subject !== 'Diğer') {
             if (!subjectGrades[subject]) subjectGrades[subject] = [];
             subjectGrades[subject].push(a.grade!);
         }

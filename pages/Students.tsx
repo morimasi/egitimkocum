@@ -48,7 +48,7 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
         <Modal isOpen={!!student} onClose={onClose} title="" size="lg">
             <div className="flex items-center justify-between mb-4 pb-4 border-b dark:border-gray-700">
                 <div className="flex items-start space-x-4">
-                    <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" />
+                    <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" loading="lazy" />
                     <div>
                         <h3 className="text-2xl font-bold">{student.name}</h3>
                         <p className="text-gray-500">{student.email}</p>
@@ -142,7 +142,7 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
             <Card className={`flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full ${isSelected ? 'ring-2 ring-primary-500' : ''}`} onClick={() => onSelect(student)}>
                 <div className="flex flex-col items-center flex-grow p-3 text-center pt-6">
                     <div className="relative flex-shrink-0 mb-2">
-                        <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" />
+                        <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" loading="lazy" />
                         <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
                         {overdueCount > 0 && (
                             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title={`${overdueCount} gecikmiş ödev`}></span>
@@ -550,7 +550,7 @@ export default function Students() {
                                         <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleSelect(student.id)}/></td>
                                         <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white cursor-pointer" onClick={() => handleSelectStudent(student)}>
                                             <div className="flex items-center gap-3">
-                                                <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full"/>
+                                                <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full" loading="lazy" />
                                                 {student.name}
                                             </div>
                                         </td>

@@ -209,7 +209,8 @@ export default function TemplateManager() {
 
                 {templates.length > 0 ? (
                     <div className="space-y-6">
-                        {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([subject, subjectTemplates]) => (
+                        {/* Fix: Add explicit type to map parameters to resolve 'unknown' type error. */}
+                        {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([subject, subjectTemplates]: [string, AssignmentTemplate[]]) => (
                             <div key={subject}>
                                 <h2 className="text-xl font-semibold border-b-2 border-primary-500 pb-1 mb-4">{subject}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

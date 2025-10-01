@@ -1,16 +1,20 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
-import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
+import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
 import FileUpload from '../components/FileUpload';
 import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { useDropzone } from 'react-dropzone';
+import { SkeletonText } from '../components/SkeletonLoader';
+
 
 const getStatusChip = (status: AssignmentStatus) => {
     const styles = {
@@ -178,8 +182,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        // Fix: Cast templates to AssignmentTemplate[] to ensure type safety.
-        const template = (templates as AssignmentTemplate[]).find((t) => t.id === templateId);
+        // Fix: Explicitly typing the parameter `t` resolves the 'unknown' type error.
+        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -338,7 +342,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                     </>
                 )}
                 <div className="flex justify-end pt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-700">İptal</button>
                     <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Oluştur</button>
                 </div>
             </form>
@@ -362,6 +366,50 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
     const [studentAudioFeedbackResponseUrl, setStudentAudioFeedbackResponseUrl] = useState<string | null>(null);
     const [studentVideoFeedbackResponseUrl, setStudentVideoFeedbackResponseUrl] = useState<string | null>(null);
 
+    // AI Help State
+    const [aiHelpImage, setAiHelpImage] = useState<File | null>(null);
+    const [aiHelpImagePreview, setAiHelpImagePreview] = useState<string | null>(null);
+    const [isGettingHelp, setIsGettingHelp] = useState(false);
+    const [aiHelpText, setAiHelpText] = useState('');
+
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            const file = acceptedFiles[0];
+            setAiHelpImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setAiHelpImagePreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    }, []);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'image/*': [] }, multiple: false });
+
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = error => reject(error);
+        });
+    };
+
+    const handleGetAIAssistance = async () => {
+        if (!aiHelpImage || !assignment) return;
+        setIsGettingHelp(true);
+        setAiHelpText('');
+        try {
+            const base64Data = await fileToBase64(aiHelpImage);
+            const helpText = await getVisualAssignmentHelp(assignment, { base64Data, mimeType: aiHelpImage.type });
+            setAiHelpText(helpText);
+        } catch (error) {
+            console.error(error);
+            addToast("Yapay zekadan yardım alınırken bir hata oluştu.", "error");
+        } finally {
+            setIsGettingHelp(false);
+        }
+    };
+
+
     useEffect(() => {
         if (assignment) {
             setGrade(assignment.grade?.toString() || '');
@@ -372,6 +420,11 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
             setVideoFeedbackUrl(assignment.videoFeedbackUrl || null);
             setStudentAudioFeedbackResponseUrl(assignment.studentAudioFeedbackResponseUrl || null);
             setStudentVideoFeedbackResponseUrl(assignment.studentVideoFeedbackResponseUrl || null);
+            // Reset AI help state
+            setAiHelpImage(null);
+            setAiHelpImagePreview(null);
+            setIsGettingHelp(false);
+            setAiHelpText('');
         }
     }, [assignment]);
 
@@ -553,6 +606,31 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                         </div>
                     ) : null}
                 </div>
+
+                {isStudentViewing && !isSubmitted && (
+                    <div className="pt-4 border-t dark:border-gray-700 space-y-3">
+                         <h4 className="font-semibold">Yardım İste 🤖</h4>
+                         <p className="text-sm text-gray-500">Bu ödevde zorlanıyor musun? Sorunun fotoğrafını yükle, yapay zeka sana ipucu versin.</p>
+                         <div {...getRootProps()} className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'}`}>
+                            <input {...getInputProps()} />
+                            {aiHelpImagePreview ? (
+                                <div className="relative">
+                                    <img src={aiHelpImagePreview} alt="Soru önizlemesi" className="max-h-40 mx-auto rounded-md"/>
+                                    <button onClick={(e) => { e.stopPropagation(); setAiHelpImage(null); setAiHelpImagePreview(null); }} className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white"><XIcon className="w-4 h-4"/></button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                                    <ImageIcon className="w-10 h-10 mb-2"/>
+                                    <p className="font-semibold">Görseli sürükle veya seç</p>
+                                </div>
+                            )}
+                        </div>
+                        {aiHelpImage && <button onClick={handleGetAIAssistance} disabled={isGettingHelp} className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"><SparklesIcon className={`w-5 h-5 ${isGettingHelp ? 'animate-spin' : ''}`}/>{isGettingHelp ? 'Analiz Ediliyor...' : 'Yardım İste'}</button>}
+                        {isGettingHelp && <SkeletonText className="h-20 w-full mt-2"/>}
+                        {aiHelpText && <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/50 rounded-lg text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{aiHelpText}</div>}
+                    </div>
+                )}
+
 
                 {/* Grading Section */}
                 {isCoach && isSubmitted && (
@@ -786,17 +864,18 @@ export default function Assignments() {
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.currentTarget.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        {/* Fix: Explicitly typing the event parameter `e` resolves the 'unknown' type error. */}
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>
                             <option value={AssignmentStatus.Graded}>Notlandırılan</option>
                         </select>
                         {isCoach && (
-                            <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            // Fix: Explicitly typing the event parameter `e` and casting `students` to User[] resolves 'unknown' type errors.
+                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
-                                {/* Fix: Cast students to User[] to ensure type safety. */}
-                                {(students as User[]).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {(students as User[]).map((s: User) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                          <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />

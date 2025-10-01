@@ -8,11 +8,19 @@ import { generateExamPerformanceInsight } from '../services/geminiService';
 import { SkeletonText } from '../components/SkeletonLoader';
 import { SparklesIcon, TrendingUpIcon, TrophyIcon, XIcon } from '../components/Icons';
 
-// Helper to extract subject from title.
+// Fix: Replaced with a more robust and consistent subject detection logic.
+// This logic is now aligned with the one used in the Gemini service for better data consistency.
 const getSubject = (title: string): string => {
     const subjectKeywords: { [key: string]: string[] } = {
-        'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç', 'vektörler', 'optik', 'elektrik'], 'Kimya': ['kimya', 'formül', 'organik', 'mol'], 'Biyoloji': ['biyoloji', 'hücre', 'bölünme'],
-        'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap', 'edebiyat'], 'Tarih': ['tarih', 'ihtilal', 'araştırma', 'savaş'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum'], 'İngilizce': ['ingilizce', 'kelime'], 'Felsefe': ['felsefe']
+        'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'],
+        'Fizik': ['fizik', 'deney', 'sarkaç', 'vektörler', 'optik', 'elektrik'],
+        'Kimya': ['kimya', 'formül', 'organik', 'mol'],
+        'Biyoloji': ['biyoloji', 'hücre', 'bölünme', 'çizim'],
+        'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap', 'edebiyat'],
+        'Tarih': ['tarih', 'ihtilal', 'araştırma', 'savaş'],
+        'Coğrafya': ['coğrafya', 'iklim', 'sunum', 'göller'],
+        'İngilizce': ['ingilizce', 'kelime', 'essay'],
+        'Felsefe': ['felsefe']
     };
     for (const subject in subjectKeywords) {
         if (subjectKeywords[subject].some(keyword => title.toLowerCase().includes(keyword))) {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Assignment, AssignmentStatus } from '../types';
@@ -123,7 +124,7 @@ export default function ParentPortal() {
                  <div className="space-y-6">
                     <Card>
                         <div className="flex items-center space-x-4">
-                            <img src={selectedChild.profilePicture} alt={selectedChild.name} className="w-20 h-20 rounded-full" />
+                            <img src={selectedChild.profilePicture} alt={selectedChild.name} className="w-20 h-20 rounded-full" loading="lazy" />
                             <div>
                                 <h2 className="text-2xl font-bold">{selectedChild.name}</h2>
                                 <p className="text-gray-500">Koç: {childCoach?.name || 'Atanmamış'}</p>

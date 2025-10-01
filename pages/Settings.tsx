@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User } from '../types';
@@ -43,7 +44,7 @@ const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }
             <form onSubmit={handleUpdate} className="space-y-4">
                 <div className="flex flex-col items-center">
                     <div className="relative">
-                        <img src={user.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" />
+                        <img src={user.profilePicture} alt="Profile" className="w-24 h-24 rounded-full mb-4" loading="lazy" />
                         {isUploading && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white">...</div>}
                     </div>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleProfilePictureChange} className="hidden" />
@@ -113,7 +114,7 @@ const StudentSettings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
                 <Card className="text-center">
-                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" />
+                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" loading="lazy" />
                     <h2 className="text-2xl font-bold mt-4">{currentUser.name}</h2>
                     <p className="text-gray-500 dark:text-gray-400">{currentUser.email}</p>
                     <button onClick={() => setIsEditModalOpen(true)} className="mt-4 w-full px-4 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 font-semibold flex items-center justify-center gap-2">
@@ -193,7 +194,7 @@ const CoachSettings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
                 <Card className="text-center">
-                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" />
+                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" loading="lazy" />
                     <h2 className="text-2xl font-bold mt-4">{currentUser.name}</h2>
                     <p className="text-gray-500 dark:text-gray-400">{currentUser.email}</p>
                     <button onClick={() => setIsEditModalOpen(true)} className="mt-4 w-full px-4 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 font-semibold flex items-center justify-center gap-2">

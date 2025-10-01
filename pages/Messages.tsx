@@ -140,7 +140,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
             case 'file':
                 return msg.imageUrl ? (
                     <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-                        <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" />
+                        <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" loading="lazy" />
                     </a>
                 ) : (
                     <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
@@ -179,7 +179,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
             className={`flex items-end gap-2.5 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
         >
             {!isOwnMessage && sender && (
-                <img src={sender.profilePicture} alt={sender.name} className="w-8 h-8 rounded-full flex-shrink-0" />
+                <img src={sender.profilePicture} alt={sender.name} className="w-8 h-8 rounded-full flex-shrink-0" loading="lazy" />
             )}
             <div className={`flex flex-col w-full max-w-xs sm:max-w-md ${isOwnMessage ? 'items-end' : 'items-start'}`}>
                  <div 
@@ -243,7 +243,7 @@ const GroupInfoModal = ({ conversation, onClose }: { conversation: Conversation 
                 {members.map(member => (
                     <li key={member.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
                         <div className="flex items-center">
-                            <img src={member.profilePicture} alt={member.name} className="w-8 h-8 rounded-full" />
+                            <img src={member.profilePicture} alt={member.name} className="w-8 h-8 rounded-full" loading="lazy" />
                             <span className="ml-3 font-medium">{member.name}</span>
                         </div>
                         {isAdmin && member.id !== currentUser?.id && (
@@ -277,7 +277,7 @@ const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: 
                     <li key={student.id}>
                         <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                             <input type="checkbox" checked={selected.includes(student.id)} onChange={() => handleToggle(student.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3" />
+                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3" loading="lazy" />
                             <span className="font-medium">{student.name}</span>
                         </label>
                     </li>
@@ -456,7 +456,7 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                     return (
                         <li key={conv.id} onClick={() => onSelectConversation(conv.id)} className={`flex items-center p-3 cursor-pointer group relative ${selectedConversationId === conv.id ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
                             <div className="relative">
-                                <img src={profilePic} className="w-12 h-12 rounded-full object-cover" />
+                                <img src={profilePic} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
                                 {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>}
                             </div>
                             <div className="flex-1 ml-3 overflow-hidden">
@@ -552,7 +552,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
         <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
             <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
                 <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
-                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" />
+                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
                 <div className="ml-3">
                     <h2 className="font-semibold">{conversation.isGroup ? conversation.groupName : otherUser?.name}</h2>
                     {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}

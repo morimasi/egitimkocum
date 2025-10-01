@@ -30,7 +30,7 @@ const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void })
                 <XIcon className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
-                 <img src={user.profilePicture} alt={user.name} className="w-16 h-16 rounded-full border-4 border-white/50" />
+                 <img src={user.profilePicture} alt={user.name} className="w-16 h-16 rounded-full border-4 border-white/50" loading="lazy" />
                 <div>
                     <h2 className="text-2xl font-bold">{title}</h2>
                     <p className="mt-1 text-white/90 max-w-2xl">{message}</p>
@@ -62,7 +62,7 @@ const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) =>
                          <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {conversationId: 'conv-announcements'})}>
                             <div className="flex-shrink-0">
                                 {sender && sender.profilePicture ? (
-                                    <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" />
+                                    <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" loading="lazy" />
                                 ) : (
                                     <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                         <StudentsIcon className="w-4 h-4 text-gray-500" />
@@ -109,8 +109,9 @@ const StudentWelcomeHeader = React.memo(() => {
                     <h1 className="text-2xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
                     <p className="text-sm text-white/80">Seviye: {currentLevel} | XP: {currentUser?.xp || 0}</p>
                 </div>
-                 <button onClick={handleGenerateSuggestion} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0">
-                    ✨ Günlük Tavsiyeni Al
+                 <button onClick={handleGenerateSuggestion} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
+                    {isLoading ? <SparklesIcon className="w-4 h-4 animate-spin" /> : '✨'}
+                    <span>{isLoading ? 'Oluşturuluyor...' : 'Günlük Tavsiyeni Al'}</span>
                 </button>
             </div>
              <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] flex items-center text-sm">
@@ -269,8 +270,9 @@ const CoachWelcomeHeader = React.memo(() => {
                     <h1 className="text-2xl font-bold text-white">Merhaba Koç {currentUser?.name}!</h1>
                     <p className="text-sm text-white/80">İşte haftalık genel durumun.</p>
                 </div>
-                 <button onClick={handleGenerateSummary} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0">
-                    ✨ Haftalık Özeti Al
+                 <button onClick={handleGenerateSummary} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
+                    {isLoading ? <SparklesIcon className="w-4 h-4 animate-spin" /> : '✨'}
+                    <span>{isLoading ? 'Özetleniyor...' : 'Haftalık Özeti Al'}</span>
                 </button>
             </div>
              <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] text-sm whitespace-pre-wrap">
@@ -327,7 +329,7 @@ const StudentsAtRiskCard = () => {
                 {studentsAtRisk.map(student => (
                     <li key={student.id} onClick={() => setActivePage('students', {studentId: student.id})} className="p-3 bg-red-50 dark:bg-red-900/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900">
                         <div className="flex items-center gap-3">
-                             <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full object-cover" />
+                             <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" />
                             <div>
                                 <p className="font-semibold">{student.name}</p>
                                 <p className="text-xs text-red-700 dark:text-red-300">{student.riskFactors.join(', ')}</p>
