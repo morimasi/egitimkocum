@@ -42,7 +42,9 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    // Fix: Destructure props to avoid linter error.
+    const { children } = this.props;
+    return children;
   }
 }
 

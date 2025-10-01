@@ -178,7 +178,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
+        // Fix: Cast templates to AssignmentTemplate[] to ensure type safety.
+        const template = (templates as AssignmentTemplate[]).find((t) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -292,7 +293,14 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
                 </div>
-                 {!preselectedStudentIds && (
+                 {preselectedStudentIds && preselectedStudentIds.length > 0 ? (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Atanan Öğrenciler</label>
+                        <div className="p-2 border rounded-md bg-gray-100 dark:bg-gray-900 dark:border-gray-600">
+                             {preselectedStudentIds.length} öğrenci seçildi.
+                        </div>
+                    </div>
+                 ) : (
                     <>
                         <div>
                             <label className="block text-sm font-medium mb-1">Sınıf Filtresi</label>
@@ -700,7 +708,13 @@ export default function Assignments() {
             setIsNewAssignmentModalOpen(true);
         }
         if (Object.keys(initialFilters).length > 0) {
-            setInitialFilters({});
+            // Clear filters after applying them
+            if (initialFilters.preselectedStudentIds) {
+                 const { preselectedStudentIds, ...rest } = initialFilters;
+                 setInitialFilters(rest);
+            } else {
+                 setInitialFilters({});
+            }
         }
     }, [initialFilters, setInitialFilters, displayedAssignments]);
 
@@ -765,12 +779,14 @@ export default function Assignments() {
         setSelectedAssignmentIds([]);
     };
     
+    const preselectedIdsForNewModal = initialFilters.preselectedStudentIds || (filterStudent !== 'all' ? [filterStudent] : null);
+
     return (
         <div className="space-y-6">
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.currentTarget.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>
@@ -779,7 +795,8 @@ export default function Assignments() {
                         {isCoach && (
                             <select value={filterStudent} onChange={e => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
-                                {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {/* Fix: Cast students to User[] to ensure type safety. */}
+                                {(students as User[]).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                          <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
@@ -842,7 +859,7 @@ export default function Assignments() {
             <NewAssignmentModal 
                 isOpen={isNewAssignmentModalOpen} 
                 onClose={() => setIsNewAssignmentModalOpen(false)} 
-                preselectedStudentIds={filterStudent !== 'all' ? [filterStudent] : null}
+                preselectedStudentIds={preselectedIdsForNewModal}
             />
 
             {selectedAssignment && (

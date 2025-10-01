@@ -3,11 +3,11 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon, XIcon } from '../components/Icons';
+import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon, XIcon, PieChartIcon } from '../components/Icons';
 import { DashboardSkeleton, SkeletonText } from '../components/SkeletonLoader';
 import { generateStudentFocusSuggestion, generatePersonalCoachSummary, suggestFocusAreas } from '../services/geminiService';
 import AnnouncementModal from '../components/AnnouncementModal';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import GoalsCard from '../components/GoalsCard';
 import OnboardingWizard from '../components/OnboardingWizard';
 
@@ -59,7 +59,7 @@ const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) =>
                 {announcements.map(msg => {
                     const sender = users.find(u => u.id === msg.senderId);
                      return (
-                         <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {contactId: 'conv-announcements'})}>
+                         <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {conversationId: 'conv-announcements'})}>
                             <div className="flex-shrink-0">
                                 {sender && sender.profilePicture ? (
                                     <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" />
@@ -388,8 +388,30 @@ const CoachDashboard = () => {
         return {
             name: student.name,
             avgGrade,
+            id: student.id,
         };
     }).sort((a,b) => b.avgGrade - a.avgGrade), [students, assignments]);
+    
+    const assignmentStatusData = useMemo(() => {
+        const statusCounts = assignments.reduce((acc, a) => {
+            acc[a.status] = (acc[a.status] || 0) + 1;
+            return acc;
+        }, {} as Record<AssignmentStatus, number>);
+
+        return [
+            { name: 'Bekleyen', value: statusCounts.pending || 0, fill: '#f59e0b' },
+            { name: 'Teslim Edilen', value: statusCounts.submitted || 0, fill: '#3b82f6' },
+            { name: 'Notlandırılan', value: statusCounts.graded || 0, fill: '#22c55e' },
+        ];
+    }, [assignments]);
+    
+     const handleBarClick = (data: any) => {
+        if (data && data.activePayload && data.activePayload[0]) {
+            const studentId = data.activePayload[0].payload.id;
+            setActivePage('students', { studentId });
+        }
+    };
+
 
     return (
         <div className="space-y-6">
@@ -397,23 +419,21 @@ const CoachDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
                 <CoachStatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon />} color="text-green-500" onClick={() => setActivePage('students')} />
                 <CoachStatCard title="Değerlendirilecek" value={toGradeCount} icon={<AssignmentsIcon />} color="text-blue-500" onClick={() => setActivePage('assignments', {status: AssignmentStatus.Submitted})} />
-                <CoachStatCard title="Gecikmiş Ödev" value={overdueCount} icon={<AlertTriangleIcon />} color="text-red-500" onClick={() => setActivePage('assignments')} />
+                <CoachStatCard title="Gecikmiş Ödev" value={overdueCount} icon={<AlertTriangleIcon />} color="text-red-500" onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
             </div>
 
             <QuickActions />
 
-            <StudentsAtRiskCard />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                 <Card title="Öğrenci Performans Sıralaması" className="lg:col-span-2 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <Card title="Öğrenci Performans Sıralaması" className="lg:col-span-3 h-full">
                      <div className="w-full h-80">
                          <ResponsiveContainer>
                             <BarChart data={studentPerformanceData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" domain={[0, 100]}/>
                                 <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 12}} />
-                                <Tooltip />
-                                <Bar dataKey="avgGrade" name="Not Ort." barSize={20}>
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
+                                <Bar dataKey="avgGrade" name="Not Ort." barSize={20} onClick={handleBarClick} cursor="pointer">
                                     {studentPerformanceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.avgGrade >= 85 ? '#22c55e' : entry.avgGrade >= 60 ? '#3b82f6' : '#ef4444'}/>
                                     ))}
@@ -422,28 +442,41 @@ const CoachDashboard = () => {
                         </ResponsiveContainer>
                     </div>
                  </Card>
-                 <Card title="Son Aktiviteler" className="h-full">
-                     {recentActivity.length > 0 ? (
-                        <ul className="space-y-3">
-                            {recentActivity.map(a => (
-                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
-                                    <div>
-                                        <p className="font-semibold text-sm">{students.find(s=>s.id === a.studentId)?.name}</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{a.title}</p>
-                                    </div>
-                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-300 flex-shrink-0">Teslim Edildi</span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <div className="text-center py-8">
-                            <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
-                            <p className="mt-2 font-semibold">Her şey güncel!</p>
-                            <p className="text-sm text-gray-500">Değerlendirilecek yeni ödev yok.</p>
+                 <div className="lg:col-span-2 space-y-6">
+                    <Card title="Ödev Durum Dağılımı" icon={<PieChartIcon />}>
+                         <div className="w-full h-40">
+                             <ResponsiveContainer>
+                                <PieChart>
+                                    <Pie data={assignmentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} />
+                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
-                    )}
-                 </Card>
+                    </Card>
+                     <Card title="Son Aktiviteler" className="h-full">
+                         {recentActivity.length > 0 ? (
+                            <ul className="space-y-3">
+                                {recentActivity.map(a => (
+                                    <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                        <div>
+                                            <p className="font-semibold text-sm">{students.find(s=>s.id === a.studentId)?.name}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{a.title}</p>
+                                        </div>
+                                        <span className="text-xs font-bold text-blue-600 dark:text-blue-300 flex-shrink-0">Teslim Edildi</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="text-center py-8">
+                                <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
+                                <p className="mt-2 font-semibold">Her şey güncel!</p>
+                                <p className="text-sm text-gray-500">Değerlendirilecek yeni ödev yok.</p>
+                            </div>
+                        )}
+                     </Card>
+                </div>
             </div>
+            <StudentsAtRiskCard />
             <AnnouncementsCard />
         </div>
     );

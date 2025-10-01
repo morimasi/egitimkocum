@@ -151,8 +151,10 @@ export default function TemplateManager() {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredTemplates = useMemo(() => {
-        if (!searchTerm) return templates;
-        return templates.filter(t => 
+        // Fix: Cast templates to ensure it's treated as an array of AssignmentTemplate.
+        const allTemplates = (templates || []) as AssignmentTemplate[];
+        if (!searchTerm) return allTemplates;
+        return allTemplates.filter(t => 
             t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
             t.description.toLowerCase().includes(searchTerm.toLowerCase())
         );

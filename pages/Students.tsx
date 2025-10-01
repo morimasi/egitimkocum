@@ -4,7 +4,7 @@ import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, Bad
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon } from '../components/Icons';
+import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon, ArrowLeftIcon, XIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverviewTab from '../components/studentDetail/OverviewTab';
@@ -25,7 +25,12 @@ const getAcademicTrackLabel = (track: AcademicTrack): string => {
     }
 };
 
-const StudentDetailModal = ({ student, onClose }: { student: User | null; onClose: () => void; }) => {
+const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: { 
+    student: User | null; 
+    onClose: () => void; 
+    onNavigate?: (direction: 'next' | 'prev') => void;
+    canNavigate?: { next: boolean, prev: boolean };
+}) => {
     const { users } = useDataContext();
     const [activeTab, setActiveTab] = useState('overview');
 
@@ -40,30 +45,38 @@ const StudentDetailModal = ({ student, onClose }: { student: User | null; onClos
     const assignedCoach = users.find(u => u.id === student.assignedCoachId);
     
     return (
-        <Modal isOpen={!!student} onClose={onClose} title={`${student.name} - Performans Detayları`} size="lg">
-            <div className="flex items-start space-x-4 mb-4 pb-4 border-b dark:border-gray-700">
-                <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" />
-                <div>
-                    <h3 className="text-2xl font-bold">{student.name}</h3>
-                    <p className="text-gray-500">{student.email}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {student.gradeLevel && (
-                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
-                                {student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`}
+        <Modal isOpen={!!student} onClose={onClose} title="" size="lg">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b dark:border-gray-700">
+                <div className="flex items-start space-x-4">
+                    <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" />
+                    <div>
+                        <h3 className="text-2xl font-bold">{student.name}</h3>
+                        <p className="text-gray-500">{student.email}</p>
+                         <div className="flex flex-wrap gap-2 mt-2">
+                            {student.gradeLevel && (
+                                <span className="text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                                    {student.gradeLevel === 'mezun' ? 'Mezun' : `${student.gradeLevel}. Sınıf`}
+                                </span>
+                            )}
+                            {student.academicTrack && (
+                                <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                                    {getAcademicTrackLabel(student.academicTrack)}
+                                </span>
+                            )}
+                        </div>
+                        <div className="mt-2">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>
+                                Koç: {assignedCoach?.name || 'Atanmamış'}
                             </span>
-                        )}
-                         {student.academicTrack && (
-                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-                                {getAcademicTrackLabel(student.academicTrack)}
-                            </span>
-                        )}
-                    </div>
-                    <div className="mt-2">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>
-                            Koç: {assignedCoach?.name || 'Atanmamış'}
-                        </span>
+                        </div>
                     </div>
                 </div>
+                 {onNavigate && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5"/></button>
+                        <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
+                    </div>
+                )}
             </div>
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
@@ -202,7 +215,7 @@ export default function Students() {
     const { students, currentUser, users, addGoal, getAssignmentsForStudent, deleteUser, assignResourceToStudents } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-    const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+    const [selectedStudentIndex, setSelectedStudentIndex] = useState<number | null>(null);
     const [filterCoach, setFilterCoach] = useState('all');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [filterTrack, setFilterTrack] = useState<AcademicTrack | 'all'>('all');
@@ -218,26 +231,6 @@ export default function Students() {
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
     const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
-
-    useEffect(() => {
-        if (initialFilters.studentId) {
-            const studentToOpen = students.find(s => s.id === initialFilters.studentId);
-            if (studentToOpen) {
-                setSelectedStudent(studentToOpen);
-            }
-            setInitialFilters({});
-        }
-    }, [initialFilters, setInitialFilters, students]);
-
-    useEffect(() => {
-        const timerId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 300);
-
-        return () => {
-            clearTimeout(timerId);
-        };
-    }, [searchTerm]);
 
     const academicTrackLabels: Record<AcademicTrack, string> = {
         [AcademicTrack.Sayisal]: 'Sayısal',
@@ -301,13 +294,58 @@ export default function Students() {
         
         return { grouped: null, flat: sorted };
     }, [filteredStudents, sortConfig, viewMode]);
-
-
-    const gradeOrder: (keyof NonNullable<typeof sortedAndGroupedStudents.grouped>)[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
+    
+    const flatStudentList = useMemo(() => sortedAndGroupedStudents.flat, [sortedAndGroupedStudents]);
+    
+    const selectedStudent = useMemo(() => 
+        selectedStudentIndex !== null ? flatStudentList[selectedStudentIndex] : null,
+        [selectedStudentIndex, flatStudentList]
+    );
 
     const handleSelectStudent = useCallback((student: User) => {
-        setSelectedStudent(student);
-    }, []);
+        const index = flatStudentList.findIndex(s => s.id === student.id);
+        if (index !== -1) {
+            setSelectedStudentIndex(index);
+        }
+    }, [flatStudentList]);
+    
+    const handleNavigate = useCallback((direction: 'next' | 'prev') => {
+        if (selectedStudentIndex === null) return;
+        const newIndex = direction === 'next' ? selectedStudentIndex + 1 : selectedStudentIndex - 1;
+        if (newIndex >= 0 && newIndex < flatStudentList.length) {
+            setSelectedStudentIndex(newIndex);
+        }
+    }, [selectedStudentIndex, flatStudentList.length]);
+
+    const navigationState = useMemo(() => ({
+        prev: selectedStudentIndex !== null && selectedStudentIndex > 0,
+        next: selectedStudentIndex !== null && selectedStudentIndex < flatStudentList.length - 1
+    }), [selectedStudentIndex, flatStudentList.length]);
+
+    useEffect(() => {
+        if (initialFilters.studentId) {
+            const studentToOpen = students.find(s => s.id === initialFilters.studentId);
+            if (studentToOpen) {
+                handleSelectStudent(studentToOpen);
+            }
+            setInitialFilters({});
+        }
+    }, [initialFilters, setInitialFilters, students, handleSelectStudent]);
+
+
+    useEffect(() => {
+        const timerId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    }, [searchTerm]);
+
+
+    // Fix: Changed type to string[] to avoid symbol conversion error.
+    const gradeOrder: string[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
 
     const handleGenerateAllGoals = async () => {
         setIsGeneratingGoals(true);
@@ -552,7 +590,7 @@ export default function Students() {
             </div>
         )}
         
-        {selectedStudent && <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />}
+        <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudentIndex(null)} onNavigate={handleNavigate} canNavigate={navigationState} />
         {isInviteModalOpen && <InviteStudentModal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} />}
         {isConfirmGoalModalOpen && (
             <ConfirmationModal

@@ -100,7 +100,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
-                    <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.target.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    {/* Fix: Use e.currentTarget.value for safer access. */}
+                    <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.currentTarget.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="link">Bağlantı</option>
                         <option value="video">Video</option>
                         <option value="pdf">PDF</option>

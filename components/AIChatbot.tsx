@@ -30,7 +30,7 @@ const AIChatbot = () => {
                         systemInstruction: "Senin adın Bilge. Öğrenci koçluğu platformunda çalışan, öğrencilere ve koçlara akademik konularda, ders çalışma ipuçlarında ve motivasyon konularında yardımcı olan, teşvik edici ve arkadaş canlısı bir yapay zeka asistansın. Cevaplarını kısa, anlaşılır ve pozitif bir dilde tut.",
                     },
                 });
-                 setMessages([{ sender: 'ai', text: "Merhaba! Ben Bilge, senin yapay zeka yardımcın. Dersler, ödevler veya motivasyon hakkında nasıl yardımcı olabilirim?" }]);
+                 setMessages([{ sender: 'ai', text: "Merhaba! Ben Bilge, senin çalışma arkadaşınım. Dersler, ödevler veya motivasyon hakkında nasıl yardımcı olabilirim?" }]);
             } catch (error) {
                  console.error("Chat başlatılamadı:", error);
                  setMessages([{ sender: 'ai', text: "Üzgünüm, bir sorun oluştu ve şu an yardımcı olamıyorum." }]);

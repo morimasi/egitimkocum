@@ -16,6 +16,7 @@ Uygulama, Google Gemini API'nin gücünü kullanarak akıllı özellikler sunar 
 - **💬 Akıllı Mesajlaşma Sistemi**: Birebir ve grup mesajlaşması, duyurular, anketler, dosya/sesli mesaj gönderme ve mesajlara reaksiyon verme.
 - **🎯 Odak Modu**: Pomodoro tekniği ile öğrencilerin çalışma verimini artırmalarına yardımcı olan özelleştirilebilir bir zamanlayıcı.
 - **🏆 Motivasyon ve Oyunlaştırma**: Seviye, XP, seriler ve kazanılabilir rozetler ile öğrenci motivasyonunu artırma.
+- ** Görüntüleme Seçenekleri**: Öğrenciler sayfasında **Izgara** ve **Liste** görünümü arasında geçiş yapma ve sıralama özelliği.
 
 ### 🤖 Gemini API Entegrasyonları
 
@@ -24,6 +25,8 @@ Uygulama, Google Gemini API'nin gücünü kullanarak akıllı özellikler sunar 
 - **🗣️ Akıllı Geri Bildirim**: Verilen nota göre motive edici ve yapıcı geri bildirimler üretir.
 - **✅ Otomatik Kontrol Listesi**: Ödev başlığı ve açıklamasına göre öğrencilere yol gösterecek adımlar oluşturur.
 - **🎯 Akıllı Hedef Önerileri**: Öğrencinin performansına göre S.M.A.R.T. hedefler önerir.
+- **🧠 Akıllı Çalışma Planı**: Haftalık müsait zamanlara, hedef sınavlara ve odak derslerine göre kişiselleştirilmiş bir çalışma programı oluşturur.
+- **📈 Sınav Performans Analizi**: Öğrencinin genel performansını analiz eder, güçlü ve zayıf yönlerini belirler ve kişiselleştirilmiş eylem planları sunar.
 - **📅 Haftalık Özetler ve İçgörüler**: Hem öğrenciler hem de koçlar için haftalık performans verilerini analiz edip özetler sunar.
 
 ## 🛠️ Kullanılan Teknolojiler

@@ -6,10 +6,11 @@ type CallState = 'idle' | 'calling' | 'in-call' | 'ended';
 
 interface InitialFilters {
     studentId?: string;
-    contactId?: string;
+    conversationId?: string;
     status?: AssignmentStatus;
     openNewAssignmentModal?: boolean;
     assignmentId?: string;
+    preselectedStudentIds?: string[];
 }
 
 interface UIContextType {

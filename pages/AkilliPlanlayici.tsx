@@ -189,7 +189,8 @@ const AkilliPlanlayici = () => {
             {plan && (
                 <Card title="Oluşturulan Akıllı Planın">
                     <div className="space-y-4">
-                        {plan.map((item, index) => (
+                        {/* Fix: Add null check before mapping over plan. */}
+                        {plan && plan.map((item, index) => (
                             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                 <div className="flex justify-between items-center">
                                     <h4 className="font-bold text-primary-600 dark:text-primary-400">{item.title}</h4>

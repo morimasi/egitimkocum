@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';

@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { StudentsIcon, AssignmentsIcon, EditIcon, TrashIcon } from '../components/Icons';
-import AddStudentForm from '../components/AddStudentForm';
+import AddUserForm from '../components/AddStudentForm';
 import EditUserModal from '../components/EditUserModal';
 
 const getAcademicTrackLabel = (track?: AcademicTrack): string => {
@@ -240,7 +240,7 @@ export default function SuperAdminDashboard() {
                 </Card>
             </div>
             
-            {isNewUserModalOpen && <Modal isOpen={isNewUserModalOpen} onClose={() => setIsNewUserModalOpen(false)} title="Yeni Kullanıcı Ekle"><AddStudentForm onClose={() => setIsNewUserModalOpen(false)}/></Modal>}
+            {isNewUserModalOpen && <Modal isOpen={isNewUserModalOpen} onClose={() => setIsNewUserModalOpen(false)} title="Yeni Kullanıcı Ekle"><AddUserForm onClose={() => setIsNewUserModalOpen(false)}/></Modal>}
             {userToEdit && <EditUserModal user={userToEdit} onClose={() => setUserToEdit(null)} />}
             {userToDelete && <ConfirmationModal isOpen={!!userToDelete} onClose={() => setUserToDelete(null)} onConfirm={handleUserDelete} title="Kullanıcıyı Sil" message={`'${userToDelete.name}' adlı kullanıcıyı silmek istediğinizden emin misiniz?`} />}
             {badgeToEdit && <EditBadgeModal badge={badgeToEdit} onClose={() => setBadgeToEdit(null)} />}

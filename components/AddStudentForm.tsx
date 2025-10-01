@@ -4,7 +4,7 @@ import { useUI } from '../contexts/UIContext';
 import { UserRole, User, AcademicTrack } from '../types';
 import { ImageIcon } from './Icons';
 
-const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
+const AddUserForm = ({ onClose }: { onClose: () => void }) => {
     const { addUser, uploadFile, users, currentUser } = useDataContext();
     const { addToast } = useUI();
 
@@ -218,4 +218,4 @@ const AddStudentForm = ({ onClose }: { onClose: () => void }) => {
         </form>
     );
 };
-export default AddStudentForm;
+export default AddUserForm;

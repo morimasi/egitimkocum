@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
-import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon } from '../components/Icons';
+import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -109,7 +109,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
 
         const totalParticipants = conversation.participantIds.length;
         const isRead = conversation.isGroup
-            ? msg.readBy.length === totalParticipants // For groups, read if everyone read it
+            ? msg.readBy.length >= totalParticipants // For groups, read if everyone read it
             : msg.readBy.length > 1; // For 1-on-1, read if the other person read it
 
         const tooltipText = conversation.isGroup
@@ -391,8 +391,9 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
 };
 
 const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }: { onSelectConversation: (id: string) => void; selectedConversationId: string | null; onNewChat: () => void; }) => {
-    const { currentUser, conversations, users, unreadCounts, lastMessagesMap } = useDataContext();
+    const { currentUser, conversations, users, unreadCounts, lastMessagesMap, setConversationArchived } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
+    const [showArchived, setShowArchived] = useState(false);
 
     const getOtherParticipant = (conv: Conversation) => {
         if (conv.isGroup) return null;
@@ -402,25 +403,21 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
 
     const sortedConversations = useMemo(() => {
         return [...conversations]
-            .filter(c => c.participantIds.includes(currentUser!.id) && !c.isArchived)
+            .filter(c => c.participantIds.includes(currentUser!.id) && (c.isArchived ?? false) === showArchived)
             .sort((a, b) => {
-                // Pin announcements to the top
                 if (a.id === 'conv-announcements') return -1;
                 if (b.id === 'conv-announcements') return 1;
 
                 const lastMsgA = lastMessagesMap.get(a.id);
                 const lastMsgB = lastMessagesMap.get(b.id);
 
-                // Conversations with messages should come before conversations without messages.
                 if (lastMsgA && !lastMsgB) return -1;
                 if (!lastMsgA && lastMsgB) return 1;
-                if (!lastMsgA && !lastMsgB) return 0; // Keep original order for conversations with no messages
+                if (!lastMsgA && !lastMsgB) return 0; 
 
-                // If both have messages, sort by last message timestamp, newest first.
-                // The non-null assertion (!) is safe here because we've handled the null cases above.
                 return new Date(lastMsgB!.timestamp).getTime() - new Date(lastMsgA!.timestamp).getTime();
             });
-    }, [conversations, currentUser, lastMessagesMap]);
+    }, [conversations, currentUser, lastMessagesMap, showArchived]);
     
     const filteredConversations = useMemo(() => {
         if (!searchTerm) return sortedConversations;
@@ -435,10 +432,15 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-            <div className="p-4 border-b dark:border-gray-700">
+            <div className="p-4 border-b dark:border-gray-700 space-y-3">
                 <div className="relative">
                     <input type="text" placeholder="Sohbet ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-900 rounded-full py-2 pl-10 pr-4 focus:outline-none" />
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                </div>
+                <div className="text-center">
+                    <button onClick={() => setShowArchived(!showArchived)} className="text-sm font-medium text-primary-600 hover:underline">
+                        {showArchived ? 'Aktif Sohbetleri Göster' : 'Arşivlenmiş Sohbetler'}
+                    </button>
                 </div>
             </div>
             <ul className="overflow-y-auto flex-1">
@@ -452,7 +454,7 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                     if (!title) return null;
 
                     return (
-                        <li key={conv.id} onClick={() => onSelectConversation(conv.id)} className={`flex items-center p-3 cursor-pointer ${selectedConversationId === conv.id ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
+                        <li key={conv.id} onClick={() => onSelectConversation(conv.id)} className={`flex items-center p-3 cursor-pointer group relative ${selectedConversationId === conv.id ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
                             <div className="relative">
                                 <img src={profilePic} className="w-12 h-12 rounded-full object-cover" />
                                 {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>}
@@ -463,6 +465,26 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                                     {lastMessage && <p className="text-xs text-gray-400 flex-shrink-0">{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>}
                                 </div>
                                 <p className={`text-sm truncate ${unreadCount > 0 ? 'font-bold text-gray-700 dark:text-gray-200' : 'text-gray-500'}`}>{lastMessage?.text || 'Sohbeti başlatın...'}</p>
+                            </div>
+                             <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {showArchived ? (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setConversationArchived(conv.id, false); }}
+                                        title="Arşivden Çıkar"
+                                        className="p-2 text-gray-500 hover:text-primary-500 rounded-full bg-gray-100 dark:bg-gray-600"
+                                    >
+                                        <UnarchiveIcon className="w-5 h-5" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setConversationArchived(conv.id, true); }}
+                                        title="Arşivle"
+                                        disabled={unreadCount > 0}
+                                        className="p-2 text-gray-500 hover:text-primary-500 rounded-full bg-gray-100 dark:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        <ArchiveIcon className="w-5 h-5" />
+                                    </button>
+                                )}
                             </div>
                         </li>
                     )
@@ -570,7 +592,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
 export default function Messages() {
     const { conversations, currentUser, markMessagesAsRead, findOrCreateConversation } = useDataContext();
     const { initialFilters, setInitialFilters } = useUI();
-    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.contactId || null);
+    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.conversationId || null);
 
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024);
 
@@ -581,8 +603,8 @@ export default function Messages() {
     }, []);
 
     useEffect(() => {
-        if (initialFilters.contactId) {
-            setSelectedConversationId(initialFilters.contactId);
+        if (initialFilters.conversationId) {
+            setSelectedConversationId(initialFilters.conversationId);
             setInitialFilters({});
         }
     }, [initialFilters, setInitialFilters]);
