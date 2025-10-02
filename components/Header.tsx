@@ -45,7 +45,7 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
             <button
                 onClick={handleToggle}
                 aria-label="Bildirimler"
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary-500 dark:hover:text-primary-400 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
             >
                 <BellIcon className="h-6 w-6" />
                 {unreadCount > 0 && (
@@ -55,18 +55,18 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
                 )}
             </button>
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 origin-top-right animate-scale-in-tr">
-                    <div className="p-3 border-b dark:border-gray-700">
-                        <h4 className="font-semibold text-gray-800 dark:text-white">Bildirimler</h4>
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border dark:border-slate-700 origin-top-right animate-scale-in-tr">
+                    <div className="p-3 border-b dark:border-slate-700">
+                        <h4 className="font-semibold text-slate-800 dark:text-white">Bildirimler</h4>
                     </div>
                     <ul className="py-2 max-h-80 overflow-y-auto">
                         {userNotifications.length > 0 ? userNotifications.map(n => (
-                            <li key={n.id} onClick={() => handleNotificationClick(n)} className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${!n.isRead ? 'font-semibold' : ''}`}>
-                                <p className="text-sm text-gray-700 dark:text-gray-300">{n.message}</p>
-                                <p className="text-xs text-gray-400 mt-1">{new Date(n.timestamp).toLocaleString('tr-TR')}</p>
+                            <li key={n.id} onClick={() => handleNotificationClick(n)} className={`px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer ${!n.isRead ? 'font-semibold' : ''}`}>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{n.message}</p>
+                                <p className="text-xs text-slate-400 mt-1">{new Date(n.timestamp).toLocaleString('tr-TR')}</p>
                             </li>
                         )) : (
-                            <li className="px-4 py-8 text-center text-sm text-gray-500">
+                            <li className="px-4 py-8 text-center text-sm text-slate-500">
                                 <CheckCircleIcon className="w-8 h-8 mx-auto mb-2 text-green-400" />
                                 Her şey güncel!
                             </li>
@@ -99,18 +99,18 @@ const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (ope
     const unreadNotificationsCount = notifications.filter(n => n.userId === currentUser?.id && !n.isRead).length;
 
     return (
-        <header className="relative z-30 flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
+        <header className="relative z-30 flex-shrink-0 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between p-4 h-16">
                 <div className="flex items-center">
-                    <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-500 dark:text-gray-400 mr-4" aria-label="Menüyü aç">
+                    <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-500 dark:text-slate-400 mr-4" aria-label="Menüyü aç">
                         <MenuIcon className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
+                    <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">{getPageTitle()}</h1>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                   <button onClick={onOpenCommandPalette} aria-label="Hızlı Erişim" className="flex items-center gap-2 p-2 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                   <button onClick={onOpenCommandPalette} aria-label="Hızlı Erişim" className="flex items-center gap-2 p-2 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
                        <SearchIcon className="h-5 w-5" />
-                       <span className="hidden md:inline text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">Ctrl+K</span>
+                       <span className="hidden md:inline text-xs border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5">Ctrl+K</span>
                    </button>
                    {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={markNotificationsAsRead} />}
                     <div className="hidden sm:flex items-center">

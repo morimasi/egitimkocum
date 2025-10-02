@@ -38,10 +38,10 @@ const SinavPerformansi = React.lazy(() => import('./pages/SinavPerformansi'));
 
 
 const AppSkeleton = () => (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-        <div className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 p-4 space-y-4">
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-900">
+        <div className="hidden lg:flex flex-col w-64 bg-white dark:bg-slate-800 border-r dark:border-slate-700 p-4 space-y-4">
             <div className="flex items-center space-x-3">
-                 <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                 <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
                  <SkeletonText className="w-2/3" />
             </div>
             <div className="space-y-2 pt-4">
@@ -49,9 +49,9 @@ const AppSkeleton = () => (
             </div>
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 h-16 flex items-center justify-between p-4">
+            <div className="flex-shrink-0 bg-white dark:bg-slate-800 border-b dark:border-slate-700 h-16 flex items-center justify-between p-4">
                 <SkeletonText className="w-1/4 h-8" />
-                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
             </div>
             <main className="flex-1 p-8">
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -161,7 +161,7 @@ const AppContent = () => {
     }
 
     return (
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />

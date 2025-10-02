@@ -25,7 +25,7 @@ const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void })
     }
 
     return (
-        <Card className="bg-gradient-to-r from-primary-600 to-blue-500 text-white mb-6 relative animate-fade-in shadow-lg">
+        <Card className="bg-gradient-to-r from-primary-500 to-fuchsia-500 text-white mb-6 relative animate-fade-in shadow-lg">
             <button onClick={onDismiss} className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
                 <XIcon className="w-5 h-5" />
             </button>
@@ -64,14 +64,14 @@ const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) =>
                                 {sender && sender.profilePicture ? (
                                     <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" loading="lazy" />
                                 ) : (
-                                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                        <StudentsIcon className="w-4 h-4 text-gray-500" />
+                                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                                        <StudentsIcon className="w-4 h-4 text-slate-500" />
                                     </div>
                                 )}
                             </div>
                             <div>
-                                <p className="text-sm text-gray-700 dark:text-gray-300">{msg.text}</p>
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{msg.text}</p>
+                                <p className="text-xs text-slate-400 mt-1">
                                     {sender?.name} - {new Date(msg.timestamp).toLocaleString('tr-TR')}
                                 </p>
                             </div>
@@ -132,8 +132,8 @@ const StudentStatCard = ({ title, value, icon, color }: { title: string, value: 
          <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
+        <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
     </Card>
 );
 
@@ -170,7 +170,7 @@ const FocusAreasCard = React.memo(() => {
                     <SkeletonText className="h-4 w-3/4" />
                 </div>
             ) : (
-                <p className="text-sm text-gray-700 dark:text-gray-300">{focusSuggestion}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{focusSuggestion}</p>
             )}
         </Card>
     );
@@ -220,10 +220,10 @@ const StudentDashboard = () => {
                      {upcomingAssignments.length > 0 ? (
                         <ul className="space-y-3">
                             {upcomingAssignments.map(a => (
-                                <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                <li key={a.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
                                     <div>
                                         <p className="font-semibold">{a.title}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
                                             {new Date(a.dueDate).toLocaleDateString('tr-TR')}
                                         </p>
                                     </div>
@@ -235,7 +235,7 @@ const StudentDashboard = () => {
                         <div className="text-center py-8">
                             <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
                             <p className="mt-2 font-semibold">Tebrikler!</p>
-                            <p className="text-sm text-gray-500">Bekleyen ödevin bulunmuyor.</p>
+                            <p className="text-sm text-slate-500">Bekleyen ödevin bulunmuyor.</p>
                         </div>
                     )}
                 </Card>
@@ -293,8 +293,8 @@ const CoachStatCard = ({ title, value, icon, color, onClick }: { title: string, 
         <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
+        <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
     </Card>
 );
 
@@ -359,7 +359,7 @@ const QuickActions = () => {
             <Card title="Hızlı Eylemler">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {actions.map(({ label, icon, action }) => (
-                        <button key={label} onClick={action} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-gray-200 dark:active:bg-gray-600">
+                        <button key={label} onClick={action} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-slate-200 dark:active:bg-slate-600">
                             {icon}
                             <span className="text-sm font-semibold text-center">{label}</span>
                         </button>
@@ -402,7 +402,7 @@ const CoachDashboard = () => {
 
         return [
             { name: 'Bekleyen', value: statusCounts.pending || 0, fill: '#f59e0b' },
-            { name: 'Teslim Edilen', value: statusCounts.submitted || 0, fill: '#3b82f6' },
+            { name: 'Teslim Edilen', value: statusCounts.submitted || 0, fill: '#8b5cf6' },
             { name: 'Notlandırılan', value: statusCounts.graded || 0, fill: '#22c55e' },
         ];
     }, [assignments]);
@@ -437,7 +437,7 @@ const CoachDashboard = () => {
                                 <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
                                 <Bar dataKey="avgGrade" name="Not Ort." barSize={20} onClick={handleBarClick} cursor="pointer">
                                     {studentPerformanceData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.avgGrade >= 85 ? '#22c55e' : entry.avgGrade >= 60 ? '#3b82f6' : '#ef4444'}/>
+                                        <Cell key={`cell-${index}`} fill={entry.avgGrade >= 85 ? '#22c55e' : entry.avgGrade >= 60 ? '#8b5cf6' : '#ef4444'}/>
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -459,10 +459,10 @@ const CoachDashboard = () => {
                          {recentActivity.length > 0 ? (
                             <ul className="space-y-3">
                                 {recentActivity.map(a => (
-                                    <li key={a.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                    <li key={a.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
                                         <div>
                                             <p className="font-semibold text-sm">{students.find(s=>s.id === a.studentId)?.name}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{a.title}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[150px]">{a.title}</p>
                                         </div>
                                         <span className="text-xs font-bold text-blue-600 dark:text-blue-300 flex-shrink-0">Teslim Edildi</span>
                                     </li>
@@ -472,7 +472,7 @@ const CoachDashboard = () => {
                             <div className="text-center py-8">
                                 <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
                                 <p className="mt-2 font-semibold">Her şey güncel!</p>
-                                <p className="text-sm text-gray-500">Değerlendirilecek yeni ödev yok.</p>
+                                <p className="text-sm text-slate-500">Değerlendirilecek yeni ödev yok.</p>
                             </div>
                         )}
                      </Card>

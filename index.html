@@ -12,7 +12,10 @@
         theme: {
           extend: {
             colors: {
-              primary: {"50":"#eef2ff","100":"#e0e7ff","200":"#c7d2fe","300":"#a5b4fc","400":"#818cf8","500":"#6366f1","600":"#4f46e5","700":"#4338ca","800":"#3730a3","900":"#312e81","950":"#1e1b4b"}
+              primary: {"50":"#f5f3ff","100":"#ede9fe","200":"#ddd6fe","300":"#c4b5fd","400":"#a78bfa","500":"#8b5cf6","600":"#7c3aed","700":"#6d28d9","800":"#5b21b6","900":"#4c1d95","950":"#2e1065"}
+            },
+            boxShadow: {
+              'primary': '0 4px 14px 0 rgba(124, 58, 237, 0.25)',
             },
             keyframes: {
               fadeIn: {
@@ -22,6 +25,11 @@
               scaleIn: {
                 '0%': { opacity: '0', transform: 'scale(0.95)' },
                 '100%': { opacity: '1' },
+              },
+              'bounce-in': {
+                '0%': { opacity: '0', transform: 'scale(0.8)' },
+                '60%': { opacity: '1', transform: 'scale(1.05)' },
+                '100%': { transform: 'scale(1)' },
               },
               'scale-in-tr': {
                 '0%': { opacity: 0, transform: 'scale(0.95) translateY(-10px) translateX(10px)' },
@@ -39,6 +47,7 @@
             animation: {
               'fade-in': 'fadeIn 0.3s ease-out',
               'scale-in': 'scaleIn 0.2s ease-out',
+              'bounce-in': 'bounce-in 0.3s ease-out',
               'scale-in-tr': 'scale-in-tr 0.2s ease-out forwards',
                'fade-in-right': 'fade-in-right 0.3s ease-out forwards',
                'float-subtle': 'float 4s ease-in-out infinite',
@@ -52,7 +61,7 @@
       *,
       *::before,
       *::after {
-        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease, transform 0.2s ease;
       }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

@@ -171,6 +171,19 @@ export interface AssignmentTemplate {
   isFavorite?: boolean;
 }
 
+export enum ResourceCategory {
+    Matematik = 'matematik',
+    Fizik = 'fizik',
+    Kimya = 'kimya',
+    Biyoloji = 'biyoloji',
+    Turkce = 'turkce',
+    Tarih = 'tarih',
+    Cografya = 'cografya',
+    Felsefe = 'felsefe',
+    Ingilizce = 'ingilizce',
+    Genel = 'genel',
+}
+
 export interface Resource {
   id: string;
   name: string;
@@ -179,6 +192,7 @@ export interface Resource {
   isPublic: boolean;
   uploaderId: string;
   assignedTo?: string[]; // Array of student IDs
+  category: ResourceCategory;
 }
 
 export interface Goal {

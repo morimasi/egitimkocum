@@ -26,10 +26,10 @@ const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
                 setActivePage(page);
             }}
             id={`nav-${page}`}
-            className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
+            className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                 isActive
-                    ? 'bg-primary-500 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600'
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600'
             }`}
         >
             <div className="flex items-center">
@@ -110,15 +110,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     
 
     const sidebarContent = (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-xl">
-            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700" id="tour-step-0">
+        <div className="flex flex-col h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-700" id="tour-step-0">
                 <div className="flex items-center">
-                    <div className="bg-primary-500 rounded-full p-2">
+                    <div className="bg-gradient-to-br from-primary-500 to-fuchsia-500 rounded-full p-2 shadow-lg shadow-primary-500/30">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
                     </div>
-                    <span className="ml-3 text-xl font-bold text-gray-800 dark:text-white">Eğitim Koçu</span>
+                    <span className="ml-3 text-xl font-bold text-slate-800 dark:text-white">Eğitim Koçu</span>
                 </div>
-                 <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                 <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                     <XIcon className="w-6 h-6"/>
                 </button>
             </div>
@@ -129,24 +129,24 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 </nav>
             </div>
 
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-4">
                      <button
                         onClick={toggleTheme}
-                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600"
+                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600"
                         >
                         {theme === 'light' ? <MoonIcon className="w-5 h-5 mr-3" /> : <SunIcon className="w-5 h-5 mr-3" />}
                         {theme === 'light' ? 'Koyu Mod' : 'Açık Mod'}
                     </button>
                 </div>
 
-                <div className="flex items-center p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50">
+                <div className="flex items-center p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50">
                     <img className="w-10 h-10 rounded-full" src={currentUser?.profilePicture} alt="User" loading="lazy" />
                     <div className="ml-3">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white">{currentUser?.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
                     </div>
-                     <button onClick={() => logout()} className="ml-auto p-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 active:bg-red-200 dark:active:bg-red-900" aria-label="Çıkış Yap">
+                     <button onClick={() => logout()} className="ml-auto p-2 text-slate-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 active:bg-red-200 dark:active:bg-red-900" aria-label="Çıkış Yap">
                         <LogoutIcon className="w-5 h-5" />
                     </button>
                 </div>
@@ -165,7 +165,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             {/* Mobile sidebar */}
             <div className={`fixed inset-0 z-40 flex lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                  <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)}></div>
-                 <div className={`relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-gray-800 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                 <div className={`relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-slate-800 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     {sidebarContent}
                 </div>
             </div>

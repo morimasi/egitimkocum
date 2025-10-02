@@ -90,12 +90,12 @@ const StudentAnalytics = () => {
                                 cx="50%" 
                                 cy="50%" 
                                 outerRadius={100} 
-                                fill="#8884d8"
+                                fill="#8b5cf6"
                                 onClick={handlePieClick}
                                 cursor="pointer"
                             >
-                                 <Cell fill="#3b82f6" />
-                                 <Cell fill="#e5e7eb" />
+                                 <Cell fill="#8b5cf6" />
+                                 <Cell fill="#e2e8f0" />
                             </Pie>
                             <Tooltip
                                 formatter={(value: number) => `${value.toFixed(2)}%`}
@@ -171,7 +171,7 @@ const CoachAnalytics = () => {
                             <Bar 
                                 dataKey="avgGrade" 
                                 name="Not Ortalaması" 
-                                fill="#3b82f6" 
+                                fill="#8b5cf6" 
                                 onClick={handleBarClick}
                                 cursor="pointer"
                             />

@@ -1,16 +1,16 @@
 
 
-
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { Resource, UserRole, AcademicTrack } from '../types';
+import { Resource, UserRole, AcademicTrack, ResourceCategory } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
+import AudioRecorder from '../components/AudioRecorder';
 
 const getAcademicTrackLabel = (track: AcademicTrack): string => {
     switch (track) {
@@ -22,12 +22,26 @@ const getAcademicTrackLabel = (track: AcademicTrack): string => {
     }
 };
 
+const ResourceCategoryLabels: Record<ResourceCategory, string> = {
+    [ResourceCategory.Matematik]: 'Matematik',
+    [ResourceCategory.Fizik]: 'Fizik',
+    [ResourceCategory.Kimya]: 'Kimya',
+    [ResourceCategory.Biyoloji]: 'Biyoloji',
+    [ResourceCategory.Turkce]: 'Türkçe',
+    [ResourceCategory.Tarih]: 'Tarih',
+    [ResourceCategory.Cografya]: 'Coğrafya',
+    [ResourceCategory.Felsefe]: 'Felsefe',
+    [ResourceCategory.Ingilizce]: 'İngilizce',
+    [ResourceCategory.Genel]: 'Genel Kaynaklar',
+};
+
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     const { addResource, uploadFile, currentUser, students } = useDataContext();
     const { addToast } = useUI();
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
     const [type, setType] = useState<Resource['type']>('link');
+    const [category, setCategory] = useState<ResourceCategory>(ResourceCategory.Genel);
     const [isPublic, setIsPublic] = useState(true);
     const [file, setFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -52,8 +66,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             addToast("Lütfen bir kaynak adı girin.", "error");
             return;
         }
-        if ((type === 'link' && !url) || (type !== 'link' && !file && type !== 'video') || (type === 'video' && !url)) {
-            addToast("Lütfen bir URL girin veya bir dosya seçin.", "error");
+        if ((type === 'link' && !url) || (type !== 'link' && !file && !url )) {
+            addToast("Lütfen bir URL girin, bir dosya seçin veya bir kayıt yapın.", "error");
             return;
         }
         if (!isPublic && assignedTo.length === 0) {
@@ -67,14 +81,14 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             let resourceUrl = url;
             let resourceName = name;
 
-            if (type !== 'link' && type !== 'video' && file) {
+            if (type !== 'link' && type !== 'video' && type !== 'audio' && file) {
                 if (!resourceName) {
                     resourceName = file.name;
                 }
                 resourceUrl = await uploadFile(file, `library/${currentUser.id}/${file.name}`);
             }
 
-            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: isPublic ? [] : assignedTo });
+            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: isPublic ? [] : assignedTo, category });
             addToast("Kaynak başarıyla eklendi.", "success");
             onClose();
         } catch (error) {
@@ -87,9 +101,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     
     const mimeTypes: {[key in Resource['type']]?: string} = {
         pdf: '.pdf',
-        video: 'video/*',
         image: 'image/*',
-        audio: 'audio/*',
         document: '.doc,.docx,.txt,.rtf,.odt',
         spreadsheet: '.xls,.xlsx,.csv',
     }
@@ -97,18 +109,26 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     return (
         <Modal isOpen={true} onClose={onClose} title="Yeni Kaynak Ekle">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Kaynak Adı</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={file ? file.name : "Örn: Türev Konu Anlatımı"} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Kaynak Adı</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={file ? file.name : "Örn: Türev Konu Anlatımı"} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium mb-1">Kategori</label>
+                        <select value={category} onChange={e => setCategory(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                        </select>
+                    </div>
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
                     <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.target.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="link">Bağlantı</option>
-                        <option value="video">Video</option>
+                        <option value="video">Video Kaydı</option>
+                        <option value="audio">Ses Kaydı</option>
                         <option value="pdf">PDF</option>
                         <option value="image">Görsel</option>
-                        <option value="audio">Ses Dosyası</option>
                         <option value="document">Doküman</option>
                         <option value="spreadsheet">Hesap Tablosu</option>
                     </select>
@@ -117,13 +137,17 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 {type === 'link' ? (
                     <div>
                         <label className="block text-sm font-medium mb-1">URL (Bağlantı)</label>
-                        {/* Fix: Explicitly typing the event parameter `e` resolves the 'unknown' type error. */}
                         <input type="url" value={url} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required />
                     </div>
                 ) : type === 'video' ? (
                     <div>
                          <label className="block text-sm font-medium mb-1">Video</label>
                          <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/>
+                    </div>
+                ) : type === 'audio' ? (
+                     <div>
+                         <label className="block text-sm font-medium mb-1">Ses Kaydı</label>
+                         <AudioRecorder onSave={(audioUrl) => setUrl(audioUrl || '')}/>
                     </div>
                 ) : (
                     <div>
@@ -355,6 +379,17 @@ export default function Library() {
         });
 
     }, [resources, activeTab, isCoachOrAdmin, currentUser, myPrivateResources, searchTerm, filterType, filterStudent]);
+
+     const groupedResources = useMemo(() => {
+        return displayedResources.reduce((acc, resource) => {
+            const category = resource.category || ResourceCategory.Genel;
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(resource);
+            return acc;
+        }, {} as Record<ResourceCategory, Resource[]>);
+    }, [displayedResources]);
     
     const handleDelete = () => {
         if (resourceToDelete) {
@@ -414,15 +449,24 @@ export default function Library() {
             </Card>
 
             {displayedResources.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {displayedResources.map((resource) => (
-                        <ResourceCard 
-                            key={resource.id} 
-                            resource={resource} 
-                            isCoachOrAdmin={isCoachOrAdmin}
-                            onAssign={setResourceToAssign}
-                            onDelete={setResourceToDelete}
-                        />
+                <div className="space-y-8">
+                    {Object.entries(groupedResources).sort(([a], [b]) => a.localeCompare(b)).map(([category, categoryResources]) => (
+                         <div key={category}>
+                            <h2 className="text-xl font-bold border-b-2 border-primary-500 pb-2 mb-4">
+                                {ResourceCategoryLabels[category as ResourceCategory]}
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {categoryResources.map((resource) => (
+                                    <ResourceCard 
+                                        key={resource.id} 
+                                        resource={resource} 
+                                        isCoachOrAdmin={isCoachOrAdmin}
+                                        onAssign={setResourceToAssign}
+                                        onDelete={setResourceToDelete}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </div>
             ) : (

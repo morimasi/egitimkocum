@@ -32,7 +32,8 @@ const OnboardingWizard = ({ onCompleteOrDismiss }: { onCompleteOrDismiss: () => 
         { id: 'message', title: "Koçuna Merhaba De", description: "Koçunla iletişime geçerek ilk mesajını gönder.", action: async () => {
             if (coach) {
                 const convId = await findOrCreateConversation(coach.id);
-                if (convId) setActivePage('messages', { contactId: convId });
+                // Fix: Corrected property 'contactId' to 'conversationId' to align with the InitialFilters type definition.
+                if (convId) setActivePage('messages', { conversationId: convId });
             }
         }},
     ];

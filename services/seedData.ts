@@ -1,4 +1,4 @@
-import { UserRole, AssignmentStatus, BadgeID, AcademicTrack } from '../types';
+import { UserRole, AssignmentStatus, BadgeID, AcademicTrack, ResourceCategory } from '../types';
 
 export const seedData = {
   assignments: [
@@ -187,12 +187,12 @@ export const seedData = {
     { studentId: "STUDENT_4_ID", text: "Günde 10 yeni İngilizce kelime öğrenmek.", isCompleted: false },
   ],
   resources: [
-    { name: "Türev Konu Anlatımı PDF", type: 'pdf', url: "#", isPublic: true, uploaderId: "COACH_ID" },
-    { name: "Paragraf Çözme Taktikleri Videosu", type: 'video', url: "#", isPublic: true, uploaderId: "COACH_ID" },
-    { name: "Limit ve Süreklilik Ders Notları", type: 'document', url: "#", isPublic: true, uploaderId: "COACH_ID" },
-    { name: "Organik Kimya Özel Notları", type: 'document', url: "#", isPublic: false, uploaderId: "COACH_ID", assignedTo: ["STUDENT_2_ID", "STUDENT_3_ID"] },
-    { name: "AYT Fizik Denemeleri", type: 'pdf', url: "#", isPublic: false, uploaderId: "COACH_2_ID", assignedTo: ["STUDENT_4_ID"] },
-    { name: "Coğrafya Harita Çalışması", type: 'image', url: "#", isPublic: true, uploaderId: "COACH_2_ID" },
+    { name: "Türev Konu Anlatımı PDF", type: 'pdf', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Paragraf Çözme Taktikleri Videosu", type: 'video', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    { name: "Limit ve Süreklilik Ders Notları", type: 'document', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Organik Kimya Özel Notları", type: 'document', url: "#", isPublic: false, uploaderId: "COACH_ID", assignedTo: ["STUDENT_2_ID", "STUDENT_3_ID"], category: ResourceCategory.Kimya },
+    { name: "AYT Fizik Denemeleri", type: 'pdf', url: "#", isPublic: false, uploaderId: "COACH_2_ID", assignedTo: ["STUDENT_4_ID"], category: ResourceCategory.Fizik },
+    { name: "Coğrafya Harita Çalışması", type: 'image', url: "#", isPublic: true, uploaderId: "COACH_2_ID", category: ResourceCategory.Cografya },
   ],
   templates: [
     { title: "Matematik: Haftalık Tekrar Testi", description: "Bu haftanın konularını içeren tekrar testini çöz.", checklist: [{ text: "Konu tekrarı yapıldı." }, { text: "20 soru çözüldü." }, { text: "Yanlışlar kontrol edildi." }] },
