@@ -66,8 +66,12 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             addToast("Lütfen bir kaynak adı girin.", "error");
             return;
         }
-        if ((type === 'link' && !url) || (type !== 'link' && !file && !url )) {
-            addToast("Lütfen bir URL girin, bir dosya seçin veya bir kayıt yapın.", "error");
+        if (type === 'link' && !url) {
+            addToast("Lütfen bir URL girin.", "error");
+            return;
+        }
+        if (type !== 'link' && !file && !url) {
+            addToast("Lütfen bir dosya seçin veya URL girin.", "error");
             return;
         }
         if (!isPublic && assignedTo.length === 0) {
@@ -81,7 +85,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             let resourceUrl = url;
             let resourceName = name;
 
-            if (type !== 'link' && type !== 'video' && type !== 'audio' && file) {
+            if (file) {
                 if (!resourceName) {
                     resourceName = file.name;
                 }
@@ -98,13 +102,6 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             setIsLoading(false);
         }
     };
-    
-    const mimeTypes: {[key in Resource['type']]?: string} = {
-        pdf: '.pdf',
-        image: 'image/*',
-        document: '.doc,.docx,.txt,.rtf,.odt',
-        spreadsheet: '.xls,.xlsx,.csv',
-    }
 
     return (
         <Modal isOpen={true} onClose={onClose} title="Yeni Kaynak Ekle">
@@ -116,7 +113,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                      <div>
                         <label className="block text-sm font-medium mb-1">Kategori</label>
-                        <select value={category} onChange={e => setCategory(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={category} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                         </select>
                     </div>
@@ -125,52 +122,43 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                     <label className="block text-sm font-medium mb-1">Kaynak Türü</label>
                     <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleTypeChange(e.target.value as Resource['type'])} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                         <option value="link">Bağlantı</option>
-                        <option value="video">Video Kaydı</option>
-                        <option value="audio">Ses Kaydı</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Ses Dosyası</option>
                         <option value="pdf">PDF</option>
                         <option value="image">Görsel</option>
                         <option value="document">Doküman</option>
                         <option value="spreadsheet">Hesap Tablosu</option>
                     </select>
                 </div>
-
-                {type === 'link' ? (
+                
+                {type === 'link' && (
                     <div>
                         <label className="block text-sm font-medium mb-1">URL (Bağlantı)</label>
                         <input type="url" value={url} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required />
                     </div>
-                ) : type === 'video' ? (
+                )}
+
+                {type === 'video' && (
                     <div>
-                         <label className="block text-sm font-medium mb-1">Video</label>
-                         <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/>
-                    </div>
-                ) : type === 'audio' ? (
-                     <div>
-                         <label className="block text-sm font-medium mb-1">Ses Kaydı</label>
-                         <AudioRecorder onSave={(audioUrl) => setUrl(audioUrl || '')}/>
-                    </div>
-                ) : (
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Dosya</label>
-                        <div className="mt-1">
-                            <label htmlFor="resource-file-upload" className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none border dark:border-gray-600 p-3 text-center block transition-colors hover:border-primary-500">
-                                <div className="flex items-center justify-center gap-2">
-                                    <DocumentIcon className="w-5 h-5"/>
-                                    <span>{file ? file.name : 'Bir dosya seçin veya sürükleyin'}</span>
-                                </div>
-                                <input 
-                                    id="resource-file-upload" 
-                                    name="resource-file-upload" 
-                                    type="file" 
-                                    className="sr-only" 
-                                    onChange={e => setFile(e.target.files ? e.target.files[0] : null)} 
-                                    accept={mimeTypes[type]}
-                                    required
-                                />
-                            </label>
-                        </div>
+                        <label className="block text-sm font-medium mb-1">Video</label>
+                        <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/>
                     </div>
                 )}
+                
+                 {type === 'audio' && (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Ses Dosyası</label>
+                        <AudioRecorder onSave={(audioUrl) => setUrl(audioUrl || '')}/>
+                    </div>
+                )}
+                
+                {['pdf', 'image', 'document', 'spreadsheet'].includes(type) && (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Dosya</label>
+                        <input type="file" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" required />
+                    </div>
+                )}
+
                
                 <div className="flex items-center pt-2">
                     <input type="checkbox" id="isPublic" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />

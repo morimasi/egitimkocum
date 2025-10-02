@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import { useUI } from '../contexts/UIContext';
@@ -32,7 +34,6 @@ const OnboardingWizard = ({ onCompleteOrDismiss }: { onCompleteOrDismiss: () => 
         { id: 'message', title: "Koçuna Merhaba De", description: "Koçunla iletişime geçerek ilk mesajını gönder.", action: async () => {
             if (coach) {
                 const convId = await findOrCreateConversation(coach.id);
-                // Fix: Corrected property 'contactId' to 'conversationId' to align with the InitialFilters type definition.
                 if (convId) setActivePage('messages', { conversationId: convId });
             }
         }},
@@ -117,9 +118,9 @@ const OnboardingWizard = ({ onCompleteOrDismiss }: { onCompleteOrDismiss: () => 
                         <RocketIcon className="w-6 h-6 text-primary-500" />
                         Platforma Hoş Geldin!
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Başlamak için aşağıdaki görevleri tamamla ve XP kazan!</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Başlamak için aşağıdaki görevleri tamamla ve XP kazan!</p>
                 </div>
-                <button onClick={handleDismiss} className="text-sm text-gray-400 hover:text-gray-600">Daha Sonra</button>
+                <button onClick={handleDismiss} className="text-sm text-slate-400 hover:text-slate-600">Daha Sonra</button>
             </div>
 
             <div className="my-4">
@@ -127,22 +128,22 @@ const OnboardingWizard = ({ onCompleteOrDismiss }: { onCompleteOrDismiss: () => 
                     <span>İlerleme</span>
                     <span>{completedCount}/{totalCount}</span>
                 </div>
-                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div className="bg-primary-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
 
             <div className="space-y-3">
                 {tasks.map(task => (
-                    <div key={task.id} className={`p-3 rounded-lg flex items-center justify-between transition-colors ${completedTasks[task.id] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+                    <div key={task.id} className={`p-3 rounded-lg flex items-center justify-between transition-colors ${completedTasks[task.id] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-slate-100 dark:bg-slate-700/50'}`}>
                         <div className="flex items-center">
                              {completedTasks[task.id] ? (
                                 <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0" />
                             ) : (
-                                <div className="w-6 h-6 border-2 border-gray-300 dark:border-gray-500 rounded-full flex-shrink-0"></div>
+                                <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-500 rounded-full flex-shrink-0"></div>
                             )}
                             <div className="ml-3">
-                                <p className={`font-semibold ${completedTasks[task.id] ? 'line-through text-gray-500' : ''}`}>{task.title}</p>
+                                <p className={`font-semibold ${completedTasks[task.id] ? 'line-through text-slate-500' : ''}`}>{task.title}</p>
                             </div>
                         </div>
                         {!completedTasks[task.id] && (

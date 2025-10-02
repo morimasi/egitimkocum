@@ -28,7 +28,7 @@ const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
             id={`nav-${page}`}
             className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
                 isActive
-                    ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30'
+                    ? 'bg-gradient-to-r from-primary-600 to-fuchsia-500 text-white shadow-lg shadow-primary-500/30'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600'
             }`}
         >

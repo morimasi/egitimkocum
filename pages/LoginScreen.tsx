@@ -70,7 +70,7 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl shadow-primary-500/30 transition-shadow"
+                            className="w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed shadow-primary hover:shadow-lg transition-shadow"
                         >
                             {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                         </button>

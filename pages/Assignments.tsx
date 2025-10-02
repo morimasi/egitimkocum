@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
@@ -184,7 +182,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-// Fix: Explicitly typing the parameter `t` resolves the 'unknown' type error.
         const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
@@ -866,7 +863,6 @@ export default function Assignments() {
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        {/* Fix: Explicitly typing the event parameter `e` resolves the 'unknown' type error. */}
                         <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
@@ -874,10 +870,9 @@ export default function Assignments() {
                             <option value={AssignmentStatus.Graded}>Notlandırılan</option>
                         </select>
                         {isCoach && (
-                            // Fix: Explicitly typing the event parameter `e` and casting `students` to User[] resolves 'unknown' type errors.
                             <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option value="all">Tüm Öğrenciler</option>
-                                {(students as User[]).map((s: User) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {students.map((s: User) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
                          <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />

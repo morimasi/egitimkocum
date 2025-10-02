@@ -1,6 +1,4 @@
 
-
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -45,7 +43,6 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Destructure `children` from `this.props` to resolve potential linter errors and improve readability.
     const { children } = this.props;
     return children;
   }
