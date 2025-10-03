@@ -4,7 +4,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon,
+    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon, TrophyIcon,
 } from './Icons';
 
 interface NavItemProps {
@@ -67,10 +67,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
+            { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'sinav-performansi', label: 'Sınav Performansı', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
-            { page: 'akilli-planlayici', label: 'Akıllı Planlayıcı', icon: <BrainCircuitIcon className="w-5 h-5" /> },
-            { page: 'odak', label: 'Odak Modu', icon: <TargetIcon className="w-5 h-5" /> },
-            { page: 'motivation', label: 'Motivasyon', icon: <FlameIcon className="w-5 h-5" /> },
+            { page: 'akilli-planlayici', label: 'AI Planlayıcı', icon: <BrainCircuitIcon className="w-5 h-5" /> },
+            { page: 'odak', label: 'Odak Modu', icon: <FlameIcon className="w-5 h-5" /> },
+            { page: 'motivation', label: 'Motivasyon', icon: <TrophyIcon className="w-5 h-5" /> },
             { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-5 h-5" /> },
             { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
         ];
@@ -79,6 +80,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
             { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+            { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
             { page: 'templates', label: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },

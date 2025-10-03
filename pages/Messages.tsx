@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
-import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon, PhoneIcon } from '../components/Icons';
+import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon, PhoneIcon, EditIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -109,8 +109,8 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
 
         const totalParticipants = conversation.participantIds.length;
         const isRead = conversation.isGroup
-            ? msg.readBy.length >= totalParticipants // For groups, read if everyone read it
-            : msg.readBy.length > 1; // For 1-on-1, read if the other person read it
+            ? msg.readBy.length >= totalParticipants 
+            : msg.readBy.length > 1; 
 
         const tooltipText = conversation.isGroup
             ? isRead ? "Herkes tarafından okundu" : "İletildi"
@@ -140,7 +140,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
             case 'file':
                 return msg.imageUrl ? (
                     <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-                        <img src={msg.imageUrl} alt={msg.fileName} className="max-w-xs max-h-64 rounded-lg object-cover" loading="lazy" />
+                        <img src={msg.imageUrl} alt={msg.fileName || 'image'} className="max-w-xs max-h-64 rounded-lg object-cover" loading="lazy" />
                     </a>
                 ) : (
                     <a href={msg.fileUrl} download={msg.fileName} className="flex items-center gap-2 underline hover:no-underline"><DocumentIcon className="w-6 h-6 flex-shrink-0" /><span>{msg.fileName}</span></a>
@@ -291,17 +291,71 @@ const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: 
     );
 };
 
-const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, disabled }: {
+const NewChatModal = ({ isOpen, onClose, onChatCreated }: { isOpen: boolean; onClose: () => void; onChatCreated: (conversationId: string) => void; }) => {
+    const { students, findOrCreateConversation, startGroupChat } = useDataContext();
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [groupName, setGroupName] = useState('');
+    
+    const handleToggleStudent = (id: string) => {
+        setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
+    };
+
+    const handleStartChat = async () => {
+        if (selectedStudentIds.length === 0) return;
+        let convId;
+        if (selectedStudentIds.length === 1) {
+            convId = await findOrCreateConversation(selectedStudentIds[0]);
+        } else {
+            if (!groupName.trim()) {
+                alert("Lütfen grup için bir ad girin.");
+                return;
+            }
+            convId = await startGroupChat(selectedStudentIds, groupName);
+        }
+        if (convId) onChatCreated(convId);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Yeni Sohbet Başlat">
+            {selectedStudentIds.length > 1 && (
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Grup Adı</label>
+                    <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Grubunuza bir ad verin" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                </div>
+            )}
+            <p className="text-sm text-gray-500 mb-2">Sohbet başlatmak için bir veya daha fazla öğrenci seçin.</p>
+            <ul className="space-y-2 max-h-80 overflow-y-auto">
+                {students.map(student => (
+                    <li key={student.id}>
+                        <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleStudent(student.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3" loading="lazy" />
+                            <span className="font-medium">{student.name}</span>
+                        </label>
+                    </li>
+                ))}
+            </ul>
+             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
+                <button onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600">İptal</button>
+                <button onClick={handleStartChat} disabled={selectedStudentIds.length === 0} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">Sohbeti Başlat</button>
+            </div>
+        </Modal>
+    )
+};
+
+
+const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, disabled, openFileDialog }: {
     onSendMessage: (type: Message['type'], content: any) => void;
     conversationId: string;
     replyTo: Message | null;
     onClearReply: () => void;
     disabled?: boolean;
+    openFileDialog: () => void;
 }) => {
     const [text, setText] = useState('');
     const [isPollModalOpen, setIsPollModalOpen] = useState(false);
     const { addToast } = useUI();
-    const { uploadFile, currentUser } = useDataContext();
+    const { currentUser } = useDataContext();
     const [isRecordingVideo, setIsRecordingVideo] = useState(false);
 
     const handleSend = () => {
@@ -321,32 +375,9 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
         }
         setIsRecordingVideo(false);
     };
-
-    const handleFileChange = async (files: File[]) => {
-        if (!files || files.length === 0 || !currentUser) return;
-        const file = files[0];
-        try {
-            const url = await uploadFile(file, `chat_files/${currentUser.id}/${file.name}`);
-            const messageType = file.type.startsWith('image/') ? 'file' : 'file'; 
-            onSendMessage(messageType, {
-                fileUrl: url,
-                fileName: file.name,
-                fileType: file.type,
-                imageUrl: file.type.startsWith('image/') ? url : undefined,
-            });
-        } catch (error) {
-            addToast("Dosya yüklenirken hata oluştu.", "error");
-        }
-    };
-    
-    const { getRootProps, getInputProps, open } = useDropzone({
-        onDrop: handleFileChange,
-        noClick: true,
-        noKeyboard: true,
-    });
     
     return (
-        <div {...getRootProps()} className={`bg-gray-100 dark:bg-gray-900 p-4 border-t dark:border-gray-700 ${disabled ? 'opacity-50' : ''}`}>
+        <div className={`bg-gray-100 dark:bg-gray-900 p-4 border-t dark:border-gray-700`}>
             {isRecordingVideo ? (
                 <div className="p-2 bg-white dark:bg-gray-800 rounded-lg">
                     <VideoRecorder onSave={handleSendVideo}/>
@@ -372,10 +403,9 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
                         className="flex-1 bg-transparent focus:outline-none"
                         disabled={disabled}
                     />
-                    <button onClick={open} disabled={disabled} className="p-2 text-gray-500 hover:text-primary-500"><PaperclipIcon className="w-5 h-5" /></button>
-                    <input {...getInputProps()} />
+                    <button onClick={openFileDialog} disabled={disabled} className="p-2 text-gray-500 hover:text-primary-500"><PaperclipIcon className="w-5 h-5" /></button>
                     <button onClick={() => setIsRecordingVideo(true)} disabled={disabled} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
-                    <button onClick={handleSend} disabled={disabled} className="p-2 text-primary-500 disabled:text-gray-400"><SendIcon className="w-5 h-5" /></button>
+                    <button onClick={handleSend} disabled={disabled || !text.trim()} className="p-2 text-primary-500 disabled:text-gray-400"><SendIcon className="w-5 h-5" /></button>
                 </div>
                 <div className="flex items-center gap-4 mt-2 px-2">
                     <AudioRecorder onSave={handleSendAudio} />
@@ -430,12 +460,21 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
         });
     }, [sortedConversations, searchTerm]);
 
+    const canCreateChat = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
+
     return (
         <div className="h-full flex flex-col bg-white dark:bg-gray-800">
             <div className="p-4 border-b dark:border-gray-700 space-y-3">
-                <div className="relative">
-                    <input type="text" placeholder="Sohbet ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-900 rounded-full py-2 pl-10 pr-4 focus:outline-none" />
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                 <div className="flex items-center gap-2">
+                    <div className="relative flex-grow">
+                        <input type="text" placeholder="Sohbet ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-900 rounded-full py-2 pl-10 pr-4 focus:outline-none" />
+                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    </div>
+                     {canCreateChat && (
+                        <button onClick={onNewChat} title="Yeni Mesaj" className="p-2 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900">
+                            <EditIcon className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
                 <div className="text-center">
                     <button onClick={() => setShowArchived(!showArchived)} className="text-sm font-medium text-primary-600 hover:underline">
@@ -498,62 +537,76 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
 };
 
 const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBack: () => void; }) => {
-    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation } = useDataContext();
-    const { startCall } = useUI();
-    const [messages, setMessages] = useState<Message[]>([]);
+    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation, uploadFile } = useDataContext();
+    const { startCall, addToast } = useUI();
     const [replyTo, setReplyTo] = useState<Message | null>(null);
     const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
     const [isAddToGroupOpen, setIsAddToGroupOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    
-    useEffect(() => {
-        const convMessages = getMessagesForConversation(conversation.id);
-        setMessages(convMessages);
-    }, [conversation.id, getMessagesForConversation]);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+    const [page, setPage] = useState(1);
+    const allMessages = useMemo(() => getMessagesForConversation(conversation.id), [conversation.id, getMessagesForConversation]);
+    const displayedMessages = useMemo(() => allMessages.slice(-(page * MESSAGE_PAGE_SIZE)), [allMessages, page]);
+    const canLoadMore = displayedMessages.length < allMessages.length;
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const prevScrollHeightRef = useRef<number | null>(null);
+
+    useLayoutEffect(() => {
+        if (prevScrollHeightRef.current !== null && chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeightRef.current;
+            prevScrollHeightRef.current = null;
+        } else {
+             messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        }
+    }, [displayedMessages]);
+
+    const handleLoadMore = () => {
+        if (chatContainerRef.current) {
+            prevScrollHeightRef.current = chatContainerRef.current.scrollHeight;
+        }
+        setPage(prev => prev + 1);
+    };
 
     const handleSendMessage = (type: Message['type'], content: any) => {
         if (!currentUser) return;
-        const messageData: Partial<Message> = {
-            senderId: currentUser.id,
-            conversationId: conversation.id,
-            type,
-            replyTo: replyTo?.id,
-        };
-
+        const messageData: Partial<Message> = { senderId: currentUser.id, conversationId: conversation.id, type, replyTo: replyTo?.id };
         switch (type) {
             case 'text': messageData.text = content; break;
             case 'poll': messageData.poll = content.poll; break;
             case 'audio': messageData.audioUrl = content.audioUrl; messageData.text = "Sesli mesaj"; break;
             case 'video': messageData.videoUrl = content.videoUrl; messageData.text = "Video mesaj"; break;
             case 'file': 
-                messageData.fileUrl = content.fileUrl;
-                messageData.fileName = content.fileName;
-                messageData.fileType = content.fileType;
-                messageData.imageUrl = content.imageUrl;
-                messageData.text = content.fileName;
-                break;
+                messageData.fileUrl = content.fileUrl; messageData.fileName = content.fileName; messageData.fileType = content.fileType;
+                messageData.imageUrl = content.imageUrl; messageData.text = content.fileName; break;
         }
-        
         sendMessage(messageData as Omit<Message, 'id'|'timestamp'|'readBy'>);
         setReplyTo(null);
     };
 
-    const handleReact = (msg: Message, emoji: string) => {
-        addReaction(msg.id, emoji);
+    const handleFileDrop = async (files: File[]) => {
+        if (!files || files.length === 0 || !currentUser) return;
+        for (const file of files) {
+            try {
+                const url = await uploadFile(file, `chat_files/${currentUser.id}/${file.name}`);
+                const messageType = file.type.startsWith('image/') ? 'file' : 'file'; 
+                handleSendMessage(messageType, { fileUrl: url, fileName: file.name, fileType: file.type, imageUrl: file.type.startsWith('image/') ? url : undefined });
+            } catch (error) { addToast("Dosya yüklenirken hata oluştu.", "error"); }
+        }
     };
 
+    const { getRootProps, getInputProps, open, isDragActive } = useDropzone({ onDrop: handleFileDrop, noClick: true, noKeyboard: true });
+
+    const handleReact = (msg: Message, emoji: string) => { addReaction(msg.id, emoji); };
     const otherUser = conversation.isGroup ? null : users.find(u => conversation.participantIds.includes(u.id) && u.id !== currentUser?.id);
     const isTyping = otherUser ? typingStatus[otherUser.id] : false;
     const isAnnouncement = conversation.id === 'conv-announcements';
     const canSend = !isAnnouncement || (currentUser && currentUser.role !== UserRole.Student);
+    const isAdmin = conversation.isGroup && conversation.adminId === currentUser?.id;
 
     return (
-        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-            <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div {...getRootProps({ className: "h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative" })}>
+            <input {...getInputProps()} />
+            <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
                 <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
                 <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
                 <div className="ml-3">
@@ -561,42 +614,57 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
                     {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    {conversation.isGroup && currentUser?.role !== UserRole.Student && (
+                    {conversation.isGroup && isAdmin && (
                         <>
-                        <button onClick={() => setIsAddToGroupOpen(true)} className="p-2 text-gray-500 hover:text-primary-500"><UserPlusIcon className="w-5 h-5" /></button>
-                        <button onClick={() => setIsGroupInfoOpen(true)} className="p-2 text-gray-500 hover:text-primary-500"><UserGroupIcon className="w-5 h-5" /></button>
+                        <button onClick={() => setIsAddToGroupOpen(true)} title="Gruba Ekle" className="p-2 text-gray-500 hover:text-primary-500"><UserPlusIcon className="w-5 h-5" /></button>
+                        <button onClick={() => setIsGroupInfoOpen(true)} title="Grup Bilgisi" className="p-2 text-gray-500 hover:text-primary-500"><UserGroupIcon className="w-5 h-5" /></button>
                         </>
                     )}
                     <button onClick={() => startCall(otherUser || conversation, 'voice')} className="p-2 text-gray-500 hover:text-primary-500"><PhoneIcon className="w-5 h-5"/></button>
                     <button onClick={() => startCall(otherUser || conversation, 'video')} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
                 </div>
             </header>
-            <main className="flex-1 overflow-y-auto p-4">
+            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
+                 {canLoadMore && (
+                    <div className="text-center mb-4">
+                        <button onClick={handleLoadMore} className="text-sm font-semibold text-primary-600 hover:underline">
+                            Daha Fazla Yükle
+                        </button>
+                    </div>
+                )}
                 <div className="space-y-1">
-                    {messages.map(msg => (
+                    {displayedMessages.map(msg => (
                         <MemoizedMessageBubble 
-                            key={msg.id} 
-                            msg={msg} 
-                            isOwnMessage={msg.senderId === currentUser?.id}
-                            onReply={setReplyTo}
-                            onReact={handleReact}
-                            conversation={conversation}
-                        />
+                            key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser?.id}
+                            onReply={setReplyTo} onReact={handleReact} conversation={conversation} />
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
             </main>
-            <MessageInput onSendMessage={handleSendMessage} conversationId={conversation.id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} disabled={!canSend}/>
+            {canSend ? (
+                <MessageInput onSendMessage={handleSendMessage} conversationId={conversation.id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
+            ) : (
+                <div className="bg-gray-100 dark:bg-gray-900 p-4 text-center text-sm text-gray-500 border-t dark:border-gray-700">
+                    Duyuru kanalına sadece koçlar mesaj gönderebilir.
+                </div>
+            )}
+
             {isGroupInfoOpen && <GroupInfoModal conversation={conversation} onClose={() => setIsGroupInfoOpen(false)} />}
             {isAddToGroupOpen && <AddToGroupModal conversation={conversation} onClose={() => setIsAddToGroupOpen(false)} onAddUsers={(ids) => ids.forEach(id => addUserToConversation(conversation.id, id))} />}
+             {isDragActive && (
+                <div className="absolute inset-0 bg-primary-500/20 backdrop-blur-sm border-4 border-dashed border-primary-500 rounded-lg flex items-center justify-center pointer-events-none z-10">
+                    <p className="text-primary-800 dark:text-primary-100 font-bold text-xl">Dosyaları buraya bırakın</p>
+                </div>
+            )}
         </div>
     );
 };
 
 export default function Messages() {
-    const { conversations, currentUser, markMessagesAsRead, findOrCreateConversation } = useDataContext();
+    const { conversations, currentUser, markMessagesAsRead } = useDataContext();
     const { initialFilters, setInitialFilters } = useUI();
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.conversationId || null);
+    const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024);
 
@@ -638,7 +706,7 @@ export default function Messages() {
                 <ContactList 
                     selectedConversationId={selectedConversationId} 
                     onSelectConversation={handleSelectConversation}
-                    onNewChat={() => {}} 
+                    onNewChat={() => setIsNewChatModalOpen(true)}
                 />
             </div>
 
@@ -650,11 +718,21 @@ export default function Messages() {
                         <EmptyState 
                             icon={<MessagesIcon className="w-12 h-12" />}
                             title="Bir sohbet seçin"
-                            description="Başlamak için kenar çubuğundan bir görüşme seçin."
+                            description="Başlamak için kenar çubuğundan bir görüşme seçin veya yeni bir sohbet başlatın."
                         />
                     </div>
                 )}
             </div>
+            {isNewChatModalOpen && (
+                <NewChatModal 
+                    isOpen={isNewChatModalOpen} 
+                    onClose={() => setIsNewChatModalOpen(false)}
+                    onChatCreated={(convId) => {
+                        setIsNewChatModalOpen(false);
+                        handleSelectConversation(convId);
+                    }}
+                />
+            )}
         </div>
     );
 };

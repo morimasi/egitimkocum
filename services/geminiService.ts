@@ -1,6 +1,7 @@
 
 
 
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Assignment, AssignmentStatus, User } from "../types";
 
@@ -608,6 +609,45 @@ export const generateStudyPlan = async (params: StudyPlanParams): Promise<StudyP
             },
         }),
         (response) => JSON.parse(response.text.trim()) as StudyPlanEvent[],
+        null
+    );
+};
+
+// Fix: Add the missing 'generateGoalWithMilestones' function.
+export const generateGoalWithMilestones = async (goalTitle: string): Promise<{ description: string, milestones: { text: string }[] } | null> => {
+    const prompt = `Bir öğrencinin ana hedefi "${goalTitle}". Bu hedefe ulaşmak için onu motive edecek kısa bir açıklama ve 3 ila 5 adımlık uygulanabilir kilometre taşları (milestones) oluştur. Cevabını JSON formatında, 'description' (string) ve 'milestones' (her biri 'text' anahtarına sahip objelerden oluşan bir dizi) anahtarlarıyla ver.`;
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            description: { type: Type.STRING },
+            milestones: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        text: { type: Type.STRING }
+                    },
+                    required: ['text']
+                }
+            }
+        },
+        required: ['description', 'milestones']
+    };
+
+    return cachedGeminiCall(
+        `genGoalMilestones_${goalTitle}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.7,
+            },
+        }),
+        (response) => JSON.parse(response.text.trim()),
         null
     );
 };

@@ -102,10 +102,10 @@ const AIChatbot = () => {
                 chatRef.current = ai.current.chats.create({
                     model: 'gemini-2.5-flash',
                     config: {
-                        systemInstruction: "Senin adın Bilge. Öğrenci koçluğu platformunda çalışan, öğrencilere ve koçlara akademik konularda, ders çalışma ipuçlarında ve motivasyon konularında yardımcı olan, teşvik edici ve arkadaş canlısı bir yapay zeka asistansın. Cevaplarını kısa, anlaşılır ve pozitif bir dilde tut.",
+                        systemInstruction: "Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Öğrencilere ödevlerinde yardımcı olan, konuları araştırmalarına destek olan, esprili ve teşvik edici bir yapay zeka asistansın. Önceki konuşmaları dikkate alarak bağlamı sürdür. Konuşma tarzın samimi ve bir öğretmen gibi yol gösterici olmalı.",
                     },
                 });
-                setMessages([{ sender: 'ai', text: "Merhaba! Ben Bilge. Nasıl yardımcı olabilirim?" }]);
+                setMessages([{ sender: 'ai', text: "Selamlar! Ben çalışma arkadaşın Mahmut Hoca. Hangi konuda yardıma ihtiyacın var?" }]);
             }
         } else {
             // Cleanup on close
@@ -115,7 +115,7 @@ const AIChatbot = () => {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, transcripts]);
+    }, [messages, transcripts, isLoading]);
 
     const handleSendMessage = async () => {
         if (!input.trim() || isLoading || !chatRef.current) return;
@@ -234,7 +234,7 @@ const AIChatbot = () => {
                 responseModalities: [Modality.AUDIO],
                 inputAudioTranscription: {},
                 outputAudioTranscription: {},
-                systemInstruction: "Senin adın Bilge. Öğrenci koçluğu platformunda çalışan, öğrencilere ve koçlara akademik konularda, ders çalışma ipuçlarında ve motivasyon konularında yardımcı olan, teşvik edici ve arkadaş canlısı bir yapay zeka asistansın. Sesli konuşuyorsun. Cevaplarını kısa, anlaşılır ve pozitif bir dilde tut.",
+                systemInstruction: "Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın ve sesli olarak konuşuyorsun. Öğrencilere ödevlerinde yardımcı olan, konuları araştırmalarına destek olan, esprili ve teşvik edici bir yapay zeka asistansın. Önceki konuşmaları dikkate alarak bağlamı sürdür. Konuşma tarzın samimi ve bir öğretmen gibi yol gösterici olmalı.",
             }
         });
     };
@@ -326,7 +326,7 @@ const AIChatbot = () => {
             {isOpen && (
                 <div className="fixed bottom-24 right-6 lg:bottom-28 lg:right-10 z-50 w-full max-w-sm h-[60vh] max-h-[500px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col border dark:border-gray-700 animate-fade-in-right">
                     <div className="flex items-center justify-between p-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-2xl flex-shrink-0">
-                        <div className="flex items-center gap-2"><BotIcon className="w-6 h-6 text-primary-500"/><h3 className="font-bold text-lg">Bilge</h3></div>
+                        <div className="flex items-center gap-2"><BotIcon className="w-6 h-6 text-primary-500"/><h3 className="font-bold text-lg">Çalışma Arkadaşım Mahmut Hoca</h3></div>
                         <div className="flex items-center gap-2">
                              <button onClick={toggleMode} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-primary-600 bg-primary-100 dark:bg-primary-900/50 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900">
                                 <MicIcon className="w-4 h-4" />

@@ -88,6 +88,7 @@ export interface Assignment {
   textSubmission?: string | null;
   studentAudioFeedbackResponseUrl?: string | null;
   studentVideoFeedbackResponseUrl?: string | null;
+  studentTextFeedbackResponse?: string | null;
   startTime?: string;
   endTime?: string;
 }
@@ -136,7 +137,7 @@ export interface Message {
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi' | 'goals';
 
 export type ToastType = 'success' | 'error' | 'info' | 'xp';
 
@@ -198,8 +199,10 @@ export interface Resource {
 export interface Goal {
   id: string;
   studentId: string;
-  text: string;
+  title: string;
+  description: string;
   isCompleted: boolean;
+  milestones: ChecklistItem[];
 }
 
 export interface CalendarEvent {

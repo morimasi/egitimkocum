@@ -178,13 +178,13 @@ export const seedData = {
     }
   ],
   goals: [
-    { studentId: "STUDENT_1_ID", text: "Haftada 200 matematik sorusu çözmek.", isCompleted: true },
-    { studentId: "STUDENT_1_ID", text: "Türkçe deneme netini 35'in üzerine çıkarmak.", isCompleted: false },
-    { studentId: "STUDENT_1_ID", text: "Biyoloji kalıtım konusunu bitirmek.", isCompleted: false },
-    { studentId: "STUDENT_2_ID", text: "Fizik Vektörler konusunu tamamen bitirmek.", isCompleted: false },
-    { studentId: "STUDENT_2_ID", text: "Her gün 20 paragraf sorusu çözmek.", isCompleted: true },
-    { studentId: "STUDENT_3_ID", text: "Geometri katı cisimler konusuna başlamak.", isCompleted: false },
-    { studentId: "STUDENT_4_ID", text: "Günde 10 yeni İngilizce kelime öğrenmek.", isCompleted: false },
+    { studentId: "STUDENT_1_ID", title: "Haftada 200 matematik sorusu çöz.", description: "Matematik becerilerini geliştirmek için haftalık 200 soru hedefi.", isCompleted: true, milestones: [{id: 'm1', text: 'Pazartesi 50 soru çöz', isCompleted: true}, {id: 'm2', text: 'Çarşamba 50 soru çöz', isCompleted: true}, {id: 'm3', text: 'Cuma 50 soru çöz', isCompleted: true}] },
+    { studentId: "STUDENT_1_ID", title: "Türkçe deneme netini 35'in üzerine çıkar.", description: "Paragraf ve dil bilgisi pratiği yaparak net artışı sağla.", isCompleted: false, milestones: [{id: 'm4', text: 'Haftada 2 Türkçe denemesi çöz', isCompleted: false}, {id: 'm5', text: 'Yanlış yapılan dil bilgisi konularını tekrar et', isCompleted: false}] },
+    { studentId: "STUDENT_1_ID", title: "Biyoloji kalıtım konusunu bitir.", description: "Kalıtım konusunu tüm alt başlıklarıyla tamamla.", isCompleted: false, milestones: [{id: 'm6', text: 'Konu anlatımını tamamla', isCompleted: false}, {id: 'm7', text: 'En az 100 soru çöz', isCompleted: false}] },
+    { studentId: "STUDENT_2_ID", title: "Fizik Vektörler konusunu tamamen bitir.", description: "Vektörler konusunu tekrar edip soru bankasından temizle.", isCompleted: false, milestones: [] },
+    { studentId: "STUDENT_2_ID", title: "Her gün 20 paragraf sorusu çöz.", description: "Okuma hızını ve anlama becerini geliştirmek için günlük pratik yap.", isCompleted: true, milestones: [] },
+    { studentId: "STUDENT_3_ID", title: "Geometri katı cisimler konusuna başla.", description: "Katı cisimler ünitesine başlayarak temel formülleri öğren.", isCompleted: false, milestones: [] },
+    { studentId: "STUDENT_4_ID", title: "Günde 10 yeni İngilizce kelime öğren.", description: "Kelime dağarcığını genişletmek için günlük çalışma yap.", isCompleted: false, milestones: [] },
   ],
   resources: [
     { name: "Türev Konu Anlatımı PDF", type: 'pdf', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },

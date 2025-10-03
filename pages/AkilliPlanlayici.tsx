@@ -1,6 +1,4 @@
 
-
-
 import React, { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -21,9 +19,12 @@ type StudyPlanEvent = {
 const AkilliPlanlayici = () => {
     const { addMultipleCalendarEvents, currentUser } = useDataContext();
     const { addToast } = useUI();
+    
+    // Fix: Replaced 'goal' state with separate states for 'targetExams' and 'focusSubjects'
+    // to match the parameters required by the 'generateStudyPlan' service.
+    const [targetExams, setTargetExams] = useState('TYT, AYT');
+    const [focusSubjects, setFocusSubjects] = useState('Matematik, Fizik');
 
-    const [targetExams, setTargetExams] = useState<string[]>(['TYT', 'AYT']);
-    const [focusSubjects, setFocusSubjects] = useState<string[]>(['Matematik', 'Fizik']);
     const [weeklyAvailability, setWeeklyAvailability] = useState<Record<string, boolean[]>>(
         () => ({
             Pazartesi: Array(3).fill(false),
@@ -40,16 +41,7 @@ const AkilliPlanlayici = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [plan, setPlan] = useState<StudyPlanEvent[] | null>(null);
 
-    const ALL_SUBJECTS = ['Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Edebiyat', 'Tarih', 'Coğrafya', 'Felsefe', 'İngilizce'];
     const TIME_SLOTS = ['Sabah (8-12)', 'Öğlen (13-17)', 'Akşam (18-22)'];
-
-    const handleToggleSubject = (subject: string) => {
-        setFocusSubjects(prev =>
-            prev.includes(subject)
-                ? prev.filter(s => s !== subject)
-                : [...prev, subject]
-        );
-    };
 
     const handleToggleAvailability = (day: string, timeIndex: number) => {
         setWeeklyAvailability(prev => ({
@@ -59,16 +51,16 @@ const AkilliPlanlayici = () => {
     };
 
     const handleGeneratePlan = async () => {
-        if (focusSubjects.length === 0) {
-            addToast("Lütfen en az bir odak dersi seçin.", "error");
+        if (!targetExams.trim() || !focusSubjects.trim()) {
+            addToast("Lütfen hedef sınavları ve odaklanılacak dersleri girin.", "error");
             return;
         }
         setIsLoading(true);
         setPlan(null);
         try {
             const planData = await generateStudyPlan({
-                targetExams,
-                focusSubjects,
+                targetExams: targetExams.split(',').map(s => s.trim()),
+                focusSubjects: focusSubjects.split(',').map(s => s.trim()),
                 weeklyAvailability,
                 sessionDuration,
                 breakDuration
@@ -84,7 +76,8 @@ const AkilliPlanlayici = () => {
 
     const handleSavePlan = async () => {
         if (!plan || !currentUser) return;
-        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map(item => ({
+        // Fix: Cast `plan` to `StudyPlanEvent[]` to resolve 'unknown' type error.
+        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as StudyPlanEvent[]).map(item => ({
             title: item.title,
             date: item.date,
             type: 'study',
@@ -102,71 +95,35 @@ const AkilliPlanlayici = () => {
             <Card>
                 <div className="text-center">
                     <BrainCircuitIcon className="w-16 h-16 text-primary-500 mx-auto" />
-                    <h1 className="text-3xl font-bold mt-2">Akıllı Çalışma Planlayıcısı</h1>
+                    <h1 className="text-3xl font-bold mt-2">AI Destekli Planlayıcı</h1>
                     <p className="text-gray-500 max-w-2xl mx-auto mt-2">
-                        Hedeflerini, odak derslerini ve müsait zamanlarını belirt, Gemini yapay zekası senin için en verimli haftalık çalışma planını oluştursun.
+                        Hedefini, müsait zamanlarını ve çalışma tarzını belirt, Gemini yapay zekası senin için en verimli haftalık çalışma planını oluştursun.
                     </p>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card title="1. Hedeflerini Belirle">
+                 <Card title="1. Hedef ve Tercihler">
                     <div className="space-y-4">
                         <div>
                             <label className="block font-semibold mb-2">Hedef Sınavlar</label>
-                            <div className="flex gap-2">
-                                {['TYT', 'AYT', 'LGS', 'DGS'].map(exam => (
-                                    <button key={exam}
-                                        onClick={() => setTargetExams(prev => prev.includes(exam) ? prev.filter(e => e !== exam) : [...prev, exam])}
-                                        className={`px-3 py-1.5 text-sm rounded-full transition-colors ${targetExams.includes(exam) ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'}`}
-                                    >
-                                        {exam}
-                                    </button>
-                                ))}
-                            </div>
+                            <input
+                                type="text"
+                                value={targetExams}
+                                onChange={e => setTargetExams(e.target.value)}
+                                className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                                placeholder="Örn: TYT, AYT"
+                            />
                         </div>
-                        <div>
-                            <label className="block font-semibold mb-2">Odak Dersleri</label>
-                            <div className="flex flex-wrap gap-2">
-                                {ALL_SUBJECTS.map(subject => (
-                                    <button key={subject}
-                                        onClick={() => handleToggleSubject(subject)}
-                                        className={`px-3 py-1.5 text-sm rounded-full transition-colors ${focusSubjects.includes(subject) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'}`}
-                                    >
-                                        {subject}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card title="2. Zamanını Planla">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block font-semibold mb-2">Haftalık Müsait Zamanlar</label>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-center text-sm">
-                                    <thead>
-                                        <tr>
-                                            <th className="p-1"></th>
-                                            {TIME_SLOTS.map(slot => <th key={slot} className="p-1 font-normal text-gray-500">{slot.split(' ')[0]}</th>)}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(weeklyAvailability).map(([day, slots]) => (
-                                            <tr key={day}>
-                                                <td className="font-semibold p-1 text-right">{day}</td>
-                                                {slots.map((isAvailable, i) => (
-                                                    <td key={i} className="p-1">
-                                                        <button onClick={() => handleToggleAvailability(day, i)} className={`w-full h-8 rounded transition-colors ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'}`}></button>
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                         <div>
+                            <label className="block font-semibold mb-2">Odaklanılacak Dersler</label>
+                            <input
+                                type="text"
+                                value={focusSubjects}
+                                onChange={e => setFocusSubjects(e.target.value)}
+                                className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                                placeholder="Örn: Matematik, Fizik"
+                            />
                         </div>
                          <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -178,6 +135,31 @@ const AkilliPlanlayici = () => {
                                 <input type="number" step="5" min="5" value={breakDuration} onChange={e => setBreakDuration(Number(e.target.value))} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
                             </div>
                         </div>
+                    </div>
+                </Card>
+
+                <Card title="2. Müsait Zamanlar">
+                     <div className="overflow-x-auto">
+                        <table className="w-full text-center text-sm">
+                            <thead>
+                                <tr>
+                                    <th className="p-1"></th>
+                                    {TIME_SLOTS.map(slot => <th key={slot} className="p-1 font-normal text-gray-500">{slot.split(' ')[0]}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(weeklyAvailability).map(([day, slots]) => (
+                                    <tr key={day}>
+                                        <td className="font-semibold p-1 text-right">{day}</td>
+                                        {slots.map((isAvailable, i) => (
+                                            <td key={i} className="p-1">
+                                                <button onClick={() => handleToggleAvailability(day, i)} className={`w-full h-8 rounded transition-colors ${isAvailable ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'}`}></button>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </Card>
             </div>
@@ -192,8 +174,7 @@ const AkilliPlanlayici = () => {
             {plan && (
                 <Card title="Oluşturulan Akıllı Planın">
                     <div className="space-y-4">
-                        {/* Fix: Explicitly typing the `item` parameter resolves the 'unknown' type error. */}
-                        {plan.map((item: StudyPlanEvent, index) => (
+                        {(plan as StudyPlanEvent[]).map((item, index) => (
                             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                 <div className="flex justify-between items-center">
                                     <h4 className="font-bold text-primary-600 dark:text-primary-400">{item.title}</h4>

@@ -4,7 +4,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { SparklesIcon, CheckIcon } from './Icons';
 import { suggestStudentGoal } from '../services/geminiService';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentStatus } from '../types';
+import { AssignmentStatus, Goal } from '../types';
 
 const GoalsCard = () => {
     const { currentUser, getGoalsForStudent, updateGoal, addGoal, getAssignmentsForStudent } = useDataContext();
@@ -21,8 +21,10 @@ const GoalsCard = () => {
         if (newGoalText.trim() === '') return;
         addGoal({
             studentId: currentUser.id,
-            text: newGoalText,
+            title: newGoalText,
+            description: '',
             isCompleted: false,
+            milestones: []
         });
         setNewGoalText('');
     };
@@ -36,7 +38,9 @@ const GoalsCard = () => {
         const overdueAssignments = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
         try {
             const suggestion = await suggestStudentGoal(currentUser.name, averageGrade, overdueAssignments);
-            setNewGoalText(suggestion);
+            if (suggestion) {
+                setNewGoalText(suggestion);
+            }
         } catch(e) {
             addToast("Hedef önerisi alınamadı.", "error");
         } finally {
@@ -44,11 +48,22 @@ const GoalsCard = () => {
         }
     };
     
+    const handleToggleGoal = (goal: Goal) => {
+        const allMilestonesCompleted = goal.milestones.every(m => m.isCompleted);
+        
+        if (!goal.isCompleted && goal.milestones.length > 0 && !allMilestonesCompleted) {
+             addToast("Hedefi tamamlamak için önce tüm kilometre taşlarını bitirmelisin.", "info");
+             return;
+        }
+
+        updateGoal({...goal, isCompleted: !goal.isCompleted});
+    };
+    
     return (
          <Card title="Hedeflerim" id="student-goals-card">
             <ul className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-3">
                  {goals.length > 0 ? goals.map(goal => (
-                     <li key={goal.id} className="flex items-center group cursor-pointer" onClick={() => updateGoal({...goal, isCompleted: !goal.isCompleted})}>
+                     <li key={goal.id} className="flex items-center group cursor-pointer" onClick={() => handleToggleGoal(goal)}>
                         <button
                             type="button"
                             role="checkbox"
@@ -61,7 +76,7 @@ const GoalsCard = () => {
                         >
                             {goal.isCompleted && <CheckIcon className="w-3.5 h-3.5 text-white" />}
                         </button>
-                        <label className={`ml-3 text-sm cursor-pointer ${goal.isCompleted ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{goal.text}</label>
+                        <label className={`ml-3 text-sm cursor-pointer ${goal.isCompleted ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{goal.title}</label>
                     </li>
                  )) : <p className="text-sm text-gray-500">Henüz bir hedef belirlemedin. Hadi ilk hedefini ekle!</p>}
             </ul>

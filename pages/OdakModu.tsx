@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, Goal, AssignmentStatus } from '../types';
@@ -141,7 +143,9 @@ const OdakModu = () => {
                 setSessionLog(prev => [
                     ...prev,
                     {
-                        taskTitle: selectedTask ? ('title' in selectedTask ? selectedTask.title : selectedTask.text) : 'Genel Çalışma',
+                        // Fix: The 'Goal' type has a 'title' property, not 'text'.
+                        // Both Assignment and Goal have a 'title' property, so we can access it directly.
+                        taskTitle: selectedTask ? selectedTask.title : 'Genel Çalışma',
                         timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
                     }
                 ]);
@@ -164,106 +168,65 @@ const OdakModu = () => {
 
     const toggleTimer = () => {
         if (!selectedTask && tasks.length > 0) {
-            alert("Lütfen odaklanmak için bir görev seçin.");
+            alert("Lütfen başlamadan önce bir görev seçin.");
             return;
         }
         setIsActive(!isActive);
-    };
-
-    const MODE_CONFIG: Record<TimerMode, { label: string; color: string }> = {
-        work: { label: 'Çalışma', color: 'text-primary-500' },
-        shortBreak: { label: 'Kısa Mola', color: 'text-green-500' },
-        longBreak: { label: 'Uzun Mola', color: 'text-blue-500' },
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
                 <Card>
-                    <div className="flex flex-col items-center justify-center p-4 sm:p-8">
-                        <div className="flex items-center gap-2 sm:gap-4 mb-4">
-                             {(Object.keys(MODE_CONFIG) as TimerMode[]).map(m => (
-                                <button
-                                    key={m}
-                                    onClick={() => selectMode(m)}
-                                    className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-full transition-colors ${mode === m ? 'bg-primary-600 text-white shadow-lg' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-                                >
-                                    {MODE_CONFIG[m].label}
-                                </button>
-                            ))}
-                            <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
-                                <SettingsIcon className="w-5 h-5"/>
-                            </button>
+                    <div className="text-center">
+                        <div className="flex justify-center gap-2 mb-8">
+                            <button onClick={() => selectMode('work')} className={`px-4 py-2 rounded-md ${mode === 'work' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Çalışma</button>
+                            <button onClick={() => selectMode('shortBreak')} className={`px-4 py-2 rounded-md ${mode === 'shortBreak' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Kısa Mola</button>
+                            <button onClick={() => selectMode('longBreak')} className={`px-4 py-2 rounded-md ${mode === 'longBreak' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Uzun Mola</button>
                         </div>
 
-                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg text-center mb-4 w-full max-w-md">
-                            <p className="font-semibold text-gray-800 dark:text-gray-200">Odaklanılan Görev</p>
-                            <p className="text-sm text-gray-500 truncate">{selectedTask ? ('title' in selectedTask ? selectedTask.title : selectedTask.text) : 'Lütfen bir görev seçin'}</p>
-                        </div>
+                        <p className="font-bold text-8xl tabular-nums">{formatTime(timeLeft)}</p>
                         
-                        <div className="relative w-60 h-60 sm:w-64 sm:h-64">
-                            <svg className="w-full h-full" viewBox="0 0 36 36">
-                                <path className="text-gray-200 dark:text-gray-700"
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    fill="none" stroke="currentColor" strokeWidth="4" />
-                                <path className={`${MODE_CONFIG[mode].color} transition-all duration-1000`}
-                                    strokeDasharray={`${(timeLeft / durations[mode]) * 100}, 100`}
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" transform="rotate(-90 18 18)" />
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-5xl sm:text-6xl font-bold font-mono tracking-tighter">{formatTime(timeLeft)}</span>
-                            </div>
-                        </div>
+                        <p className="font-semibold text-lg mt-4 h-7">{selectedTask ? selectedTask.title : 'Bir görev seçin...'}</p>
 
-                        <button
-                            onClick={toggleTimer}
-                            className="mt-6 px-10 py-3 sm:px-12 sm:py-4 text-xl sm:text-2xl font-bold bg-primary-600 text-white rounded-full hover:bg-primary-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-3"
-                        >
-                            {isActive ? <PauseIcon className="w-8 h-8"/> : <PlayIcon className="w-8 h-8"/>}
-                            {isActive ? 'DURAKLAT' : 'BAŞLAT'}
+                        <button onClick={toggleTimer} className={`mt-8 w-48 h-16 text-2xl font-bold rounded-full text-white transition-transform transform hover:scale-105 ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}>
+                            {isActive ? 'DURDUR' : 'BAŞLAT'}
                         </button>
                         
-                        <div className="mt-4 text-center">
-                            <p className="font-semibold">Tamamlanan Pomodoro: {pomodoros}</p>
+                        <div className="mt-8 flex justify-center items-center gap-4">
+                             <p className="text-sm text-gray-500">Tamamlanan Pomodoro: {pomodoros}</p>
+                             <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"><SettingsIcon className="w-5 h-5"/></button>
                         </div>
                     </div>
                 </Card>
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-                 <Card title="Odaklanılacak Görevi Seç">
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {tasks.map(task => {
-                            const isGoal = 'isCompleted' in task;
-                            const title = isGoal ? task.text : task.title;
-                             return (
-                                 <button key={task.id} onClick={() => setSelectedTask(task)} className={`w-full text-left p-3 rounded-lg transition-colors ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                    <p className="font-medium text-sm">{isGoal ? 'Hedef' : 'Ödev'}: {title}</p>
-                                </div>
-                             )
-                        })}
-                        {tasks.length === 0 && <p className="text-sm text-center text-gray-500 py-4">Harika! Odaklanılacak aktif bir görevin yok.</p>}
-                    </div>
-                </Card>
-                <Card title="Seans Günlüğü">
-                    <ul className="space-y-2 max-h-60 overflow-y-auto">
-                        {sessionLog.length > 0 ? sessionLog.map((log, index) => (
-                            <li key={index} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md flex justify-between items-center text-sm">
-                                <span className="truncate pr-2">{log.taskTitle}</span>
-                                <span className="flex-shrink-0 font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">{log.timestamp}</span>
+                 <Card title="Oturum Kaydı">
+                    <ul className="space-y-2 max-h-40 overflow-y-auto">
+                         {sessionLog.length > 0 ? sessionLog.map((log, i) => (
+                            <li key={i} className="flex items-center gap-3 text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                                <CheckIcon className="w-4 h-4 text-green-500"/>
+                                <span className="flex-1">{log.taskTitle}</span>
+                                <span className="text-xs text-gray-400">{log.timestamp}</span>
                             </li>
-                        )) : <p className="text-sm text-center text-gray-500 py-4">Henüz tamamlanan seans yok.</p>}
+                         )) : <p className="text-sm text-center text-gray-500 py-4">Henüz tamamlanan bir oturum yok.</p>}
                     </ul>
                 </Card>
             </div>
-            <SettingsModal 
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                durations={durations}
-                setDurations={setDurations}
-                alertSound={alertSound}
-                setAlertSound={setAlertSound}
-            />
+            
+             <Card title="Bugünün Görevleri" icon={<ClipboardListIcon/>}>
+                <ul className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+                    {tasks.map(task => (
+                        <li key={task.id} onClick={() => setSelectedTask(task)} className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                            <p className="font-semibold text-sm flex items-center gap-2">
+                                <TargetIcon className="w-4 h-4 flex-shrink-0"/>
+                                {task.title}
+                            </p>
+                            {'dueDate' in task && <p className="text-xs text-gray-400 mt-1 ml-6">Ödev - {new Date(task.dueDate).toLocaleDateString('tr-TR')}</p>}
+                            {'milestones' in task && <p className="text-xs text-gray-400 mt-1 ml-6">Hedef</p>}
+                        </li>
+                    ))}
+                </ul>
+            </Card>
+             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} durations={durations} setDurations={setDurations} alertSound={alertSound} setAlertSound={setAlertSound} />
         </div>
     );
 };

@@ -4,7 +4,7 @@ import { useUI } from '../contexts/UIContext';
 import { Page, User, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon
+    AnalyticsIcon, SettingsIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon, TrophyIcon
 } from './Icons';
 
 interface Command {
@@ -35,15 +35,19 @@ const CommandPalette = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     ];
     
     if (currentUser?.role === UserRole.Student) {
-         commands.push({ id: 'page-motivation', type: 'page', title: 'Motivasyon', icon: <FlameIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('motivation'), keywords: 'motivasyon seviye puan rozet' });
-         commands.push({ id: 'page-odak', type: 'page', title: 'Odak Modu', icon: <TargetIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('odak'), keywords: 'odaklanma pomodoro zamanlayıcı' });
+         commands.push({ id: 'page-motivation', type: 'page', title: 'Motivasyon', icon: <TrophyIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('motivation'), keywords: 'motivasyon seviye puan rozet' });
+         commands.push({ id: 'page-odak', type: 'page', title: 'Odak Modu', icon: <FlameIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('odak'), keywords: 'odaklanma pomodoro zamanlayıcı' });
          commands.push({ id: 'page-sinav-performansi', type: 'page', title: 'Sınav Performansı', icon: <ClipboardCheckIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('sinav-performansi'), keywords: 'sınav performans analiz tyt ayt' });
-         commands.push({ id: 'page-akilli-planlayici', type: 'page', title: 'Akıllı Planlayıcı', icon: <BrainCircuitIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('akilli-planlayici'), keywords: 'akıllı planlayıcı yapay zeka program' });
+         commands.push({ id: 'page-akilli-planlayici', type: 'page', title: 'AI Planlayıcı', icon: <BrainCircuitIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('akilli-planlayici'), keywords: 'akıllı planlayıcı yapay zeka program' });
+         commands.push({ id: 'page-goals', type: 'page', title: 'Hedefler', icon: <TargetIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('goals'), keywords: 'hedeflerim kilometre taşı amaç' });
+
     }
 
     if (currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin) {
         commands.push({ id: 'page-students', type: 'page', title: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('students'), keywords: 'öğrenciler liste' });
         commands.push({ id: 'page-templates', type: 'page', title: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('templates'), keywords: 'şablonlar ödev şablonu' });
+        commands.push({ id: 'page-goals', type: 'page', title: 'Hedefler', icon: <TargetIcon className="w-5 h-5 text-gray-400" />, action: () => setActivePage('goals'), keywords: 'hedeflerim kilometre taşı amaç' });
+
         students.forEach(student => {
             commands.push({
                 id: `student-${student.id}`,

@@ -3,11 +3,11 @@ import { useDropzone } from 'react-dropzone';
 import { XIcon, DocumentIcon } from './Icons'; // Assuming you have these icons
 
 interface FileUploadProps {
-    onUpload: (file: File) => void;
+    onFileChange: (file: File | null) => void;
     isUploading: boolean;
 }
 
-const FileUpload = ({ onUpload, isUploading }: FileUploadProps) => {
+const FileUpload = ({ onFileChange, isUploading }: FileUploadProps) => {
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
 
@@ -15,6 +15,7 @@ const FileUpload = ({ onUpload, isUploading }: FileUploadProps) => {
         if (acceptedFiles.length > 0) {
             const currentFile = acceptedFiles[0];
             setFile(currentFile);
+            onFileChange(currentFile);
             if (currentFile.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -25,7 +26,7 @@ const FileUpload = ({ onUpload, isUploading }: FileUploadProps) => {
                 setPreview(null);
             }
         }
-    }, []);
+    }, [onFileChange]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -33,43 +34,31 @@ const FileUpload = ({ onUpload, isUploading }: FileUploadProps) => {
         disabled: isUploading || !!file,
     });
 
-    const handleUploadClick = () => {
-        if (file) {
-            onUpload(file);
-        }
-    };
-
     const handleRemoveFile = () => {
         setFile(null);
         setPreview(null);
+        onFileChange(null);
     };
 
     if (file) {
         return (
-            <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-                <div className="flex items-center justify-center gap-4">
-                    {preview ? (
-                        <img src={preview} alt="Preview" className="w-16 h-16 rounded object-cover" />
-                    ) : (
-                        <DocumentIcon className="w-12 h-12 text-gray-400" />
-                    )}
-                    <div className="text-left">
-                        <p className="font-semibold">{file.name}</p>
-                        <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+            <div className="p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        {preview ? (
+                            <img src={preview} alt="Preview" className="w-12 h-12 rounded object-cover flex-shrink-0" />
+                        ) : (
+                            <DocumentIcon className="w-12 h-12 text-gray-400 flex-shrink-0" />
+                        )}
+                        <div className="text-left min-w-0">
+                            <p className="font-semibold truncate">{file.name}</p>
+                            <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+                        </div>
                     </div>
-                </div>
-                <div className="mt-4 flex justify-center gap-2">
-                    <button
-                        onClick={handleUploadClick}
-                        disabled={isUploading}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed"
-                    >
-                        {isUploading ? 'Yükleniyor...' : 'Ödevi Teslim Et'}
-                    </button>
                     <button
                         onClick={handleRemoveFile}
                         disabled={isUploading}
-                        className="p-2 text-red-500 hover:text-red-700"
+                        className="p-2 text-red-500 hover:text-red-700 flex-shrink-0"
                         aria-label="Dosyayı kaldır"
                     >
                         <XIcon className="w-5 h-5" />

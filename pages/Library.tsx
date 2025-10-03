@@ -1,5 +1,9 @@
 
 
+
+
+
+
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -452,7 +456,8 @@ export default function Library() {
 
             {displayedResources.length > 0 ? (
                 <div className="space-y-8">
-                    {Object.entries(groupedResources).sort(([a], [b]) => a.localeCompare(b)).map(([category, categoryResources]) => (
+                    {/* Fix: Add explicit type to map parameters to resolve 'unknown' type error. */}
+                    {(Object.entries(groupedResources).sort(([a], [b]) => a.localeCompare(b)) as [string, Resource[]][]).map(([category, categoryResources]) => (
                          <div key={category}>
                             <h2 className="text-xl font-bold border-b-2 border-primary-500 pb-2 mb-4">
                                 {ResourceCategoryLabels[category as ResourceCategory]}

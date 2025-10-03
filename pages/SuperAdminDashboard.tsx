@@ -9,17 +9,15 @@ import { StudentsIcon, AssignmentsIcon, EditIcon, TrashIcon } from '../component
 import AddUserForm from '../components/AddStudentForm';
 import EditUserModal from '../components/EditUserModal';
 
-const getAcademicTrackLabel = (track?: AcademicTrack): string => {
-    if (!track) return 'Belirtilmemiş';
-    switch (track) {
-        case AcademicTrack.Sayisal: return 'Sayısal';
-        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
-        case AcademicTrack.Sozel: return 'Sözel';
-        case AcademicTrack.Dil: return 'Dil';
-        default: return '';
+const getRoleLabel = (role: UserRole) => {
+    switch (role) {
+        case UserRole.SuperAdmin: return 'Süper Admin';
+        case UserRole.Coach: return 'Koç';
+        case UserRole.Student: return 'Öğrenci';
+        case UserRole.Parent: return 'Veli';
+        default: return 'Bilinmiyor';
     }
 };
-
 
 const KpiCard = React.memo(({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
     <Card className="flex items-center">
@@ -73,40 +71,28 @@ export default function SuperAdminDashboard() {
     const [badgeToEdit, setBadgeToEdit] = useState<Badge | null>(null);
     const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
 
-    const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
-    const students = useMemo(() => users.filter(u => u.role === UserRole.Student), [users]);
-
     const kpis = useMemo(() => ({
-        totalStudents: students.length,
-        totalCoaches: coaches.length,
+        totalUsers: users.length,
+        totalCoaches: users.filter(u => u.role === UserRole.Coach).length,
+        totalStudents: users.filter(u => u.role === UserRole.Student).length,
         totalAssignments: assignments.length,
-        pendingAssignments: assignments.filter(a => a.status === AssignmentStatus.Submitted).length,
-    }), [students, coaches, assignments]);
-
-    const coachData = useMemo(() => {
-        return coaches.map(coach => {
-            const assignedStudents = students.filter(s => s.assignedCoachId === coach.id);
-            const studentIds = assignedStudents.map(s => s.id);
-            const coachAssignments = assignments.filter(a => studentIds.includes(a.studentId));
-            const gradedAssignments = coachAssignments.filter(a => a.grade !== null);
-            const avgGrade = gradedAssignments.length > 0
-                ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length)
-                : 'N/A';
-            return {
-                ...coach,
-                studentCount: assignedStudents.length,
-                avgGrade,
-            };
-        });
-    }, [coaches, students, assignments]);
-
-    const studentData = useMemo(() => {
-        const coachMap = new Map(coaches.map(c => [c.id, c.name]));
-        return students.map(student => ({
-            ...student,
-            coachName: student.assignedCoachId ? coachMap.get(student.assignedCoachId) || 'Atanmamış' : 'Atanmamış'
-        }));
-    }, [students, coaches]);
+    }), [users, assignments]);
+    
+    const allUsersData = useMemo(() => {
+        const coachMap = new Map(users.filter(u => u.role === UserRole.Coach).map(c => [c.id, c.name]));
+        return users
+            .map(user => ({
+                ...user,
+                coachName: user.role === UserRole.Student && user.assignedCoachId ? coachMap.get(user.assignedCoachId) || 'Atanmamış' : undefined
+            }))
+            .sort((a, b) => { 
+                const roleOrder = [UserRole.SuperAdmin, UserRole.Coach, UserRole.Student, UserRole.Parent];
+                if (roleOrder.indexOf(a.role) !== roleOrder.indexOf(b.role)) {
+                    return roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role);
+                }
+                return a.name.localeCompare(b.name);
+            });
+    }, [users]);
 
 
     const handleUserDelete = () => {
@@ -131,74 +117,46 @@ export default function SuperAdminDashboard() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KpiCard title="Toplam Öğrenci" value={kpis.totalStudents} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
-                <KpiCard title="Toplam Koç" value={kpis.totalCoaches} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-blue-500" />
-                <KpiCard title="Toplam Ödev" value={kpis.totalAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
-                <KpiCard title="Bekleyen Ödev" value={kpis.pendingAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
+                <KpiCard title="Toplam Kullanıcı" value={kpis.totalUsers} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-blue-500" />
+                <KpiCard title="Toplam Koç" value={kpis.totalCoaches} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-green-500" />
+                <KpiCard title="Toplam Öğrenci" value={kpis.totalStudents} icon={<StudentsIcon className="w-6 h-6 text-white"/>} color="bg-purple-500" />
+                <KpiCard title="Toplam Ödev" value={kpis.totalAssignments} icon={<AssignmentsIcon className="w-6 h-6 text-white"/>} color="bg-yellow-500" />
             </div>
             
-            <Card title="Koç Yönetimi">
-                <div className="overflow-x-auto">
+             <Card title="Kullanıcı Yönetimi">
+                <div className="overflow-x-auto max-h-[30rem]">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
                             <tr>
-                                <th scope="col" className="px-4 py-3">Koç</th>
+                                <th scope="col" className="px-4 py-3">Kullanıcı</th>
                                 <th scope="col" className="px-4 py-3 hidden md:table-cell">E-posta</th>
-                                <th scope="col" className="px-4 py-3 text-center">Öğrenci Sayısı</th>
-                                <th scope="col" className="px-4 py-3 text-center">Genel Ort.</th>
+                                <th scope="col" className="px-4 py-3">Rol</th>
+                                <th scope="col" className="px-4 py-3 hidden lg:table-cell">Detay</th>
                                 <th scope="col" className="px-4 py-3 text-right">Eylemler</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {coachData.map(coach => (
-                                <tr key={coach.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            {allUsersData.map(user => (
+                                <tr key={user.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                         <div className="flex items-center gap-3">
-                                            <img src={coach.profilePicture} alt={coach.name} className="w-8 h-8 rounded-full" loading="lazy" />
-                                            {coach.name}
+                                            <img src={user.profilePicture} alt={user.name} className="w-8 h-8 rounded-full" loading="lazy" />
+                                            {user.name}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 hidden md:table-cell">{coach.email}</td>
-                                    <td className="px-4 py-3 text-center">{coach.studentCount}</td>
-                                    <td className="px-4 py-3 text-center font-semibold">{coach.avgGrade}</td>
-                                    <td className="px-4 py-3 text-right space-x-2">
-                                        <button onClick={() => setUserToEdit(coach)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
-                                        <button onClick={() => setUserToDelete(coach)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                    <td className="px-4 py-3 hidden md:table-cell">{user.email}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                            user.role === UserRole.SuperAdmin ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' :
+                                            user.role === UserRole.Coach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' :
+                                            user.role === UserRole.Student ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' :
+                                            'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'
+                                        }`}>{getRoleLabel(user.role)}</span>
                                     </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-
-            <Card title="Öğrenci Yönetimi">
-                <div className="overflow-x-auto max-h-96">
-                    <table className="w-full text-sm text-left">
-                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
-                            <tr>
-                                <th scope="col" className="px-4 py-3">Öğrenci</th>
-                                <th scope="col" className="px-4 py-3 hidden md:table-cell">Sınıf</th>
-                                <th scope="col" className="px-4 py-3 hidden lg:table-cell">Bölüm</th>
-                                <th scope="col" className="px-4 py-3">Atanmış Koç</th>
-                                <th scope="col" className="px-4 py-3 text-right">Eylemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                             {studentData.map(student => (
-                                <tr key={student.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                        <div className="flex items-center gap-3">
-                                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full" loading="lazy" />
-                                            {student.name}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 hidden md:table-cell">{student.gradeLevel || 'N/A'}</td>
-                                    <td className="px-4 py-3 hidden lg:table-cell">{getAcademicTrackLabel(student.academicTrack)}</td>
-                                    <td className="px-4 py-3">{student.coachName}</td>
+                                    <td className="px-4 py-3 hidden lg:table-cell">{user.role === UserRole.Student ? `Koç: ${user.coachName}` : '-'}</td>
                                     <td className="px-4 py-3 text-right space-x-2">
-                                        <button onClick={() => setUserToEdit(student)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
-                                        <button onClick={() => setUserToDelete(student)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                        <button onClick={() => setUserToEdit(user)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
+                                        <button onClick={() => setUserToDelete(user)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
                                     </td>
                                 </tr>
                             ))}

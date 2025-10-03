@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+
+
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -13,6 +15,117 @@ import VideoRecorder from '../components/VideoRecorder';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useDropzone } from 'react-dropzone';
 import { SkeletonText } from '../components/SkeletonLoader';
+import { GoogleGenAI, Chat } from "@google/genai";
+
+
+const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmission }: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    assignment: Assignment;
+    onUseAsSubmission: (submissionText: string) => void;
+}) => {
+    const [messages, setMessages] = useState<{ sender: 'user' | 'ai'; text: string }[]>([]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const chatRef = useRef<Chat | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const aiRef = useRef<GoogleGenAI | null>(null);
+    const { addToast } = useUI();
+
+    useEffect(() => {
+        if (isOpen) {
+            if (!aiRef.current) {
+                 if (!process.env.API_KEY) {
+                    console.error("API_KEY not set");
+                    setMessages([{ sender: 'ai', text: "Üzgünüm, API anahtarı yapılandırılmamış." }]);
+                    return;
+                }
+                aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            }
+            
+            chatRef.current = aiRef.current.chats.create({
+                model: 'gemini-2.5-flash',
+                config: {
+                    systemInstruction: `Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Bir öğrenciye "${assignment.title}" başlıklı ödevde yardımcı oluyorsun. Ödevin açıklaması: "${assignment.description}". Öğrenci sana bu ödevle ilgili sorular soracak. Ona doğrudan cevapları verme, bunun yerine düşünmesini sağlayacak ipuçları ver, yol göster ve konuyu anlamasına yardımcı ol. Cesaretlendirici ve samimi bir dil kullan.`,
+                },
+            });
+            setMessages([{ sender: 'ai', text: "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Sana yardımcı olmak için buradayım!" }]);
+        }
+    }, [isOpen, assignment]);
+
+     useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
+
+    const handleSendMessage = async () => {
+        if (!input.trim() || isLoading || !chatRef.current) return;
+        const userMessage = { sender: 'user' as const, text: input };
+        setMessages(prev => [...prev, userMessage]);
+        setInput('');
+        setIsLoading(true);
+        try {
+            const response = await chatRef.current.sendMessage({ message: input });
+            setMessages(prev => [...prev, { sender: 'ai', text: response.text }]);
+        } catch (error) {
+            setMessages(prev => [...prev, { sender: 'ai', text: "Üzgünüm, bir hata oluştu." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleUseAsSubmission = () => {
+        const aiResponses = messages
+            .filter(msg => msg.sender === 'ai' && msg.text !== "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Sana yardımcı olmak için buradayım!")
+            .map(msg => msg.text)
+            .join('\n\n---\n\n');
+        
+        if (!aiResponses.trim()) {
+            addToast("Aktarılacak bir yapay zeka yanıtı bulunmuyor.", "info");
+            return;
+        }
+        
+        const submissionText = `--- Mahmut Hoca'dan Alınan Yardımla Hazırlanmıştır ---\n\n${aiResponses}`;
+        onUseAsSubmission(submissionText);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Yardım: ${assignment.title}`}>
+            <div className="flex flex-col h-[60vh]">
+                <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                    {messages.map((msg, index) => (
+                        <div key={index} className={`flex items-end gap-2.5 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                            {msg.sender === 'ai' && <BotIcon className="w-8 h-8 p-1.5 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"/>}
+                            <div className={`px-4 py-2 rounded-2xl max-w-[80%] ${msg.sender === 'user' ? 'bg-primary-600 text-white rounded-br-lg' : 'bg-gray-200 dark:bg-gray-700 rounded-bl-lg'}`}>
+                                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                            </div>
+                        </div>
+                    ))}
+                    {isLoading && (
+                        <div className="flex items-end gap-2.5">
+                            <BotIcon className="w-8 h-8 p-1.5 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"/>
+                            <div className="px-4 py-3 rounded-2xl bg-gray-200 dark:bg-gray-700 rounded-bl-lg">
+                                <div className="flex items-center space-x-1"><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div></div>
+                            </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+                <div className="p-3 border-t dark:border-gray-700 flex-shrink-0">
+                    <button 
+                        onClick={handleUseAsSubmission}
+                        className="w-full mb-2 px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-md hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900 transition-colors"
+                    >
+                        Bu Bilgileri Ödev Metni Olarak Kullan
+                    </button>
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
+                        <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' ? handleSendMessage() : null} placeholder="Bir soru sorun..." className="flex-1 bg-transparent focus:outline-none" disabled={isLoading}/>
+                        <button onClick={handleSendMessage} disabled={isLoading || !input.trim()} className="p-2 text-primary-500 disabled:text-gray-400"><SendIcon className="w-5 h-5" /></button>
+                    </div>
+                </div>
+            </div>
+        </Modal>
+    );
+};
 
 
 const getStatusChip = (status: AssignmentStatus) => {
@@ -181,7 +294,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
+        // Fix: Explicitly cast 'templates' to ensure 't' is correctly typed and properties can be accessed.
+        const template = (templates as AssignmentTemplate[]).find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -285,7 +399,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
                         <option value="completed">Sadece Tamamlandı İşareti</option>
@@ -329,8 +443,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                                     {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
                                 </button>
                             </div>
-                            <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
-                                {Object.entries(availableStudents).map(([track, studentGroup]) => (
+                            <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value))} className="w-full p-2 border rounded-md h-32 bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                                {Object.entries(availableStudents).map(([track, studentGroup]: [string, User[]]) => (
                                     <optgroup key={track} label={track}>
                                         {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </optgroup>
@@ -349,8 +463,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
 };
 
 
-const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, canNavigate }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (direction: 'next' | 'prev') => void, canNavigate?: { next: boolean, prev: boolean } }) => {
-    const { currentUser, updateAssignment, uploadFile, getAssignmentsForStudent, assignments: allAssignments } = useDataContext();
+const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, canNavigate, onOpenHelpChat }: { assignment: Assignment | null, onClose: () => void, studentName: string | undefined, onNavigate?: (direction: 'next' | 'prev') => void, canNavigate?: { next: boolean, prev: boolean }, onOpenHelpChat: () => void }) => {
+    const { currentUser, updateAssignment, uploadFile, assignments: allAssignments } = useDataContext();
     const { addToast } = useUI();
     const [grade, setGrade] = useState<string>('');
     const [feedback, setFeedback] = useState('');
@@ -363,6 +477,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
     const [videoFeedbackUrl, setVideoFeedbackUrl] = useState<string | null>(null);
     const [studentAudioFeedbackResponseUrl, setStudentAudioFeedbackResponseUrl] = useState<string | null>(null);
     const [studentVideoFeedbackResponseUrl, setStudentVideoFeedbackResponseUrl] = useState<string | null>(null);
+    const [studentTextFeedbackResponse, setStudentTextFeedbackResponse] = useState('');
+    const [submissionFile, setSubmissionFile] = useState<File | null>(null);
 
     // AI Help State
     const [aiHelpImage, setAiHelpImage] = useState<File | null>(null);
@@ -418,6 +534,8 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
             setVideoFeedbackUrl(assignment.videoFeedbackUrl || null);
             setStudentAudioFeedbackResponseUrl(assignment.studentAudioFeedbackResponseUrl || null);
             setStudentVideoFeedbackResponseUrl(assignment.studentVideoFeedbackResponseUrl || null);
+            setStudentTextFeedbackResponse(assignment.studentTextFeedbackResponse || '');
+            setSubmissionFile(null);
             // Reset AI help state
             setAiHelpImage(null);
             setAiHelpImagePreview(null);
@@ -431,52 +549,42 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
     const isCoach = currentUser.role === UserRole.Coach || currentUser.role === UserRole.SuperAdmin;
 
     const handleSubmission = async () => {
-        let updatedAssignment: Assignment = { 
-            ...assignment, 
-            status: AssignmentStatus.Submitted, 
-            submittedAt: new Date().toISOString(),
-            studentVideoSubmissionUrl,
-        };
-        
-        switch(assignment.submissionType) {
-            case 'text':
-                if (textSubmission.trim() === '') {
-                    addToast("Lütfen metin cevabınızı girin.", "error");
-                    return;
-                }
-                updatedAssignment.textSubmission = textSubmission;
-                break;
-            case 'completed':
-                break;
-            default:
-                 // This case is handled by handleFileUpload now
-                addToast("Lütfen dosya yükleme alanını kullanın.", "error");
-                return;
+        if (assignment.submissionType === 'file' && !submissionFile && textSubmission.trim() === '') {
+            addToast("Lütfen bir dosya yükleyin veya bir not bırakarak teslim edin.", "error");
+            return;
         }
-
-        await updateAssignment(updatedAssignment);
-        addToast("Ödev başarıyla teslim edildi.", "success");
-        onClose();
-    };
-
-    const handleFileUpload = async (file: File) => {
-        if (!currentUser) return;
+        if (assignment.submissionType === 'text' && textSubmission.trim() === '') {
+            addToast("Lütfen metin cevabınızı girin.", "error");
+            return;
+        }
+    
         setIsUploading(true);
         try {
-            const fileUrl = await uploadFile(file, `submissions/${currentUser.id}`);
-            await updateAssignment({ 
-                ...assignment, 
-                status: AssignmentStatus.Submitted, 
-                fileUrl: fileUrl, 
-                fileName: file.name,
+            const updatedAssignment: Assignment = {
+                ...assignment,
+                status: AssignmentStatus.Submitted,
                 submittedAt: new Date().toISOString(),
+                textSubmission: textSubmission.trim() || null,
                 studentVideoSubmissionUrl,
-            });
-            addToast("Ödev dosyası başarıyla yüklendi.", "success");
+            };
+    
+            if (submissionFile) {
+                const fileUrl = await uploadFile(submissionFile, `submissions/${currentUser.id}`);
+                updatedAssignment.fileUrl = fileUrl;
+                updatedAssignment.fileName = submissionFile.name;
+            }
+    
+            if (assignment.submissionType === 'completed') {
+                updatedAssignment.textSubmission = null;
+            }
+    
+            await updateAssignment(updatedAssignment);
+            addToast("Ödev başarıyla teslim edildi.", "success");
             onClose();
+    
         } catch (error) {
-            console.error("File upload error:", error);
-            addToast("Dosya yüklenirken bir hata oluştu.", "error");
+            console.error("Submission error:", error);
+            addToast("Ödev teslim edilirken bir hata oluştu.", "error");
         } finally {
             setIsUploading(false);
         }
@@ -540,7 +648,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
     };
 
     const handleSaveStudentResponse = async () => {
-        await updateAssignment({ ...assignment, studentAudioFeedbackResponseUrl, studentVideoFeedbackResponseUrl });
+        await updateAssignment({ ...assignment, studentAudioFeedbackResponseUrl, studentVideoFeedbackResponseUrl, studentTextFeedbackResponse });
         addToast("Yanıtınız koçunuza gönderildi.", "success");
     };
 
@@ -584,6 +692,18 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                     </div>
                  )}
 
+                {isStudentViewing && !isSubmitted && (
+                    <div className="pt-4 border-t dark:border-slate-700">
+                        <button
+                            onClick={onOpenHelpChat}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300 dark:hover:bg-indigo-900"
+                        >
+                            <SparklesIcon className="w-5 h-5"/> Bu ödev hakkında AI'a soru sor
+                        </button>
+                    </div>
+                )}
+
+
                 <div className="pt-4 border-t dark:border-slate-700">
                     {isSubmitted ? (
                         <div>
@@ -595,11 +715,38 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                         </div>
                     ) : isStudentViewing ? (
                         <div>
-                             <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
-                             {assignment.submissionType === 'file' && <FileUpload onUpload={handleFileUpload} isUploading={isUploading}/>}
-                             {assignment.submissionType === 'text' && <textarea value={textSubmission} onChange={e => setTextSubmission(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />}
-                             <button onClick={handleSubmission} className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" disabled={isUploading}>
-                                {isUploading ? 'Yükleniyor...' : 'Teslim Et'}
+                            <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
+                            
+                            {assignment.submissionType === 'file' && (
+                                <FileUpload onFileChange={setSubmissionFile} isUploading={isUploading}/>
+                            )}
+                    
+                            {(assignment.submissionType === 'text' || assignment.submissionType === 'file') && (
+                                <div className="mt-4">
+                                    <label htmlFor="submission-note" className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">
+                                        {assignment.submissionType === 'file' ? 'Not Bırak (Dosya yerine veya ek olarak):' : 'Cevabını Buraya Yaz:'}
+                                    </label>
+                                    <textarea
+                                        id="submission-note"
+                                        value={textSubmission}
+                                        onChange={e => setTextSubmission(e.target.value)}
+                                        rows={4}
+                                        className="w-full p-2 mt-1 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"
+                                        placeholder={assignment.submissionType === 'file' ? "Örn: Ödevi defterime yaptım, kontrol edebilirsiniz." : "Metin cevabınız..."}
+                                    />
+                                </div>
+                            )}
+                    
+                            {assignment.submissionType === 'completed' && (
+                                <p className="text-sm text-gray-500 mt-4">Bu ödevi tamamladığını bildirmek için "Teslim Et" butonuna tıkla.</p>
+                            )}
+                    
+                            <button
+                                onClick={handleSubmission}
+                                className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                                disabled={isUploading}
+                            >
+                                {isUploading ? 'Gönderiliyor...' : 'Teslim Et'}
                             </button>
                         </div>
                     ) : null}
@@ -607,7 +754,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
 
                 {isStudentViewing && !isSubmitted && (
                     <div className="pt-4 border-t dark:border-slate-700 space-y-3">
-                         <h4 className="font-semibold">Yardım İste 🤖</h4>
+                         <h4 className="font-semibold">Görsel Yükleyerek Yardım İste 🤖</h4>
                          <p className="text-sm text-slate-500">Bu ödevde zorlanıyor musun? Sorunun fotoğrafını yükle, yapay zeka sana ipucu versin.</p>
                          <div {...getRootProps()} className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'}`}>
                             <input {...getInputProps()} />
@@ -681,11 +828,29 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                                     <VideoRecorder initialVideo={assignment.studentVideoFeedbackResponseUrl} readOnly />
                                 </div>
                             )}
+                             {isCoach && assignment.studentTextFeedbackResponse && (
+                                <div className="mt-2">
+                                    <h5 className="font-semibold text-sm mb-1">Öğrencinin Yazılı Yanıtı</h5>
+                                    <div className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md">
+                                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap italic">"{assignment.studentTextFeedbackResponse}"</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                          {isStudentViewing && (
                              <div>
                                 <h4 className="font-semibold mb-2">Geri Bildirime Yanıtın (İsteğe Bağlı)</h4>
                                  <div className="space-y-3">
+                                    <div>
+                                        <h5 className="text-sm font-medium mb-1">Yazılı Yanıt Gönder</h5>
+                                        <textarea
+                                            value={studentTextFeedbackResponse}
+                                            onChange={e => setStudentTextFeedbackResponse(e.target.value)}
+                                            rows={3}
+                                            className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"
+                                            placeholder="Koçunuza bir not yazın..."
+                                        />
+                                    </div>
                                     <div>
                                         <h5 className="text-sm font-medium mb-1">Sesli Yanıt Gönder</h5>
                                         <AudioRecorder onSave={setStudentAudioFeedbackResponseUrl} initialAudio={studentAudioFeedbackResponseUrl} />
@@ -752,9 +917,10 @@ export default function Assignments() {
     const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isBatchGradeModalOpen, setIsBatchGradeModalOpen] = useState(false);
+    const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
 
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
-    const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
+    const studentMap = useMemo(() => new Map(students.map((s: User) => [s.id, s.name])), [students]);
     
     const displayedAssignments = useMemo(() => {
         let filtered = assignments;
@@ -838,7 +1004,7 @@ export default function Assignments() {
     
     const handleBatchGrade = async (grade: number, feedback: string) => {
         const promises = selectedAssignmentIds.map(id => {
-            const assignment = assignments.find(a => a.id === id);
+            const assignment = assignments.find((a: Assignment) => a.id === id);
             if (assignment) {
                 return updateAssignment({
                     ...assignment,
@@ -853,6 +1019,18 @@ export default function Assignments() {
         await Promise.all(promises);
         addToast(`${selectedAssignmentIds.length} ödev başarıyla notlandırıldı.`, "success");
         setSelectedAssignmentIds([]);
+    };
+    
+    const handleUseAiHelpAsSubmission = async (generatedText: string) => {
+        if (!selectedAssignment) return;
+        
+        await updateAssignment({ 
+            ...selectedAssignment, 
+            textSubmission: generatedText 
+        });
+        
+        addToast("Yapay zeka yardımı ödev metni olarak eklendi.", "success");
+        setIsHelpChatOpen(false);
     };
     
     const preselectedIdsForNewModal = initialFilters.preselectedStudentIds || (filterStudent !== 'all' ? [filterStudent] : null);
@@ -898,7 +1076,7 @@ export default function Assignments() {
 
             {displayedAssignments.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {displayedAssignments.map(assignment => (
+                    {displayedAssignments.map((assignment: Assignment) => (
                         <MemoizedAssignmentCard
                             key={assignment.id}
                             assignment={assignment}
@@ -944,8 +1122,19 @@ export default function Assignments() {
                     studentName={studentMap.get(selectedAssignment.studentId)}
                     onNavigate={handleNavigation}
                     canNavigate={navigationState}
+                    onOpenHelpChat={() => setIsHelpChatOpen(true)}
                 />
             )}
+            
+            {isHelpChatOpen && selectedAssignment && (
+                <AssignmentHelpChatModal
+                    isOpen={isHelpChatOpen}
+                    onClose={() => setIsHelpChatOpen(false)}
+                    assignment={selectedAssignment}
+                    onUseAsSubmission={handleUseAiHelpAsSubmission}
+                />
+            )}
+
 
             {isConfirmDeleteOpen && (
                 <ConfirmationModal

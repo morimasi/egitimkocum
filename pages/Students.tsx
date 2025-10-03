@@ -344,7 +344,6 @@ export default function Students() {
     }, [searchTerm]);
 
 
-    // Fix: Changed type to string[] to avoid symbol conversion error.
     const gradeOrder: string[] = ['12', '11', '10', '9', 'mezun', 'Diğer'];
 
     const handleGenerateAllGoals = async () => {
@@ -363,8 +362,10 @@ export default function Students() {
                 if (suggestion) {
                     await addGoal({
                         studentId: student.id,
-                        text: suggestion,
+                        title: suggestion,
                         isCompleted: false,
+                        description: "Bu hedef AI tarafından önerilmiştir. Detayları ve kilometre taşlarını hedefler sayfasından ekleyebilirsiniz.",
+                        milestones: [],
                     });
                 }
             });
