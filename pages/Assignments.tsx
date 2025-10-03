@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
@@ -47,12 +46,12 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
                 if (target.closest('input[type="checkbox"]')) return;
                 onSelect(assignment);
             }}
-            className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 p-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+            className={`bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-primary hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 p-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
         >
              {isCoach && (
                 <input 
                     type="checkbox"
-                    className="absolute top-3 left-3 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 z-10"
+                    className="absolute top-3 left-3 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600 z-10"
                     checked={isSelected}
                     onChange={(e) => {
                         e.stopPropagation();
@@ -63,14 +62,14 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
             )}
             <div>
                 <div className={`flex justify-between items-start gap-2 ${isCoach ? 'pl-8' : ''}`}>
-                    <h3 className="font-bold text-gray-900 dark:text-white pr-2 leading-tight flex-1">{assignment.title}</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-white pr-2 leading-tight flex-1">{assignment.title}</h3>
                     {getStatusChip(assignment.status)}
                 </div>
 
-                {isCoach && <p className={`text-sm text-gray-500 dark:text-gray-400 mt-1 ${isCoach ? 'pl-8' : ''}`}>{studentName}</p>}
+                {isCoach && <p className={`text-sm text-slate-500 dark:text-slate-400 mt-1 ${isCoach ? 'pl-8' : ''}`}>{studentName}</p>}
             </div>
             
-            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
                 <div>
                     <span className="font-semibold">Teslim: </span>
                     <span className={isOverdue ? 'text-red-500 font-bold' : ''}>
@@ -79,7 +78,7 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
                 </div>
                 <div>
                     <span className="font-semibold">Not: </span>
-                    <span className="font-bold text-gray-700 dark:text-gray-200">{assignment.grade ?? '-'}</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{assignment.grade ?? '-'}</span>
                 </div>
             </div>
         </div>
@@ -237,18 +236,18 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Şablondan Seç</label>
-                    <select value={selectedTemplate} onChange={handleTemplateChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <select value={selectedTemplate} onChange={handleTemplateChange} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                         <option value="">Şablon Yok</option>
                         {templates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                     </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Ödev Başlığı</label>
-                    <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                    <input type="text" value={title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"/>
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Açıklama</label>
-                    <textarea value={description} onChange={e => setDescription(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                    <textarea value={description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"/>
                     <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
                         <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed">
                             <SparklesIcon className={`w-4 h-4 mr-1 ${isGeneratingDesc ? 'animate-spin' : ''}`} />
@@ -266,12 +265,12 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                         {checklist.map((item, index) => (
                             <div key={index} className="flex items-center">
                                 <input type="text" value={item.text} 
-                                       onChange={(e) => {
+                                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                            const newChecklist = [...checklist];
                                            newChecklist[index].text = e.target.value;
                                            setChecklist(newChecklist);
                                        }} 
-                                       className="w-full p-2 border rounded-md bg-gray-100 dark:bg-gray-900 dark:border-gray-600"/>
+                                       className="w-full p-2 border rounded-md bg-slate-100 dark:bg-slate-900 dark:border-slate-600"/>
                                 <button type="button" onClick={() => setChecklist(checklist.filter((_, i) => i !== index))} className="ml-2 text-red-500 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50">
                                     <XIcon className="w-4 h-4" />
                                 </button>
@@ -286,7 +285,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                    <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
                         <option value="completed">Sadece Tamamlandı İşareti</option>
@@ -294,12 +293,12 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Teslim Tarihi</label>
-                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
+                    <input type="date" value={dueDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDueDate(e.target.value)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"/>
                 </div>
                  {preselectedStudentIds && preselectedStudentIds.length > 0 ? (
                     <div>
                         <label className="block text-sm font-medium mb-1">Atanan Öğrenciler</label>
-                        <div className="p-2 border rounded-md bg-gray-100 dark:bg-gray-900 dark:border-gray-600">
+                        <div className="p-2 border rounded-md bg-slate-100 dark:bg-slate-900 dark:border-slate-600">
                              {preselectedStudentIds.length} öğrenci seçildi.
                         </div>
                     </div>
@@ -313,7 +312,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                                     setFilterGrade(e.target.value);
                                     setSelectedStudents([]); // Reset selection when filter changes
                                 }}
-                                className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                                className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600"
                             >
                                 <option value="all">Tüm Sınıflar</option>
                                 <option value="9">9. Sınıf</option>
@@ -330,7 +329,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                                     {selectedStudents.length === Object.values(availableStudents).flat().length ? 'Tümünü Bırak' : 'Tümünü Seç'}
                                 </button>
                             </div>
-                            <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <select multiple value={selectedStudents} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStudents(Array.from(e.target.selectedOptions, option => option.value))} className="w-full p-2 border rounded-md h-32 bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                                 {Object.entries(availableStudents).map(([track, studentGroup]) => (
                                     <optgroup key={track} label={track}>
                                         {studentGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -341,7 +340,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                     </>
                 )}
                 <div className="flex justify-end pt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-700">İptal</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-slate-600 hover:bg-slate-700">İptal</button>
                     <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Oluştur</button>
                 </div>
             </form>
@@ -555,14 +554,14 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                      {isCoach && <p className="font-semibold">Öğrenci: {studentName}</p>}
                      {isCoach && onNavigate && (
                         <div className="flex gap-2">
-                             <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5"/></button>
-                             <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
+                             <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5"/></button>
+                             <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
                         </div>
                      )}
                 </div>
                 
-                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{assignment.description}</p>
-                 <p className="text-xs text-gray-500">Teslim Tarihi: {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{assignment.description}</p>
+                 <p className="text-xs text-slate-500">Teslim Tarihi: {new Date(assignment.dueDate).toLocaleString('tr-TR')}</p>
                  
                 {assignment.videoDescriptionUrl && (
                     <div>
@@ -577,20 +576,20 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                         <ul className="space-y-2">
                             {assignment.checklist.map(item => (
                                 <li key={item.id} className="flex items-center">
-                                    <input type="checkbox" id={`chk-${item.id}`} checked={item.isCompleted} onChange={() => handleChecklistToggle(item.id)} disabled={!isStudentViewing || isSubmitted} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50" />
-                                    <label htmlFor={`chk-${item.id}`} className={`ml-3 text-sm ${item.isCompleted ? 'line-through text-gray-500' : ''} ${!isStudentViewing || isSubmitted ? 'cursor-default' : ''}`}>{item.text}</label>
+                                    <input type="checkbox" id={`chk-${item.id}`} checked={item.isCompleted} onChange={() => handleChecklistToggle(item.id)} disabled={!isStudentViewing || isSubmitted} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50" />
+                                    <label htmlFor={`chk-${item.id}`} className={`ml-3 text-sm ${item.isCompleted ? 'line-through text-slate-500' : ''} ${!isStudentViewing || isSubmitted ? 'cursor-default' : ''}`}>{item.text}</label>
                                 </li>
                             ))}
                         </ul>
                     </div>
                  )}
 
-                <div className="pt-4 border-t dark:border-gray-700">
+                <div className="pt-4 border-t dark:border-slate-700">
                     {isSubmitted ? (
                         <div>
                             <h4 className="font-semibold mb-2">Teslim Edilen Çalışma</h4>
                             {assignment.fileUrl && <p>Dosya: <a href={assignment.fileUrl} download={assignment.fileName} className="text-primary-500 underline">{assignment.fileName}</a></p>}
-                            {assignment.textSubmission && <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded"><p className="text-sm italic whitespace-pre-wrap">"{assignment.textSubmission}"</p></div>}
+                            {assignment.textSubmission && <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded"><p className="text-sm italic whitespace-pre-wrap">"{assignment.textSubmission}"</p></div>}
                             {assignment.studentVideoSubmissionUrl && <VideoRecorder initialVideo={assignment.studentVideoSubmissionUrl} readOnly />}
                             {!assignment.fileUrl && !assignment.textSubmission && !assignment.studentVideoSubmissionUrl && <p className="text-sm italic">Bu ödev "Tamamlandı" olarak işaretlendi.</p>}
                         </div>
@@ -598,7 +597,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                         <div>
                              <h4 className="font-semibold mb-2">Ödevi Teslim Et</h4>
                              {assignment.submissionType === 'file' && <FileUpload onUpload={handleFileUpload} isUploading={isUploading}/>}
-                             {assignment.submissionType === 'text' && <textarea value={textSubmission} onChange={e => setTextSubmission(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />}
+                             {assignment.submissionType === 'text' && <textarea value={textSubmission} onChange={e => setTextSubmission(e.target.value)} rows={5} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />}
                              <button onClick={handleSubmission} className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" disabled={isUploading}>
                                 {isUploading ? 'Yükleniyor...' : 'Teslim Et'}
                             </button>
@@ -607,10 +606,10 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                 </div>
 
                 {isStudentViewing && !isSubmitted && (
-                    <div className="pt-4 border-t dark:border-gray-700 space-y-3">
+                    <div className="pt-4 border-t dark:border-slate-700 space-y-3">
                          <h4 className="font-semibold">Yardım İste 🤖</h4>
-                         <p className="text-sm text-gray-500">Bu ödevde zorlanıyor musun? Sorunun fotoğrafını yükle, yapay zeka sana ipucu versin.</p>
-                         <div {...getRootProps()} className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'}`}>
+                         <p className="text-sm text-slate-500">Bu ödevde zorlanıyor musun? Sorunun fotoğrafını yükle, yapay zeka sana ipucu versin.</p>
+                         <div {...getRootProps()} className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'}`}>
                             <input {...getInputProps()} />
                             {aiHelpImagePreview ? (
                                 <div className="relative">
@@ -618,7 +617,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                                     <button onClick={(e) => { e.stopPropagation(); setAiHelpImage(null); setAiHelpImagePreview(null); }} className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white"><XIcon className="w-4 h-4"/></button>
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                                <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                                     <ImageIcon className="w-10 h-10 mb-2"/>
                                     <p className="font-semibold">Görseli sürükle veya seç</p>
                                 </div>
@@ -633,17 +632,17 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
 
                 {/* Grading Section */}
                 {isCoach && isSubmitted && (
-                    <div className="pt-4 border-t dark:border-gray-700">
+                    <div className="pt-4 border-t dark:border-slate-700">
                         <h4 className="font-semibold mb-2">Değerlendirme</h4>
                         <div className="flex items-center gap-2 mb-2">
-                            <input type="number" value={grade} onChange={e => setGrade(e.target.value)} placeholder="Not (0-100)" className="w-32 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                            <input type="number" value={grade} onChange={e => setGrade(e.target.value)} placeholder="Not (0-100)" className="w-32 p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />
                             <button type="button" onClick={handleSuggestGrade} disabled={isSuggestingGrade} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50">
                                 <SparklesIcon className={`w-4 h-4 mr-1 ${isSuggestingGrade ? 'animate-spin' : ''}`} />
                                 {isSuggestingGrade ? 'Öneriliyor...' : '✨ Not Öner'}
                             </button>
                         </div>
-                         {gradeRationale && <p className="text-xs text-gray-500 italic p-2 bg-gray-100 dark:bg-gray-700 rounded-md mb-2">Öneri: {gradeRationale}</p>}
-                        <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Geri bildirim yazın..." className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                         {gradeRationale && <p className="text-xs text-slate-500 italic p-2 bg-slate-100 dark:bg-slate-700 rounded-md mb-2">Öneri: {gradeRationale}</p>}
+                        <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} placeholder="Geri bildirim yazın..." className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />
                         <button type="button" onClick={handleGenerateFeedback} disabled={isGenerating} className="flex items-center text-sm text-primary-600 hover:text-primary-800 disabled:opacity-50 mt-2">
                              <SparklesIcon className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
                              {isGenerating ? 'Oluşturuluyor...' : '✨ Akıllı Geri Bildirim Oluştur'}
@@ -659,7 +658,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                 )}
                 
                 {assignment.status === AssignmentStatus.Graded && (
-                     <div className="pt-4 border-t dark:border-gray-700 space-y-4">
+                     <div className="pt-4 border-t dark:border-slate-700 space-y-4">
                         <div>
                             <h4 className="font-semibold mb-2">Sonuç</h4>
                             <p><strong>Not:</strong> {assignment.grade}</p>
@@ -724,18 +723,18 @@ const BatchGradeModal = ({ isOpen, onClose, onBatchGrade, assignmentCount }: { i
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Toplu Notlandırma (${assignmentCount} Ödev)`}>
             <div className="space-y-4">
-                <p className="text-sm text-gray-500">Seçilen tüm ödevlere aynı not ve geri bildirim uygulanacaktır.</p>
+                <p className="text-sm text-slate-500">Seçilen tüm ödevlere aynı not ve geri bildirim uygulanacaktır.</p>
                 <div>
                     <label className="block text-sm font-medium mb-1">Not (0-100)</label>
-                    <input type="number" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    <input type="number" value={grade} onChange={e => setGrade(e.target.value)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Geri Bildirim (İsteğe Bağlı)</label>
-                    <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
+                    <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={4} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600" />
                 </div>
             </div>
-            <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
-                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+            <div className="flex justify-end pt-4 mt-4 border-t dark:border-slate-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">İptal</button>
                 <button onClick={handleSubmit} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Notlandır</button>
             </div>
         </Modal>
@@ -863,25 +862,25 @@ export default function Assignments() {
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>
                             <option value={AssignmentStatus.Graded}>Notlandırılan</option>
                         </select>
                         {isCoach && (
-                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                                 <option value="all">Tüm Öğrenciler</option>
                                 {students.map((s: User) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         )}
-                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" />
+                         <input type="text" placeholder="Ödev ara..." value={searchTerm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600 flex-grow" />
                           {isCoach && (
                             <div className="flex items-center">
                                 <input 
                                     type="checkbox"
                                     id="select-all"
-                                    className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                                    className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600"
                                     checked={displayedAssignments.length > 0 && selectedAssignmentIds.length === displayedAssignments.length}
                                     onChange={handleSelectAll}
                                 />
@@ -920,7 +919,7 @@ export default function Assignments() {
             )}
              {isCoach && selectedAssignmentIds.length > 0 && (
                 <div className="fixed bottom-24 lg:bottom-10 right-10 z-40 animate-fade-in-right">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-4 flex items-center gap-4 border dark:border-gray-700">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl p-4 flex items-center gap-4 border dark:border-slate-700">
                         <span className="text-sm font-semibold">{selectedAssignmentIds.length} ödev seçildi</span>
                         <button onClick={() => setIsBatchGradeModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">
                            ✅ Notlandır

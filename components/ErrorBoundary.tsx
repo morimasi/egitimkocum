@@ -1,4 +1,3 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -26,10 +25,10 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
             <Card className="text-center max-w-lg">
                 <h1 className="text-2xl font-bold text-red-500">Bir şeyler ters gitti.</h1>
-                <p className="mt-4 text-gray-600 dark:text-gray-300">
+                <p className="mt-4 text-slate-600 dark:text-slate-300">
                     Uygulamada beklenmedik bir hata oluştu. Lütfen sayfayı yenileyerek tekrar deneyin. Sorun devam ederse, destek ekibiyle iletişime geçin.
                 </p>
                 <button

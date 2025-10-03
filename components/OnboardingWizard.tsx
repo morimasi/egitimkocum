@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import { useUI } from '../contexts/UIContext';

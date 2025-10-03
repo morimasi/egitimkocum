@@ -46,12 +46,12 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
     
     return (
         <Modal isOpen={!!student} onClose={onClose} title="" size="lg">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b dark:border-slate-700">
                 <div className="flex items-start space-x-4">
                     <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" loading="lazy" />
                     <div>
                         <h3 className="text-2xl font-bold">{student.name}</h3>
-                        <p className="text-gray-500">{student.email}</p>
+                        <p className="text-slate-500">{student.email}</p>
                          <div className="flex flex-wrap gap-2 mt-2">
                             {student.gradeLevel && (
                                 <span className="text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
@@ -65,7 +65,7 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
                             )}
                         </div>
                         <div className="mt-2">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}`}>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${assignedCoach ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200'}`}>
                                 Koç: {assignedCoach?.name || 'Atanmamış'}
                             </span>
                         </div>
@@ -73,17 +73,17 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
                 </div>
                  {onNavigate && (
                     <div className="flex items-center gap-2">
-                        <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5"/></button>
-                        <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
+                        <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5"/></button>
+                        <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
                     </div>
                 )}
             </div>
-            <div className="border-b border-gray-200 dark:border-gray-700">
+            <div className="border-b border-slate-200 dark:border-slate-700">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('overview')} className={`${activeTab === 'overview' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Genel Bakış</button>
-                    <button onClick={() => setActiveTab('assignments')} className={`${activeTab === 'assignments' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Ödevler</button>
-                    <button onClick={() => setActiveTab('motivation')} className={`${activeTab === 'motivation' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Motivasyon</button>
-                    <button onClick={() => setActiveTab('notes')} className={`${activeTab === 'notes' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Notlar</button>
+                    <button onClick={() => setActiveTab('overview')} className={`${activeTab === 'overview' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Genel Bakış</button>
+                    <button onClick={() => setActiveTab('assignments')} className={`${activeTab === 'assignments' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Ödevler</button>
+                    <button onClick={() => setActiveTab('motivation')} className={`${activeTab === 'motivation' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Motivasyon</button>
+                    <button onClick={() => setActiveTab('notes')} className={`${activeTab === 'notes' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>Notlar</button>
                 </nav>
             </div>
             
@@ -134,7 +134,7 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
         <div className="relative">
              <input
                 type="checkbox"
-                className="absolute top-2 left-2 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 z-10"
+                className="absolute top-2 left-2 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600 z-10"
                 checked={isSelected}
                 onChange={() => onToggleSelect(student.id)}
                 aria-label={`Select student ${student.name}`}
@@ -143,13 +143,13 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
                 <div className="flex flex-col items-center flex-grow p-3 text-center pt-6">
                     <div className="relative flex-shrink-0 mb-2">
                         <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" loading="lazy" />
-                        <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
+                        <span className="absolute -bottom-1 -right-1 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800" title={`Seviye ${currentLevel}`}>{currentLevel}</span>
                         {overdueCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title={`${overdueCount} gecikmiş ödev`}></span>
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" title={`${overdueCount} gecikmiş ödev`}></span>
                         )}
                     </div>
                     <h4 className="text-sm font-bold leading-tight">{student.name}</h4>
-                    <p className="text-xs text-gray-500 leading-tight">{student.email}</p>
+                    <p className="text-xs text-slate-500 leading-tight">{student.email}</p>
                     <div className="flex flex-wrap justify-center gap-1 mt-2">
                         {student.gradeLevel && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 whitespace-nowrap">
@@ -164,14 +164,14 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
                     </div>
                 </div>
 
-                <div className="flex justify-around items-center w-full px-1 py-1 border-t dark:border-gray-700 mt-auto">
-                    <button onClick={handleAssignTask} title="Ödev Ver" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                <div className="flex justify-around items-center w-full px-1 py-1 border-t dark:border-slate-700 mt-auto">
+                    <button onClick={handleAssignTask} title="Ödev Ver" className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-primary-500 transition-colors">
                         <AssignmentsIcon className="w-4 h-4" />
                     </button>
-                    <button onClick={handleSendMessage} title="Mesaj At" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <button onClick={handleSendMessage} title="Mesaj At" className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-primary-500 transition-colors">
                         <MessagesIcon className="w-4 h-4" />
                     </button>
-                    <button onClick={handleAssignResource} title="Kaynak Ekle" className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-primary-500 transition-colors">
+                    <button onClick={handleAssignResource} title="Kaynak Ekle" className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-primary-500 transition-colors">
                         <LibraryIcon className="w-4 h-4" />
                     </button>
                 </div>
@@ -198,13 +198,13 @@ const AssignResourceToStudentsModal = ({ isOpen, onClose, onAssign, studentCount
         <Modal isOpen={isOpen} onClose={onClose} title={`Kaynak Ata (${studentCount} Öğrenci)`}>
             <div className="space-y-4">
                 <p>Seçilen öğrencilere atanacak bir kütüphane kaynağı seçin.</p>
-                <select value={selectedResourceId} onChange={e => setSelectedResourceId(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                <select value={selectedResourceId} onChange={e => setSelectedResourceId(e.target.value)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                     <option value="" disabled>Bir kaynak seçin...</option>
                     {publicResources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
             </div>
-             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
-                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+             <div className="flex justify-end pt-4 mt-4 border-t dark:border-slate-700">
+                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">İptal</button>
                 <button onClick={handleAssign} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700" disabled={!selectedResourceId}>Ata</button>
             </div>
         </Modal>
@@ -429,13 +429,13 @@ export default function Students() {
                         placeholder="Öğrenci ara..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full sm:w-auto flex-grow"
+                        className="p-2 border rounded-md bg-white dark:bg-slate-800 dark:border-slate-600 w-full sm:w-auto flex-grow"
                     />
                      <div className="flex items-center flex-shrink-0">
                         <input
                             type="checkbox"
                             id="select-all"
-                            className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                            className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600"
                             checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length}
                             onChange={handleSelectAll}
                         />
@@ -443,14 +443,14 @@ export default function Students() {
                     </div>
                  </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                     <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                        <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><GridIcon className="w-5 h-5"/></button>
-                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}><ListIcon className="w-5 h-5"/></button>
+                     <div className="flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg p-1">
+                        <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-white dark:bg-slate-800 shadow' : ''}`}><GridIcon className="w-5 h-5"/></button>
+                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-slate-800 shadow' : ''}`}><ListIcon className="w-5 h-5"/></button>
                     </div>
                     <select
                         value={filterTrack}
                         onChange={e => setFilterTrack(e.target.value as any)}
-                        className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full"
+                        className="p-2 border rounded-md bg-white dark:bg-slate-800 dark:border-slate-600 w-full"
                         aria-label="Bölüme göre filtrele"
                     >
                         <option value="all">Tüm Bölümler</option>
@@ -463,7 +463,7 @@ export default function Students() {
                         <select
                             value={filterCoach}
                             onChange={e => setFilterCoach(e.target.value)}
-                            className="p-2 border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 w-full"
+                            className="p-2 border rounded-md bg-white dark:bg-slate-800 dark:border-slate-600 w-full"
                             aria-label="Koça göre filtrele"
                         >
                             <option value="all">Tüm Koçlar</option>
@@ -534,9 +534,9 @@ export default function Students() {
                 <Card>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-700 dark:text-slate-400">
                                 <tr>
-                                    <th scope="col" className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600" checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length} onChange={handleSelectAll}/></th>
+                                    <th scope="col" className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600" checked={filteredStudents.length > 0 && selectedStudentIds.length === filteredStudents.length} onChange={handleSelectAll}/></th>
                                     <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => requestSort('name')}>Öğrenci</th>
                                     <th scope="col" className="px-4 py-3 cursor-pointer hidden md:table-cell" onClick={() => requestSort('avgGrade')}>Not Ort.</th>
                                     <th scope="col" className="px-4 py-3 cursor-pointer hidden lg:table-cell" onClick={() => requestSort('overdueCount')}>Gecikmiş Ödev</th>
@@ -546,9 +546,9 @@ export default function Students() {
                             </thead>
                             <tbody>
                                 {sortedAndGroupedStudents.flat.map(student => (
-                                    <tr key={student.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                        <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleSelect(student.id)}/></td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white cursor-pointer" onClick={() => handleSelectStudent(student)}>
+                                    <tr key={student.id} className="bg-white border-b dark:bg-slate-800 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600">
+                                        <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleSelect(student.id)}/></td>
+                                        <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap dark:text-white cursor-pointer" onClick={() => handleSelectStudent(student)}>
                                             <div className="flex items-center gap-3">
                                                 <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full" loading="lazy" />
                                                 {student.name}
@@ -571,7 +571,7 @@ export default function Students() {
 
         {selectedStudentIds.length > 0 && (
             <div className="fixed bottom-16 left-0 right-0 z-40 animate-fade-in lg:left-auto lg:w-auto lg:right-10 lg:bottom-10">
-                <div className="bg-white dark:bg-gray-800 p-4 flex items-center justify-between gap-4 border-t dark:border-gray-700 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] lg:rounded-lg lg:border lg:shadow-2xl">
+                <div className="bg-white dark:bg-slate-800 p-4 flex items-center justify-between gap-4 border-t dark:border-slate-700 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] lg:rounded-lg lg:border lg:shadow-2xl">
                     <span className="text-sm font-semibold whitespace-nowrap">{selectedStudentIds.length} öğrenci seçildi</span>
                     <div className="flex items-center gap-2">
                         <button onClick={handleBatchAssignTask} className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 flex items-center gap-1.5">

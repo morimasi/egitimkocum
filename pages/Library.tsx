@@ -47,6 +47,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [assignedTo, setAssignedTo] = useState<string[]>([]);
     const [filterGrade, setFilterGrade] = useState('all');
+    const [mediaInputMethod, setMediaInputMethod] = useState<'upload' | 'record' | null>(null);
 
     const availableStudents = useMemo(() => {
         if (filterGrade === 'all') return students;
@@ -58,6 +59,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
         setType(newType);
         setUrl('');
         setFile(null);
+        setMediaInputMethod(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -71,7 +73,7 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
             return;
         }
         if (type !== 'link' && !file && !url) {
-            addToast("Lütfen bir dosya seçin veya URL girin.", "error");
+            addToast("Lütfen bir dosya seçin, kayıt yapın veya URL girin.", "error");
             return;
         }
         if (!isPublic && assignedTo.length === 0) {
@@ -138,17 +140,29 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 )}
 
-                {type === 'video' && (
+                {(type === 'video' || type === 'audio') && !mediaInputMethod && (
                     <div>
-                        <label className="block text-sm font-medium mb-1">Video</label>
-                        <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/>
+                        <label className="block text-sm font-medium mb-2">{type === 'video' ? 'Video Ekle' : 'Ses Ekle'}</label>
+                        <div className="flex gap-4">
+                            <button type="button" onClick={() => setMediaInputMethod('upload')} className="w-full p-3 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Dosya Yükle</button>
+                            <button type="button" onClick={() => setMediaInputMethod('record')} className="w-full p-3 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Kayıt Yap</button>
+                        </div>
+                    </div>
+                )}
+
+                {(type === 'video' || type === 'audio') && mediaInputMethod === 'record' && (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Canlı Kayıt</label>
+                        {type === 'video' ? <VideoRecorder onSave={(videoUrl) => setUrl(videoUrl || '')}/> : <AudioRecorder onSave={(audioUrl) => setUrl(audioUrl || '')}/>}
+                        <button type="button" onClick={() => { setMediaInputMethod(null); setUrl(''); }} className="text-sm mt-2 text-primary-600 hover:underline">Geri</button>
                     </div>
                 )}
                 
-                 {type === 'audio' && (
+                {(type === 'video' || type === 'audio') && mediaInputMethod === 'upload' && (
                     <div>
-                        <label className="block text-sm font-medium mb-1">Ses Dosyası</label>
-                        <AudioRecorder onSave={(audioUrl) => setUrl(audioUrl || '')}/>
+                        <label className="block text-sm font-medium mb-1">Dosya Yükle</label>
+                        <input type="file" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} accept={type === 'video' ? 'video/*' : 'audio/*'} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" required />
+                        <button type="button" onClick={() => { setMediaInputMethod(null); setFile(null); }} className="text-sm mt-2 text-primary-600 hover:underline">Geri</button>
                     </div>
                 )}
                 
