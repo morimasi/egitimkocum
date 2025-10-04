@@ -225,9 +225,12 @@ export default function Students() {
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isAssignResourceModalOpen, setIsAssignResourceModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => (localStorage.getItem('studentViewMode') as 'grid' | 'list') || 'grid');
     const [sortConfig, setSortConfig] = useState<{ key: keyof (User & { avgGrade: number; overdueCount: number }); direction: 'asc' | 'desc' } | null>(null);
 
+    useEffect(() => {
+        localStorage.setItem('studentViewMode', viewMode);
+    }, [viewMode]);
 
     const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
     const coaches = useMemo(() => users.filter(u => u.role === UserRole.Coach), [users]);
@@ -265,10 +268,12 @@ export default function Students() {
         const sorted = [...filteredStudents];
         if (sortConfig !== null) {
             sorted.sort((a, b) => {
-                if (a[sortConfig.key] < b[sortConfig.key]) {
+                const valA = a[sortConfig.key];
+                const valB = b[sortConfig.key];
+                if (valA < valB) {
                     return sortConfig.direction === 'asc' ? -1 : 1;
                 }
-                if (a[sortConfig.key] > b[sortConfig.key]) {
+                if (valA > valB) {
                     return sortConfig.direction === 'asc' ? 1 : -1;
                 }
                 return 0;
@@ -276,7 +281,7 @@ export default function Students() {
         }
 
         if (viewMode === 'grid' && !sortConfig) {
-             const gradeKeys = ['9', '10', '11', '12', 'mezun'];
+             const gradeKeys = ['12', '11', '10', '9', 'mezun'];
              const groups = gradeKeys.reduce((acc, grade) => ({ ...acc, [grade]: [] }), {} as Record<string, typeof sorted>);
              groups['Diğer'] = [];
 

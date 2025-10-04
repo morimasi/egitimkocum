@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer } from 'react';
-import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll, PollOption, AcademicTrack } from '../types';
+import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll, PollOption, AcademicTrack, Exam } from '../types';
 import { useUI } from './UIContext';
 import { seedData as initialSeedData } from '../services/seedData';
 
@@ -57,6 +57,7 @@ const getInitialState = (): AppState => {
     const goals: Goal[] = replacePlaceholders(seedData.goals, 'goals').map((g: any) => ({ ...g, id: uuid() }));
     const resources: Resource[] = replacePlaceholders(seedData.resources, 'resources').map((r: any) => ({ ...r, id: uuid() }));
     const templates: AssignmentTemplate[] = seedData.templates.map((t: any) => ({...t, id: uuid()}));
+    const exams: Exam[] = replacePlaceholders(seedData.exams, 'exams').map((e: any) => ({...e, id: uuid()}));
     
     return {
         users,
@@ -69,6 +70,7 @@ const getInitialState = (): AppState => {
         goals,
         badges: seedData.badges,
         calendarEvents: [],
+        exams,
         currentUser: null,
         isLoading: true,
         typingStatus: {},
@@ -87,6 +89,7 @@ type AppState = {
     goals: Goal[];
     badges: Badge[];
     calendarEvents: CalendarEvent[];
+    exams: Exam[];
     currentUser: User | null;
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
@@ -166,6 +169,7 @@ interface DataContextType {
     goals: Goal[];
     badges: Badge[];
     calendarEvents: CalendarEvent[];
+    exams: Exam[];
     isLoading: boolean;
     typingStatus: { [userId: string]: boolean };
     login: (email: string) => Promise<User | null>;
@@ -215,6 +219,9 @@ interface DataContextType {
     deleteCalendarEvent: (eventId: string) => Promise<void>;
     toggleTemplateFavorite: (templateId: string) => Promise<void>;
     seedDatabase: () => Promise<void>;
+    addExam: (exam: Omit<Exam, 'id'>) => Promise<void>;
+    updateExam: (updatedExam: Exam) => Promise<void>;
+    deleteExam: (examId: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -243,6 +250,50 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
         return () => clearInterval(interval);
     }, [state.users, state.currentUser]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (state.currentUser && (state.currentUser.role === UserRole.Coach || state.currentUser.role === UserRole.SuperAdmin)) {
+                // Find a pending assignment from a student of this coach
+                const studentIds = state.users
+                    .filter(u => u.role === UserRole.Student && (state.currentUser!.role === UserRole.SuperAdmin || u.assignedCoachId === state.currentUser!.id))
+                    .map(s => s.id);
+                
+                const pendingAssignments = state.assignments.filter(a => studentIds.includes(a.studentId) && a.status === AssignmentStatus.Pending);
+
+                if (pendingAssignments.length > 0) {
+                    const randomAssignment = pendingAssignments[Math.floor(Math.random() * pendingAssignments.length)];
+                    const student = state.users.find(u => u.id === randomAssignment.studentId);
+                    if (student) {
+                        // 1. Update assignment status to submitted
+                        const updatedAssignment = { 
+                            ...randomAssignment, 
+                            status: AssignmentStatus.Submitted,
+                            submittedAt: new Date().toISOString()
+                        };
+                        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: updatedAssignment } });
+
+                        // 2. Create a notification for the coach
+                        const newNotification: AppNotification = {
+                            id: uuid(),
+                            userId: state.currentUser.id,
+                            message: `${student.name}, "${updatedAssignment.title}" ödevini teslim etti.`,
+                            timestamp: new Date().toISOString(),
+                            isRead: false,
+                            link: {
+                                page: 'assignments',
+                                filter: { status: AssignmentStatus.Submitted }
+                            }
+                        };
+                        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'notifications', data: newNotification } });
+                    }
+                }
+            }
+        }, 45000); // Every 45 seconds to simulate a student submitting an assignment
+
+        return () => clearInterval(interval);
+    }, [state.currentUser, state.users, state.assignments]);
+
 
     const awardXp = useCallback(async (amount: number, reason: string, studentId: string) => {
         const student = state.users.find(u => u.id === studentId);
@@ -718,6 +769,59 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: { ...template, isFavorite: !template.isFavorite } }});
     }, [state.templates]);
     
+    const addExam = useCallback(async (examData: Omit<Exam, 'id'>) => {
+        const newExam = { ...examData, id: uuid() };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'exams', data: newExam } });
+
+        // Add calendar event for the student
+        const eventId = `exam-${newExam.id}`;
+        const newEvent: CalendarEvent = {
+            id: eventId,
+            userId: newExam.studentId,
+            title: `Sınav: ${newExam.title}`,
+            date: newExam.date,
+            type: 'study',
+            color: 'bg-red-500 hover:bg-red-600',
+        };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: newEvent } });
+
+        // Add notification for the student
+        const newNotification: AppNotification = {
+            id: uuid(),
+            userId: newExam.studentId,
+            message: `Yeni bir sınav sonucu eklendi: "${newExam.title}"`,
+            timestamp: new Date().toISOString(),
+            isRead: false,
+            link: { page: 'exams' }
+        };
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'notifications', data: newNotification } });
+
+    }, []);
+
+    const updateExam = useCallback(async (updatedExam: Exam) => {
+        dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'exams', data: updatedExam } });
+
+        // Update corresponding calendar event
+        const eventId = `exam-${updatedExam.id}`;
+        const existingEvent = state.calendarEvents.find(e => e.id === eventId);
+        if (existingEvent) {
+            const updatedEvent = {
+                ...existingEvent,
+                title: `Sınav: ${updatedExam.title}`,
+                date: updatedExam.date,
+            };
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: updatedEvent } });
+        }
+    }, [state.calendarEvents]);
+
+    const deleteExam = useCallback(async (examId: string) => {
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'exams', id: examId } });
+        
+        // Remove corresponding calendar event
+        const eventId = `exam-${examId}`;
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'calendarEvents', id: eventId } });
+    }, []);
+    
     const value = useMemo(() => ({
         ...state,
         coach,
@@ -768,7 +872,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addMultipleCalendarEvents,
         deleteCalendarEvent,
         toggleTemplateFavorite,
-        seedDatabase
+        seedDatabase,
+        addExam,
+        updateExam,
+        deleteExam,
     }), [
         state, coach, students, unreadCounts, lastMessagesMap,
         getAssignmentsForStudent, getMessagesForConversation, findMessageById,
@@ -778,7 +885,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
         uploadFile, updateStudentNotes, awardXp, startGroupChat, findOrCreateConversation, addUserToConversation,
         removeUserFromConversation, endConversation, setConversationArchived, updateBadge, addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
-        toggleTemplateFavorite, seedDatabase
+        toggleTemplateFavorite, seedDatabase, addExam, updateExam, deleteExam
     ]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

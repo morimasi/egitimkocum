@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { Assignment, AssignmentStatus, User } from "../types";
+import { Assignment, AssignmentStatus, User, Exam } from "../types";
 
 // Caching helper functions
 const getFromCache = <T>(key: string, ttl: number): T | null => {
@@ -646,4 +646,79 @@ export const generateGoalWithMilestones = async (goalTitle: string): Promise<{ d
         (response) => JSON.parse(response.text.trim()),
         null
     );
+};
+
+export const generateExamAnalysis = (exam: Exam, studentName: string): Promise<string> => {
+    const prompt = `Sen uzman bir YKS (TYT/AYT) sınav koçusun. Öğrencin ${studentName}'in aşağıdaki sınav sonucunu analiz et ve ona özel, yapıcı ve motive edici bir performans raporu hazırla.
+
+Sınav Sonuçları (JSON formatında):
+${JSON.stringify(exam, null, 2)}
+
+Raporu Markdown formatında, aşağıdaki başlıkları kullanarak ve her bölüme en az bir emoji ekleyerek oluştur:
+
+### 📊 Genel Değerlendirme
+Öğrencinin genel netini ve toplam puana göre durumunu yorumla. Başarılı bulduğun ve geliştirilmesi gereken genel noktaları belirt.
+
+### 📚 Ders Bazında Analiz
+Her bir ders için ayrı ayrı yorum yap.
+- **Güçlü Dersler:** En yüksek net yaptığı 1-2 dersi belirle, bu başarıyı öv ve bu performansı nasıl koruyabileceğine dair ipuçları ver.
+- **Geliştirilmesi Gereken Dersler:** En düşük net yaptığı 1-2 dersi belirle. Bu derslerdeki olası temel eksikliklere dikkat çek ve cesaretlendirici bir dille nasıl daha iyi olabileceğini anlat.
+
+### 🚀 Eylem Planı ve Öneriler
+Analizlerine dayanarak öğrenci için 3 maddelik somut, eyleme geçirilebilir bir sonraki adım listesi oluştur. (Örn: "- **Fizik:** 'Elektrik' konusunda eksiklerin görünüyor. Bu hafta konu tekrarı yapıp en az 50 soru çözmeye ne dersin?").
+
+### ⭐ Motivasyon Mesajı
+Öğrenciyi teşvik eden, genel durumu özetleyen ve geleceğe yönelik umut veren pozitif bir kapanış cümlesi yaz.
+
+Tonun profesyonel, destekleyici ve yol gösterici olmalı. Sadece analiz metnini döndür.`;
+
+    return cachedGeminiCall(
+        `examAnalysis_v2_${exam.id}`,
+        ONE_HOUR,
+        () => getAi().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } }),
+        (response) => response.text,
+        "Sınav analizi oluşturulurken bir hata oluştu. Lütfen netlerini ve ders performansını manuel olarak gözden geçir."
+    );
+};
+
+export const generateExamDetails = async (category: string, topic: string, studentGrade: string): Promise<{ title: string; description: string; totalQuestions: number; dueDate: string } | null> => {
+    const prompt = `Bir eğitim koçu olarak, YKS'ye hazırlanan ${studentGrade}. sınıf öğrencisi için bir sınav taslağı oluştur.
+    
+    Ders: "${category}"
+    Konu: "${topic}"
+
+    Bu bilgilere dayanarak, aşağıdaki JSON formatında bir yanıt oluştur:
+    - title: Konuyla ilgili, öğrencinin seviyesine uygun, ilgi çekici bir sınav başlığı. Örn: "${topic} Konu Tarama Testi".
+    - description: Sınavın amacını ve kapsamını açıklayan kısa bir metin.
+    - totalQuestions: Bu konu için makul bir soru sayısı (20 ile 50 arasında).
+    - dueDate: Bugünden itibaren 7 gün sonrası için önerilen bir teslim tarihi (YYYY-MM-DD formatında).
+    
+    Cevabın sadece JSON objesi içermelidir. Başka hiçbir metin ekleme.`;
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            totalQuestions: { type: Type.INTEGER },
+            dueDate: { type: Type.STRING }
+        },
+        required: ['title', 'description', 'totalQuestions', 'dueDate']
+    };
+
+    try {
+        const response = await getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.6,
+            },
+        });
+        return JSON.parse(response.text.trim());
+    } catch (error) {
+        console.error("Error generating exam details with AI:", error);
+        return null;
+    }
 };

@@ -137,7 +137,7 @@ export interface Message {
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi' | 'goals';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi' | 'goals' | 'exams';
 
 export type ToastType = 'success' | 'error' | 'info' | 'xp';
 
@@ -214,4 +214,31 @@ export interface CalendarEvent {
   color: string;
   startTime?: string;
   endTime?: string;
+}
+
+export interface ExamSubjectPerformance {
+    name: string;
+    totalQuestions: number;
+    correct: number;
+    incorrect: number;
+    empty: number;
+    netScore: number;
+}
+
+export interface Exam {
+    id: string;
+    studentId: string;
+    title: string;
+    date: string;
+    totalQuestions: number;
+    correct: number;
+    incorrect: number;
+    empty: number;
+    netScore: number;
+    subjects: ExamSubjectPerformance[];
+    coachNotes?: string;
+    studentReflections?: string;
+    category: string; // e.g., 'Matematik', 'Genel Deneme Sınavları'
+    topic: string; // e.g., 'Türev', 'TYT'
+    type: 'deneme' | 'konu-tarama';
 }

@@ -243,5 +243,68 @@ export const seedData = {
     { id: BadgeID.StreakStarter, name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
     { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
     { id: BadgeID.OnTimeSubmissions, name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
+  ],
+  exams: [
+    {
+        studentId: "STUDENT_1_ID",
+        title: "TYT Deneme Sınavı - 1",
+        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        category: "Genel Deneme Sınavları",
+        topic: "TYT",
+        type: "deneme",
+        totalQuestions: 120, correct: 95, incorrect: 15, empty: 10,
+        netScore: 91.25,
+        subjects: [
+            { name: "Türkçe", totalQuestions: 40, correct: 32, incorrect: 5, empty: 3, netScore: 30.75 },
+            { name: "Sosyal", totalQuestions: 20, correct: 15, incorrect: 3, empty: 2, netScore: 14.25 },
+            { name: "Matematik", totalQuestions: 40, correct: 33, incorrect: 4, empty: 3, netScore: 32.00 },
+            { name: "Fen", totalQuestions: 20, correct: 15, incorrect: 3, empty: 2, netScore: 14.25 }
+        ]
+    },
+    {
+        studentId: "STUDENT_1_ID",
+        title: "AYT Deneme Sınavı - 1 (Sayısal)",
+        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        category: "Genel Deneme Sınavları",
+        topic: "AYT",
+        type: "deneme",
+        totalQuestions: 80, correct: 62, incorrect: 12, empty: 6,
+        netScore: 59,
+        subjects: [
+            { name: "Matematik", totalQuestions: 40, correct: 30, incorrect: 6, empty: 4, netScore: 28.5 },
+            { name: "Fizik", totalQuestions: 14, correct: 9, incorrect: 3, empty: 2, netScore: 8.25 },
+            { name: "Kimya", totalQuestions: 13, correct: 11, incorrect: 1, empty: 1, netScore: 10.75 },
+            { name: "Biyoloji", totalQuestions: 13, correct: 12, incorrect: 2, empty: -1, netScore: 11.5 }
+        ]
+    },
+     {
+        studentId: "STUDENT_2_ID",
+        title: "TYT Deneme Sınavı - 1",
+        date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+        category: "Genel Deneme Sınavları",
+        topic: "TYT",
+        type: "deneme",
+        totalQuestions: 120, correct: 80, incorrect: 25, empty: 15,
+        netScore: 73.75,
+        subjects: [
+            { name: "Türkçe", totalQuestions: 40, correct: 28, incorrect: 8, empty: 4, netScore: 26.00 },
+            { name: "Sosyal", totalQuestions: 20, correct: 12, incorrect: 5, empty: 3, netScore: 10.75 },
+            { name: "Matematik", totalQuestions: 40, correct: 29, incorrect: 8, empty: 3, netScore: 27.00 },
+            { name: "Fen", totalQuestions: 20, correct: 11, incorrect: 4, empty: 5, netScore: 10.00 }
+        ]
+    },
+    {
+        studentId: "STUDENT_3_ID",
+        title: "Matematik - Türev Konu Tarama",
+        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        category: "Matematik",
+        topic: "Türev",
+        type: "konu-tarama",
+        totalQuestions: 25, correct: 20, incorrect: 3, empty: 2,
+        netScore: 19.25,
+        subjects: [
+            { name: "Türev", totalQuestions: 25, correct: 20, incorrect: 3, empty: 2, netScore: 19.25 }
+        ]
+    }
   ]
 };

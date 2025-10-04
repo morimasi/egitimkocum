@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { AssignmentTemplate, ChecklistItem } from '../types';
@@ -138,4 +135,70 @@ const TemplateFormModal = ({ isOpen, onClose, templateToEdit }: { isOpen: boolea
                         <button type="button" onClick={addChecklistItem} className="mt-2 text-sm text-primary-600 font-semibold hover:text-primary-800">+ Madde Ekle</button>
                     </div>
                     <div className="flex justify-end pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray
+                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600">İptal</button>
+                        <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+    );
+};
+
+export default function TemplateManager() {
+    const { templates, deleteTemplate } = useDataContext();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [templateToEdit, setTemplateToEdit] = useState<AssignmentTemplate | null>(null);
+    const [templateToDelete, setTemplateToDelete] = useState<AssignmentTemplate | null>(null);
+
+    const handleOpenModal = (template: AssignmentTemplate | null) => {
+        setTemplateToEdit(template);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = () => {
+        if (templateToDelete) {
+            deleteTemplate(templateToDelete.id);
+            setTemplateToDelete(null);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <Card>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold flex items-center gap-2"><ClipboardListIcon className="w-8 h-8"/> Ödev Şablonları</h1>
+                    <button onClick={() => handleOpenModal(null)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold">
+                        + Yeni Şablon
+                    </button>
+                </div>
+            </Card>
+
+            {templates.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {templates.map(template => (
+                        <Card key={template.id} className="flex flex-col">
+                            <div className="flex-1">
+                                <h3 className="font-bold">{template.title}</h3>
+                                <p className="text-sm text-gray-500 mt-2 line-clamp-3">{template.description}</p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t dark:border-gray-700 flex justify-end gap-2">
+                                <button onClick={() => handleOpenModal(template)} className="p-2 text-gray-400 hover:text-blue-500"><EditIcon className="w-4 h-4"/></button>
+                                <button onClick={() => setTemplateToDelete(template)} className="p-2 text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4"/></button>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <EmptyState 
+                    icon={<ClipboardListIcon className="w-12 h-12"/>}
+                    title="Henüz Şablon Oluşturulmamış"
+                    description="Ödev oluşturmayı hızlandırmak için yeni bir şablon oluşturun."
+                    action={{ label: "Yeni Şablon Oluştur", onClick: () => handleOpenModal(null) }}
+                />
+            )}
+
+            {(isModalOpen || templateToEdit) && <TemplateFormModal isOpen={true} onClose={() => { setIsModalOpen(false); setTemplateToEdit(null); }} templateToEdit={templateToEdit} />}
+            {templateToDelete && <ConfirmationModal isOpen={true} onClose={() => setTemplateToDelete(null)} onConfirm={handleDelete} title="Şablonu Sil" message={`'${templateToDelete.title}' şablonunu silmek istediğinizden emin misiniz?`} />}
+        </div>
+    );
+}

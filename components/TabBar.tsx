@@ -3,7 +3,7 @@ import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole, User } from '../types';
 import {
-    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon
+    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon, ClipboardCheckIcon
 } from './Icons';
 
 interface TabItemProps {
@@ -55,13 +55,14 @@ const TabBar = () => {
     if (currentUser.role === UserRole.Parent) {
         tabItems.push(
             { page: 'parent', label: 'Portal', icon: <ParentIcon className="w-6 h-6" /> },
+            { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-6 h-6" /> },
             { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-6 h-6" /> }
         );
     } else if (currentUser.role === UserRole.Student) {
         tabItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-6 h-6" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
-            { page: 'odak', label: 'Odak', icon: <TargetIcon className="w-6 h-6" /> },
+            { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
             { page: 'motivation', label: 'Motive', icon: <FlameIcon className="w-6 h-6" /> }
         );
@@ -69,7 +70,7 @@ const TabBar = () => {
         tabItems.push(
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-6 h-6" /> },
             { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-6 h-6" /> },
-            { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-6 h-6" /> },
+            { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-6 h-6" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-6 h-6" />, badge: totalUnreadMessages },
             { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-6 h-6" /> }
         );

@@ -66,6 +66,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         const studentItems: NavItemProps[] = [
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
+            { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
             { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'sinav-performansi', label: 'Sınav Performansı', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
@@ -80,6 +81,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'dashboard', label: 'Anasayfa', icon: <DashboardIcon className="w-5 h-5" /> },
             { page: 'assignments', label: 'Ödevler', icon: <AssignmentsIcon className="w-5 h-5" /> },
             { page: 'students', label: 'Öğrenciler', icon: <StudentsIcon className="w-5 h-5" /> },
+            { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
             { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
             { page: 'templates', label: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5" /> },
@@ -103,6 +105,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             case UserRole.Parent:
                 return [
                     { page: 'parent', label: 'Veli Portalı', icon: <ParentIcon className="w-5 h-5" /> },
+                    { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
                     { page: 'settings', label: 'Ayarlar', icon: <SettingsIcon className="w-5 h-5" /> },
                 ];
             default:

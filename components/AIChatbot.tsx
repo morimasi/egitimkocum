@@ -96,6 +96,29 @@ const AIChatbot = () => {
         }
     }, []);
 
+    const stopLiveSession = useCallback(async () => {
+        setStatus('idle');
+        if (sessionPromise.current) {
+            try {
+                const session = await sessionPromise.current;
+                session.close();
+            } catch (e) {
+                console.error("Error closing session:", e);
+            }
+            sessionPromise.current = null;
+        }
+        streamRef.current?.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+        
+        scriptProcessor.current?.disconnect();
+        mediaStreamSource.current?.disconnect();
+        scriptProcessor.current = null;
+        mediaStreamSource.current = null;
+        
+        if (inputAudioContext.current?.state !== 'closed') inputAudioContext.current?.close();
+        if (outputAudioContext.current?.state !== 'closed') outputAudioContext.current?.close();
+    }, []);
+
     useEffect(() => {
         if (isOpen) {
             initializeApi();
@@ -113,7 +136,13 @@ const AIChatbot = () => {
             // Cleanup on close
             stopLiveSession();
         }
-    }, [isOpen, mode, initializeApi]);
+
+        return () => {
+            if (isOpen) {
+                stopLiveSession();
+            }
+        }
+    }, [isOpen, mode, initializeApi, stopLiveSession]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -136,21 +165,7 @@ const AIChatbot = () => {
     };
     
     // --- Live Session Logic ---
-    const stopLiveSession = useCallback(async () => {
-        setStatus('idle');
-        if (sessionPromise.current) {
-            const session = await sessionPromise.current;
-            session.close();
-            sessionPromise.current = null;
-        }
-        streamRef.current?.getTracks().forEach(track => track.stop());
-        scriptProcessor.current?.disconnect();
-        mediaStreamSource.current?.disconnect();
-        inputAudioContext.current?.close();
-        outputAudioContext.current?.close();
-    }, []);
-    
-     const startLiveSession = async () => {
+    const startLiveSession = async () => {
         if (!ai.current) {
             setStatus('idle');
             return;
@@ -335,7 +350,7 @@ const AIChatbot = () => {
             {isOpen && (
                 <div className="fixed bottom-24 right-6 lg:bottom-28 lg:right-10 z-50 w-full max-w-sm h-[60vh] max-h-[500px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col border dark:border-gray-700 animate-fade-in-right">
                     <div className="flex items-center justify-between p-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-t-2xl flex-shrink-0">
-                        <div className="flex items-center gap-2"><BotIcon className="w-6 h-6 text-primary-500"/><h3 className="font-bold text-lg">Çalışma Arkadaşım Mahmut Hoca</h3></div>
+                        <div className="flex items-center gap-2"><BotIcon className="w-6 h-6 text-primary-500"/><h3 className="font-bold text-lg">Çalışma Arkadaşım</h3></div>
                         <div className="flex items-center gap-2">
                              <button onClick={toggleMode} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-primary-600 bg-primary-100 dark:bg-primary-900/50 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900">
                                 <MicIcon className="w-4 h-4" />

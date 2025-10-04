@@ -4,7 +4,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole, User } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon
-} from './Icons';
+} from '../components/Icons';
 
 interface TabItemProps {
     page: Page;
@@ -25,7 +25,7 @@ const TabItem = React.memo(({ page, label, icon, badge }: TabItemProps) => {
                 setActivePage(page);
             }}
             className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium transition-colors duration-200 rounded-md active:bg-slate-100 dark:active:bg-slate-700 ${
-                isActive ? 'text-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'text-slate-500 dark:text-slate-400 hover:text-primary-500'
+                isActive ? 'text-primary-500' : 'text-slate-500 dark:text-slate-400 hover:text-primary-500'
             }`}
         >
             <div className="relative">
