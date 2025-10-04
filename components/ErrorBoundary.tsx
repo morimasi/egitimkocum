@@ -1,3 +1,5 @@
+
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -10,19 +12,19 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+  state: State = {
     hasError: false,
   };
 
-  public static getDerivedStateFromError(_: Error): State {
+  static getDerivedStateFromError(_: Error): State {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
@@ -42,8 +44,8 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Access children from this.props in a class component.
-    return this.props.children;
+    // Fix: Explicitly returning children || null is safer and can prevent some render issues.
+    return this.props.children || null;
   }
 }
 

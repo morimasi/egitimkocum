@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { AssignmentTemplate, ChecklistItem } from '../types';
@@ -136,119 +138,4 @@ const TemplateFormModal = ({ isOpen, onClose, templateToEdit }: { isOpen: boolea
                         <button type="button" onClick={addChecklistItem} className="mt-2 text-sm text-primary-600 font-semibold hover:text-primary-800">+ Madde Ekle</button>
                     </div>
                     <div className="flex justify-end pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
-                        <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">{templateToEdit ? "Kaydet" : "Oluştur"}</button>
-                    </div>
-                </form>
-            </div>
-        </Modal>
-    );
-};
-
-export default function TemplateManager() {
-    const { templates, deleteTemplate } = useDataContext();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [templateToEdit, setTemplateToEdit] = useState<AssignmentTemplate | null>(null);
-    const [templateToDelete, setTemplateToDelete] = useState<AssignmentTemplate | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-
-    const filteredTemplates = useMemo(() => {
-        // Fix: Cast templates to ensure it's treated as an array of AssignmentTemplate.
-        const allTemplates = (templates || []) as AssignmentTemplate[];
-        if (!searchTerm) return allTemplates;
-        return allTemplates.filter(t => 
-            t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            t.description.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [templates, searchTerm]);
-
-    const groupedTemplates = useMemo(() => {
-        return filteredTemplates.reduce((acc: { [key: string]: AssignmentTemplate[] }, template) => {
-            const subject = template.title.split(':')[0] || 'Diğer';
-            if (!acc[subject]) {
-                acc[subject] = [];
-            }
-            acc[subject].push(template);
-            return acc;
-        }, {});
-    }, [filteredTemplates]);
-
-    const handleEdit = (template: AssignmentTemplate) => {
-        setTemplateToEdit(template);
-        setIsModalOpen(true);
-    };
-    
-    const handleAddNew = () => {
-        setTemplateToEdit(null);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = () => {
-        if (templateToDelete) {
-            deleteTemplate(templateToDelete.id);
-            setTemplateToDelete(null);
-        }
-    };
-    
-    return (
-        <>
-            <Card>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <h1 className="text-2xl font-bold">Ödev Şablonları</h1>
-                    <div className="flex-1 flex flex-col md:flex-row justify-end gap-4 w-full">
-                         <input
-                            type="text"
-                            placeholder="Şablonlarda ara..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full md:w-auto"
-                        />
-                        <button onClick={handleAddNew} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold w-full md:w-auto">
-                            + Yeni Şablon
-                        </button>
-                    </div>
-                </div>
-
-                {templates.length > 0 ? (
-                    <div className="space-y-6">
-                        {/* Fix: Add explicit type to map parameters to resolve 'unknown' type error. */}
-                        {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([subject, subjectTemplates]: [string, AssignmentTemplate[]]) => (
-                            <div key={subject}>
-                                <h2 className="text-xl font-semibold border-b-2 border-primary-500 pb-1 mb-4">{subject}</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {subjectTemplates.map(template => (
-                                        <Card key={template.id} className="flex flex-col">
-                                            <div className="flex-grow">
-                                                <h3 className="font-bold text-lg">{template.title.split(': ')[1] || template.title}</h3>
-                                                <p className="text-sm text-gray-500 mt-2 line-clamp-3">{template.description}</p>
-                                                {template.checklist && template.checklist.length > 0 && (
-                                                    <ul className="text-sm list-disc list-inside mt-2 text-gray-600 dark:text-gray-400">
-                                                        {template.checklist.slice(0, 2).map((item, i) => <li key={i}>{item.text}</li>)}
-                                                        {template.checklist.length > 2 && <li className="italic">...ve daha fazlası</li>}
-                                                    </ul>
-                                                )}
-                                            </div>
-                                            <div className="mt-4 pt-3 border-t dark:border-gray-700 flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(template)} className="p-2 text-gray-500 hover:text-blue-500 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50" aria-label="Düzenle"><EditIcon className="w-5 h-5"/></button>
-                                                <button onClick={() => setTemplateToDelete(template)} className="p-2 text-gray-500 hover:text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50" aria-label="Sil"><TrashIcon className="w-5 h-5"/></button>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <EmptyState
-                        icon={<ClipboardListIcon className="w-10 h-10" />}
-                        title="Henüz Şablon Yok"
-                        description="Sık kullandığınız ödev türleri için şablonlar oluşturarak zaman kazanın."
-                        action={{ label: "İlk Şablonu Oluştur", onClick: handleAddNew }}
-                    />
-                )}
-            </Card>
-            {(isModalOpen || templateToEdit) && <TemplateFormModal isOpen={true} onClose={() => { setIsModalOpen(false); setTemplateToEdit(null); }} templateToEdit={templateToEdit}/>}
-            {templateToDelete && <ConfirmationModal isOpen={!!templateToDelete} onClose={() => setTemplateToDelete(null)} onConfirm={handleDelete} title="Şablonu Sil" message={`'${templateToDelete.title}' adlı şablonu silmek istediğinizden emin misiniz?`}/>}
-        </>
-    );
-};
+                        <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray

@@ -118,6 +118,7 @@ export const seedData = {
       participantIds: ["COACH_ID", "STUDENT_1_ID", "STUDENT_2_ID", "STUDENT_3_ID"],
       isGroup: true,
       groupName: "📢 Ahmet Hoca Duyurular",
+      groupImage: "https://i.pravatar.cc/150?u=announcements",
       adminId: "COACH_ID",
     },
     {
@@ -125,7 +126,16 @@ export const seedData = {
       participantIds: ["COACH_ID", "STUDENT_1_ID", "STUDENT_3_ID"],
       isGroup: true,
       groupName: "Sayısal Çalışma Grubu",
+      groupImage: "https://i.pravatar.cc/150?u=sayisal",
       adminId: "COACH_ID",
+    },
+    {
+      id: 'conv-teachers-lounge',
+      participantIds: ["SUPER_ADMIN_ID", "COACH_ID", "COACH_2_ID"],
+      isGroup: true,
+      groupName: "Öğretmenler Odası",
+      groupImage: "https://i.pravatar.cc/150?u=teachers",
+      adminId: "SUPER_ADMIN_ID",
     }
   ],
   messages: [
@@ -175,7 +185,14 @@ export const seedData = {
         options: [ { text: "Limit ve Süreklilik", votes: ["STUDENT_1_ID"] }, { text: "Organik Kimya", votes: [] }, { text: "Modern Fizik", votes: ["STUDENT_3_ID"] } ]
       },
       readBy: [],
-    }
+    },
+    {
+      senderId: "SUPER_ADMIN_ID",
+      conversationId: "conv-teachers-lounge",
+      text: "Merhaba değerli hocalarım, öğretmenler odası sohbet grubumuza hoş geldiniz. Buradan genel konuları ve işbirliğini konuşabiliriz.",
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      type: 'text', readBy: [],
+    },
   ],
   goals: [
     { studentId: "STUDENT_1_ID", title: "Haftada 200 matematik sorusu çöz.", description: "Matematik becerilerini geliştirmek için haftalık 200 soru hedefi.", isCompleted: true, milestones: [{id: 'm1', text: 'Pazartesi 50 soru çöz', isCompleted: true}, {id: 'm2', text: 'Çarşamba 50 soru çöz', isCompleted: true}, {id: 'm3', text: 'Cuma 50 soru çöz', isCompleted: true}] },

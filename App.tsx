@@ -122,7 +122,7 @@ const AppContent = () => {
                 default: return 'Anasayfa';
             }
         };
-        document.title = `Eğitim Koçu - ${getPageTitle()}`;
+        document.title = `Mahmut Hoca - ${getPageTitle()}`;
     }, [activePage]);
 
     const renderPage = () => {

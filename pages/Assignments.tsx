@@ -294,8 +294,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        // Fix: Explicitly cast 'templates' to ensure 't' is correctly typed and properties can be accessed.
-        const template = (templates as AssignmentTemplate[]).find((t: AssignmentTemplate) => t.id === templateId);
+        // Fix: Explicitly type parameter 't' to resolve 'unknown' type error.
+        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -399,6 +399,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
+                    {/* Fix: Add explicit type to event handler */}
                     <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>

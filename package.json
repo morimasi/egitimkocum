@@ -1,5 +1,5 @@
 {
-  "name": "eğitim-koçu-platformu-v2",
+  "name": "mahmut-hoca",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "@google/genai": "^1.20.0",
+    "react-dom": "^19.2.0",
+    "@google/genai": "^1.22.0",
+    "react": "^19.2.0",
     "recharts": "^3.2.1",
     "react-dropzone": "^14.3.8"
   },

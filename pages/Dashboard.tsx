@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
@@ -20,7 +22,7 @@ const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void })
         title = `Hoş geldin Koç, ${user.name}!`;
         message = "Öğrencilerinizi başarıya ulaştırmaya hazır mısınız? Ödevler oluşturun, ilerlemelerini takip edin ve onlarla iletişimde kalın.";
     } else if (user.role === UserRole.SuperAdmin) {
-        title = `Hoş geldin Admin, ${user.name}!`;
+        title = `Hoş geldin Süper Admin, ${user.name}!`;
         message = "Platform yönetimine hoş geldiniz. Kullanıcıları yönetebilir ve sistemin genel durumunu izleyebilirsiniz.";
     }
 
@@ -408,8 +410,10 @@ const CoachDashboard = () => {
     }, [assignments]);
     
      const handleBarClick = (data: any) => {
-        if (data && data.activePayload && data.activePayload[0]) {
-            const studentId = data.activePayload[0].payload.id;
+        if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
+            // Fix: Add type assertion to resolve 'unknown' type error on payload.
+            const payload = data.activePayload[0].payload as { id: string };
+            const studentId = payload.id;
             setActivePage('students', { studentId });
         }
     };

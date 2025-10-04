@@ -115,10 +115,24 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         <div className="flex flex-col h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-xl">
             <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-700" id="tour-step-0">
                 <div className="flex items-center">
-                    <div className="bg-gradient-to-br from-primary-500 to-fuchsia-500 rounded-full p-2 shadow-lg shadow-primary-500/30">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
-                    </div>
-                    <span className="ml-3 text-xl font-bold text-slate-800 dark:text-white">Eğitim Koçu</span>
+                     <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-slate-800 dark:text-white">
+                        <g className="animate-float-subtle">
+                            <path d="M 20 50 C 20 25, 60 25, 60 50 C 60 75, 20 75, 20 50 Z" fill="#f2d5b1" stroke="currentColor" strokeWidth="2"/>
+                            <rect x="22" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                            <rect x="42" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                            <line x1="40" y1="44" x2="42" y2="44" stroke="currentColor" strokeWidth="2.5"/>
+                            <circle cx="31" cy="44" r="1.5" fill="currentColor"/>
+                            <g transform="translate(51 44)">
+                                <g className="animate-wink">
+                                    <circle cx="0" cy="0" r="1.5" fill="currentColor"/>
+                                </g>
+                            </g>
+                            <path d="M 35 60 Q 40 62, 45 60" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M 20 70 L 35 80 L 45 80 L 60 70 L 60 55 L 20 55 Z" className="fill-slate-700 dark:fill-slate-300"/>
+                            <path d="M 40 70 L 45 80 L 35 80 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1"/>
+                        </g>
+                    </svg>
+                    <span className="ml-2 text-xl font-bold text-slate-800 dark:text-white">Mahmut Hoca</span>
                 </div>
                  <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                     <XIcon className="w-6 h-6"/>

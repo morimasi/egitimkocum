@@ -31,11 +31,25 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
             <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-slate-800 rounded-2xl shadow-xl">
                 <div className="text-center">
                     <div className="flex items-center justify-center mb-4">
-                        <div className="bg-primary-500 rounded-full p-3">
-                             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v11.494m-9-5.747h18"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18a6 6 0 110-12 6 6 0 010 12z"></path></svg>
-                        </div>
+                        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20 text-slate-800 dark:text-white">
+                            <g className="animate-float-subtle">
+                                <path d="M 20 50 C 20 25, 60 25, 60 50 C 60 75, 20 75, 20 50 Z" fill="#f2d5b1" stroke="currentColor" strokeWidth="2"/>
+                                <rect x="22" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                                <rect x="42" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                                <line x1="40" y1="44" x2="42" y2="44" stroke="currentColor" strokeWidth="2.5"/>
+                                <circle cx="31" cy="44" r="1.5" fill="currentColor"/>
+                                <g transform="translate(51 44)">
+                                    <g className="animate-wink">
+                                        <circle cx="0" cy="0" r="1.5" fill="currentColor"/>
+                                    </g>
+                                </g>
+                                <path d="M 35 60 Q 40 62, 45 60" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                <path d="M 20 70 L 35 80 L 45 80 L 60 70 L 60 55 L 20 55 Z" className="fill-slate-700 dark:fill-slate-300"/>
+                                <path d="M 40 70 L 45 80 L 35 80 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1"/>
+                            </g>
+                        </svg>
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Eğitim Koçu Platformu</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mahmut Hoca</h1>
                     <p className="mt-2 text-slate-500 dark:text-slate-400">Giriş Yap</p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
@@ -76,6 +90,15 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
                         </button>
                     </div>
                 </form>
+                <div className="mt-6 p-4 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50 dark:bg-slate-800/50">
+                    <h3 className="font-semibold text-center text-slate-700 dark:text-slate-300 mb-2">Test Bilgileri</h3>
+                    <p className="text-slate-500 dark:text-slate-400">Şifre: Herhangi bir şey girebilirsiniz (örn: 123456)</p>
+                    <ul className="mt-2 space-y-1 list-disc list-inside text-slate-600 dark:text-slate-400">
+                        <li><span className="font-semibold text-slate-700 dark:text-slate-300">Mahmut Hoca (Süper Admin):</span> admin@egitim.com</li>
+                        <li><span className="font-semibold text-slate-700 dark:text-slate-300">Koç:</span> ahmet.yilmaz@egitim.com</li>
+                        <li><span className="font-semibold text-slate-700 dark:text-slate-300">Öğrenci:</span> leyla.kaya@mail.com</li>
+                    </ul>
+                </div>
                 <div className="text-center text-sm">
                     <p className="text-slate-600 dark:text-slate-400">
                         Hesabınız yok mu?{' '}

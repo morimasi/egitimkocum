@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Goal, ChecklistItem, User } from '../types';
@@ -8,7 +6,6 @@ import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { TargetIcon, CheckIcon, SparklesIcon, XIcon, PlusCircleIcon, EditIcon, TrashIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
-// Fix: Import the missing 'generateGoalWithMilestones' function from the Gemini service.
 import { generateGoalWithMilestones } from '../services/geminiService';
 import ConfirmationModal from '../components/ConfirmationModal';
 

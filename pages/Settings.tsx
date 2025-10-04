@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, User } from '../types';
+import { UserRole, User, BadgeID } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon, AwardIcon, StarIcon, ZapIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon, AlertTriangleIcon } from '../components/Icons';
+import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon, AwardIcon, StarIcon, ZapIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon, AlertTriangleIcon, TrophyIcon, FlameIcon } from '../components/Icons';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }) => {
@@ -69,8 +69,21 @@ const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }
     );
 };
 
+const BadgeIcon = ({ badgeId }: { badgeId: BadgeID }) => {
+    const icons: { [key in BadgeID]: React.ReactNode } = {
+        [BadgeID.FirstAssignment]: <StarIcon className="w-8 h-8 text-yellow-500" />,
+        [BadgeID.HighAchiever]: <RocketIcon className="w-8 h-8 text-blue-500" />,
+        [BadgeID.PerfectScore]: <TrophyIcon className="w-8 h-8 text-amber-500" />,
+        [BadgeID.GoalGetter]: <TrophyIcon className="w-8 h-8 text-green-500" />,
+        [BadgeID.StreakStarter]: <FlameIcon className="w-8 h-8 text-orange-500" />,
+        [BadgeID.StreakMaster]: <FlameIcon className="w-8 h-8 text-red-500" />,
+        [BadgeID.OnTimeSubmissions]: <StarIcon className="w-8 h-8 text-indigo-500" />,
+    };
+    return <>{icons[badgeId] || <TrophyIcon className="w-8 h-8 text-gray-400" />}</>;
+};
+
 const StudentSettings = () => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, coach, logout } = useDataContext();
+    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, coach, logout, badges } = useDataContext();
     const { startTour, addToast } = useUI();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -82,33 +95,6 @@ const StudentSettings = () => {
     const avgGrade = gradedAssignments.length > 0 ? Math.round(gradedAssignments.reduce((sum, a) => sum + a.grade!, 0) / gradedAssignments.length) : 0;
     const goals = getGoalsForStudent(currentUser.id);
     const completedGoals = goals.filter(g => g.isCompleted);
-
-    const achievements = useMemo(() => [
-        {
-            icon: <StarIcon className="w-8 h-8 text-yellow-500" />,
-            title: "İlk Adım",
-            description: "İlk ödevini tamamladın!",
-            isUnlocked: completedAssignments.length >= 1,
-        },
-        {
-            icon: <AwardIcon className="w-8 h-8 text-blue-500" />,
-            title: "Çalışkan Arı",
-            description: "5'ten fazla ödev tamamladın.",
-            isUnlocked: completedAssignments.length >= 5,
-        },
-        {
-            icon: <ZapIcon className="w-8 h-8 text-green-500" />,
-            title: "Not Canavarı",
-            description: "Not ortalaman 90'ın üzerinde!",
-            isUnlocked: avgGrade >= 90,
-        },
-        {
-            icon: <RocketIcon className="w-8 h-8 text-purple-500" />,
-            title: "Hedef Avcısı",
-            description: "3'ten fazla hedef tamamladın.",
-            isUnlocked: completedGoals.length >= 3,
-        }
-    ], [completedAssignments.length, avgGrade, completedGoals.length]);
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -139,16 +125,21 @@ const StudentSettings = () => {
                     </ul>
                 </Card>
                 <Card title="Başarımlarım">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {achievements.map(ach => (
-                            <div key={ach.title} className={`p-4 rounded-lg flex items-center gap-4 border ${ach.isUnlocked ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 opacity-60'}`}>
-                                <div className="flex-shrink-0">{ach.icon}</div>
-                                <div>
-                                    <h5 className={`font-bold ${ach.isUnlocked ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{ach.title}</h5>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{ach.description}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {badges.map(badge => {
+                            const isEarned = currentUser.earnedBadgeIds?.includes(badge.id);
+                            return (
+                                <div key={badge.id} title={`${badge.name}: ${badge.description}`} className={`p-4 rounded-lg flex items-center gap-4 border ${isEarned ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 opacity-60'}`}>
+                                    <div className="flex-shrink-0">
+                                        <BadgeIcon badgeId={badge.id} />
+                                    </div>
+                                    <div>
+                                        <h5 className={`font-bold text-sm ${isEarned ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{badge.name}</h5>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{badge.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </Card>
             </div>

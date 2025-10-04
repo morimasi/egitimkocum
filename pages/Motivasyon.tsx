@@ -1,19 +1,20 @@
 
+
 import React, { useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import Card from '../components/Card';
-import { FlameIcon, TrophyIcon, StarIcon, RocketIcon } from '../components/Icons';
+import { FlameIcon, TrophyIcon, StarIcon, RocketIcon, KeyIcon, AwardIcon, ZapIcon } from '../components/Icons';
 import { BadgeID } from '../types';
 
 const BadgeIcon = ({ badgeId }: { badgeId: BadgeID }) => {
-    const icons: { [key in BadgeID]: React.ReactNode } = {
+    const icons: { [key in BadgeID]?: React.ReactNode } = {
         [BadgeID.FirstAssignment]: <StarIcon className="w-8 h-8 text-yellow-500" />,
         [BadgeID.HighAchiever]: <RocketIcon className="w-8 h-8 text-blue-500" />,
         [BadgeID.PerfectScore]: <TrophyIcon className="w-8 h-8 text-amber-500" />,
-        [BadgeID.GoalGetter]: <TrophyIcon className="w-8 h-8 text-green-500" />,
-        [BadgeID.StreakStarter]: <FlameIcon className="w-8 h-8 text-orange-500" />,
+        [BadgeID.GoalGetter]: <AwardIcon className="w-8 h-8 text-green-500" />,
+        [BadgeID.StreakStarter]: <ZapIcon className="w-8 h-8 text-orange-500" />,
         [BadgeID.StreakMaster]: <FlameIcon className="w-8 h-8 text-red-500" />,
-        [BadgeID.OnTimeSubmissions]: <StarIcon className="w-8 h-8 text-indigo-500" />,
+        [BadgeID.OnTimeSubmissions]: <KeyIcon className="w-8 h-8 text-indigo-500" />,
     };
     return <>{icons[badgeId] || <TrophyIcon className="w-8 h-8 text-gray-400" />}</>;
 };
@@ -85,15 +86,18 @@ const Motivasyon = () => {
                         </div>
                     </Card>
                     <Card title="Başarı Rozetleri">
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                             {badges.map(badge => {
                                 const isEarned = student.earnedBadgeIds?.includes(badge.id);
                                 return (
-                                    <div key={badge.id} title={`${badge.name}: ${badge.description}`} className={`flex flex-col items-center text-center transition-opacity ${!isEarned ? 'opacity-30' : ''}`}>
-                                        <div className={`p-4 rounded-full ${isEarned ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                                    <div key={badge.id} title={`${badge.name}: ${badge.description}`} className={`p-4 rounded-lg flex items-center gap-4 border ${isEarned ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 opacity-60'}`}>
+                                        <div className="flex-shrink-0">
                                             <BadgeIcon badgeId={badge.id} />
                                         </div>
-                                        <p className="text-xs mt-2 font-semibold w-24 truncate">{badge.name}</p>
+                                        <div>
+                                            <h5 className={`font-bold text-sm ${isEarned ? 'text-gray-800 dark:text-white' : 'text-gray-500'}`}>{badge.name}</h5>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{badge.description}</p>
+                                        </div>
                                     </div>
                                 );
                             })}

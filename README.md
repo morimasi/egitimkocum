@@ -1,8 +1,8 @@
-# Eğitim Koçu Platformu v3 (Standalone Demo)
+# Mahmut Hoca (Standalone Demo)
 
 ## 🚀 Proje Açıklaması
 
-Eğitim Koçu Platformu, eğitim koçları ve öğrenciler arasındaki etkileşimi dijitalleştiren, ödev atama, takip, değerlendirme ve iletişim süreçlerini merkezileştiren modern ve reaktif bir web uygulamasıdır. Bu sürüm, **herhangi bir backend veya veritabanı kurulumu gerektirmeden**, tamamen tarayıcı içinde çalışan bir demo olarak tasarlanmıştır. Uygulama, başlangıçta örnek verilerle yüklenir ve yaptığınız değişiklikler sayfa yenilenene kadar oturumda saklanır.
+Mahmut Hoca, öğrencilerle etkileşimi dijitalleştiren, ödev atama, takip, değerlendirme ve iletişim süreçlerini merkezileştiren modern ve reaktif bir web uygulamasıdır. Bu sürüm, **herhangi bir backend veya veritabanı kurulumu gerektirmeden**, tamamen tarayıcı içinde çalışan bir demo olarak tasarlanmıştır. Uygulama, başlangıçta örnek verilerle yüklenir ve yaptığınız değişiklikler sayfa yenilenene kadar oturumda saklanır.
 
 Uygulama, Google Gemini API'nin gücünü kullanarak akıllı özellikler sunar ve öğrenme sürecini daha verimli, kişiselleştirilmiş ve ilgi çekici hale getirir. Uygulama, üç farklı kullanıcı rolünü (Süper Admin, Koç, Öğrenci) destekleyerek her bir kullanıcının ihtiyacına yönelik özelleştirilmiş bir deneyim sunar.
 
@@ -52,7 +52,7 @@ Uygulamayı yerel ortamınızda çalıştırmak için aşağıdaki adımları iz
 
 1.  API anahtarını ayarladıktan sonra uygulamayı başlatın veya tarayıcıda sayfayı yenileyin.
 2.  Uygulama, önceden tanımlanmış örnek kullanıcılar ve verilerle başlayacaktır. Aşağıdaki örnek kullanıcı bilgileriyle giriş yapabilirsiniz:
-    *   **Admin Girişi:**
+    *   **Mahmut Hoca (Süper Admin) Girişi:**
         *   **E-posta:** `admin@egitim.com`
         *   **Şifre:** Herhangi bir şey yazabilirsiniz (örn: `123456`)
     *   **Koç Girişi:**

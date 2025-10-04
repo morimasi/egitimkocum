@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -20,8 +21,6 @@ const AkilliPlanlayici = () => {
     const { addMultipleCalendarEvents, currentUser } = useDataContext();
     const { addToast } = useUI();
     
-    // Fix: Replaced 'goal' state with separate states for 'targetExams' and 'focusSubjects'
-    // to match the parameters required by the 'generateStudyPlan' service.
     const [targetExams, setTargetExams] = useState('TYT, AYT');
     const [focusSubjects, setFocusSubjects] = useState('Matematik, Fizik');
 
@@ -75,9 +74,9 @@ const AkilliPlanlayici = () => {
     };
 
     const handleSavePlan = async () => {
-        if (!plan || !currentUser) return;
-        // Fix: Cast `plan` to `StudyPlanEvent[]` to resolve 'unknown' type error.
-        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as StudyPlanEvent[]).map(item => ({
+        // Fix: Add Array.isArray check to ensure 'plan' is an array before using .map
+        if (!plan || !Array.isArray(plan) || !currentUser) return;
+        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map(item => ({
             title: item.title,
             date: item.date,
             type: 'study',
@@ -171,10 +170,11 @@ const AkilliPlanlayici = () => {
                  </button>
             </div>
             
-            {plan && (
+            {plan && Array.isArray(plan) && (
                 <Card title="Oluşturulan Akıllı Planın">
                     <div className="space-y-4">
-                        {(plan as StudyPlanEvent[]).map((item, index) => (
+                        {/* Fix: Add Array.isArray check to prevent crash if 'plan' is not an array */}
+                        {plan.map((item, index) => (
                             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                 <div className="flex justify-between items-center">
                                     <h4 className="font-bold text-primary-600 dark:text-primary-400">{item.title}</h4>

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, Goal, AssignmentStatus } from '../types';
@@ -143,8 +141,6 @@ const OdakModu = () => {
                 setSessionLog(prev => [
                     ...prev,
                     {
-                        // Fix: The 'Goal' type has a 'title' property, not 'text'.
-                        // Both Assignment and Goal have a 'title' property, so we can access it directly.
                         taskTitle: selectedTask ? selectedTask.title : 'Genel Çalışma',
                         timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
                     }

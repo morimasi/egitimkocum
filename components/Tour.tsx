@@ -24,7 +24,7 @@ const Tour = () => {
             {
                 id: 'tour-step-0',
                 title: 'Hoş Geldiniz!',
-                content: 'Eğitim Koçu Platformu\'na hoş geldiniz! Hızlı bir turla temel özellikleri tanıyalım.',
+                content: 'Mahmut Hoca platformuna hoş geldiniz! Hızlı bir turla temel özellikleri tanıyalım.',
                 position: 'bottom',
             },
             {

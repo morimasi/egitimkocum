@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import Card from '../components/Card';
@@ -10,8 +8,6 @@ import { generateExamPerformanceInsight } from '../services/geminiService';
 import { SkeletonText } from '../components/SkeletonLoader';
 import { SparklesIcon, TrendingUpIcon, TrophyIcon, XIcon } from '../components/Icons';
 
-// Fix: Replaced with a more robust and consistent subject detection logic.
-// This logic is now aligned with the one used in the Gemini service for better data consistency.
 const getSubject = (title: string): string => {
     const subjectKeywords: { [key: string]: string[] } = {
         'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'],

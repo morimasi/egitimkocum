@@ -20,18 +20,30 @@ const TypingIndicator = () => (
     </div>
 );
 
-const PollCreationModal = ({ isOpen, onClose, onSend, addToast }: { isOpen: boolean; onClose: () => void; onSend: (poll: Poll) => void; addToast: (message: string, type: ToastType) => void; }) => {
-    const [question, setQuestion] = useState('');
-    const [options, setOptions] = useState(['', '']);
-
+const PollCreationModal = ({
+    isOpen,
+    onClose,
+    onSend,
+    addToast,
+    question,
+    setQuestion,
+    options,
+    setOptions
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSend: (poll: Poll) => void;
+    addToast: (message: string, type: ToastType) => void;
+    question: string;
+    setQuestion: (q: string) => void;
+    options: string[];
+    setOptions: (o: string[]) => void;
+}) => {
     const handleSend = () => {
-        if (question.trim() && options.every(o => o.trim())) {
+        if (question.trim() && options.length >= 2 && options.every(o => o.trim())) {
             onSend({ question, options: options.map(o => ({ text: o, votes: [] })) });
-            onClose();
-            setQuestion('');
-            setOptions(['', '']);
         } else {
-            addToast("Lütfen anket sorusunu ve tüm seçenekleri doldurun.", "error");
+            addToast("Lütfen anket sorusunu ve en az iki seçeneği doldurun.", "error");
         }
     };
     
@@ -41,8 +53,19 @@ const PollCreationModal = ({ isOpen, onClose, onSend, addToast }: { isOpen: bool
         setOptions(newOptions);
     };
 
-    const addOption = () => setOptions([...options, '']);
-    const removeOption = (index: number) => setOptions(options.filter((_, i) => i !== index));
+    const addOption = () => {
+        if (options.length < 10) {
+            setOptions([...options, '']);
+        } else {
+            addToast("En fazla 10 seçenek ekleyebilirsiniz.", "info");
+        }
+    };
+    
+    const removeOption = (index: number) => {
+        if (options.length > 2) {
+            setOptions(options.filter((_, i) => i !== index));
+        }
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Anket Oluştur">
@@ -51,14 +74,14 @@ const PollCreationModal = ({ isOpen, onClose, onSend, addToast }: { isOpen: bool
                 {options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-2">
                         <input type="text" value={opt} onChange={e => handleOptionChange(i, e.target.value)} placeholder={`Seçenek ${i + 1}`} className="flex-1 w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />
-                        {options.length > 2 && <button onClick={() => removeOption(i)} className="p-2 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><XIcon className="w-4 h-4" /></button>}
+                        {options.length > 2 && <button type="button" onClick={() => removeOption(i)} className="p-2 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><XIcon className="w-4 h-4" /></button>}
                     </div>
                 ))}
-                <button onClick={addOption} className="text-sm text-primary-600 font-semibold hover:text-primary-800">+ Seçenek Ekle</button>
+                <button type="button" onClick={addOption} className="text-sm text-primary-600 font-semibold hover:text-primary-800">+ Seçenek Ekle</button>
             </div>
             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
-                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover-bg-gray-700">İptal</button>
-                <button onClick={handleSend} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Gönder</button>
+                <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                <button type="button" onClick={handleSend} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Gönder</button>
             </div>
         </Modal>
     );
@@ -292,52 +315,78 @@ const AddToGroupModal = ({ conversation, onClose, onAddUsers }: { conversation: 
 };
 
 const NewChatModal = ({ isOpen, onClose, onChatCreated }: { isOpen: boolean; onClose: () => void; onChatCreated: (conversationId: string) => void; }) => {
-    const { students, findOrCreateConversation, startGroupChat } = useDataContext();
-    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const { students, users, currentUser, findOrCreateConversation, startGroupChat } = useDataContext();
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
     const [groupName, setGroupName] = useState('');
-    
-    const handleToggleStudent = (id: string) => {
-        setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
+    const [groupType, setGroupType] = useState<'student' | 'teacher'>('student');
+
+    const handleToggleUser = (id: string) => {
+        setSelectedUserIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
     };
 
+    const availableUsersForChat = useMemo(() => {
+        if (groupType === 'student') {
+            return students;
+        } else {
+            return users.filter(u =>
+                (u.role === UserRole.Coach || u.role === UserRole.SuperAdmin) &&
+                u.id !== currentUser!.id
+            );
+        }
+    }, [groupType, students, users, currentUser]);
+
     const handleStartChat = async () => {
-        if (selectedStudentIds.length === 0) return;
+        if (selectedUserIds.length === 0) return;
         let convId;
-        if (selectedStudentIds.length === 1) {
-            convId = await findOrCreateConversation(selectedStudentIds[0]);
+        if (selectedUserIds.length === 1) {
+            convId = await findOrCreateConversation(selectedUserIds[0]);
         } else {
             if (!groupName.trim()) {
                 alert("Lütfen grup için bir ad girin.");
                 return;
             }
-            convId = await startGroupChat(selectedStudentIds, groupName);
+            convId = await startGroupChat(selectedUserIds, groupName);
         }
         if (convId) onChatCreated(convId);
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Yeni Sohbet Başlat">
-            {selectedStudentIds.length > 1 && (
+            <div className="flex gap-4 mb-4 border-b dark:border-gray-600 pb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="groupType" value="student" checked={groupType === 'student'} onChange={() => { setGroupType('student'); setSelectedUserIds([]); }} className="h-4 w-4 text-primary-600 focus:ring-primary-500" />
+                    Öğrenci Grubu
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="groupType" value="teacher" checked={groupType === 'teacher'} onChange={() => { setGroupType('teacher'); setSelectedUserIds([]); }} className="h-4 w-4 text-primary-600 focus:ring-primary-500" />
+                    Öğretmen Grubu
+                </label>
+            </div>
+            {selectedUserIds.length > 1 && (
                 <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Grup Adı</label>
                     <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Grubunuza bir ad verin" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"/>
                 </div>
             )}
-            <p className="text-sm text-gray-500 mb-2">Sohbet başlatmak için bir veya daha fazla öğrenci seçin.</p>
+            <p className="text-sm text-gray-500 mb-2">
+                 {groupType === 'student'
+                    ? 'Sohbet başlatmak için bir veya daha fazla öğrenci seçin.'
+                    : 'Sohbet başlatmak için bir veya daha fazla öğretmen/admin seçin.'}
+            </p>
             <ul className="space-y-2 max-h-80 overflow-y-auto">
-                {students.map(student => (
-                    <li key={student.id}>
+                {availableUsersForChat.map(user => (
+                    <li key={user.id}>
                         <label className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                            <input type="checkbox" checked={selectedStudentIds.includes(student.id)} onChange={() => handleToggleStudent(student.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                            <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full mx-3" loading="lazy" />
-                            <span className="font-medium">{student.name}</span>
+                            <input type="checkbox" checked={selectedUserIds.includes(user.id)} onChange={() => handleToggleUser(user.id)} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                            <img src={user.profilePicture} alt={user.name} className="w-8 h-8 rounded-full mx-3" loading="lazy" />
+                            <span className="font-medium">{user.name}</span>
                         </label>
                     </li>
                 ))}
             </ul>
              <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
                 <button onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600">İptal</button>
-                <button onClick={handleStartChat} disabled={selectedStudentIds.length === 0} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">Sohbeti Başlat</button>
+                <button onClick={handleStartChat} disabled={selectedUserIds.length === 0} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">Sohbeti Başlat</button>
             </div>
         </Modal>
     )
@@ -353,10 +402,14 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
     openFileDialog: () => void;
 }) => {
     const [text, setText] = useState('');
-    const [isPollModalOpen, setIsPollModalOpen] = useState(false);
     const { addToast } = useUI();
     const { currentUser } = useDataContext();
     const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+
+    // Poll State
+    const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+    const [pollQuestion, setPollQuestion] = useState('');
+    const [pollOptions, setPollOptions] = useState(['', '']);
 
     const handleSend = () => {
         if (text.trim()) {
@@ -374,6 +427,19 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
             onSendMessage('video', { videoUrl });
         }
         setIsRecordingVideo(false);
+    };
+    
+    const handleSendPoll = (poll: Poll) => {
+        onSendMessage('poll', { poll, text: poll.question });
+        setPollQuestion('');
+        setPollOptions(['', '']);
+        setIsPollModalOpen(false);
+    };
+
+    const handleClosePollModal = () => {
+        setIsPollModalOpen(false);
+        setPollQuestion('');
+        setPollOptions(['', '']);
     };
     
     return (
@@ -415,7 +481,16 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
                 </div>
                 </>
             )}
-            <PollCreationModal isOpen={isPollModalOpen} onClose={() => setIsPollModalOpen(false)} onSend={(poll) => onSendMessage('poll', { poll })} addToast={addToast} />
+            <PollCreationModal 
+                isOpen={isPollModalOpen} 
+                onClose={handleClosePollModal} 
+                onSend={handleSendPoll} 
+                addToast={addToast}
+                question={pollQuestion}
+                setQuestion={setPollQuestion}
+                options={pollOptions}
+                setOptions={setPollOptions}
+            />
         </div>
     );
 };
@@ -567,21 +642,26 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
         setPage(prev => prev + 1);
     };
 
-    const handleSendMessage = (type: Message['type'], content: any) => {
+    const handleSendMessage = useCallback((type: Message['type'], content: any) => {
         if (!currentUser) return;
         const messageData: Partial<Message> = { senderId: currentUser.id, conversationId: conversation.id, type, replyTo: replyTo?.id };
         switch (type) {
             case 'text': messageData.text = content; break;
-            case 'poll': messageData.poll = content.poll; break;
+            case 'poll': 
+                messageData.poll = content.poll; 
+                messageData.text = content.poll.question;
+                break;
             case 'audio': messageData.audioUrl = content.audioUrl; messageData.text = "Sesli mesaj"; break;
             case 'video': messageData.videoUrl = content.videoUrl; messageData.text = "Video mesaj"; break;
             case 'file': 
                 messageData.fileUrl = content.fileUrl; messageData.fileName = content.fileName; messageData.fileType = content.fileType;
-                messageData.imageUrl = content.imageUrl; messageData.text = content.fileName; break;
+                messageData.imageUrl = content.imageUrl; 
+                messageData.text = content.fileName || "Ekli dosya";
+                break;
         }
         sendMessage(messageData as Omit<Message, 'id'|'timestamp'|'readBy'>);
         setReplyTo(null);
-    };
+    }, [currentUser, sendMessage, replyTo, conversation.id]);
 
     const handleFileDrop = async (files: File[]) => {
         if (!files || files.length === 0 || !currentUser) return;

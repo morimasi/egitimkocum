@@ -1,8 +1,21 @@
 import React, { useMemo } from 'react';
 import { useDataContext } from '../../contexts/DataContext';
-import { User } from '../../types';
+import { User, BadgeID } from '../../types';
 import Card from '../Card';
-import { TrophyIcon } from '../Icons';
+import { TrophyIcon, FlameIcon, StarIcon, RocketIcon, KeyIcon, AwardIcon, ZapIcon } from '../Icons';
+
+const BadgeIcon = ({ badgeId }: { badgeId: BadgeID }) => {
+    const icons: { [key in BadgeID]?: React.ReactNode } = {
+        [BadgeID.FirstAssignment]: <StarIcon className="w-8 h-8 text-yellow-500" />,
+        [BadgeID.HighAchiever]: <RocketIcon className="w-8 h-8 text-blue-500" />,
+        [BadgeID.PerfectScore]: <TrophyIcon className="w-8 h-8 text-amber-500" />,
+        [BadgeID.GoalGetter]: <AwardIcon className="w-8 h-8 text-green-500" />,
+        [BadgeID.StreakStarter]: <ZapIcon className="w-8 h-8 text-orange-500" />,
+        [BadgeID.StreakMaster]: <FlameIcon className="w-8 h-8 text-red-500" />,
+        [BadgeID.OnTimeSubmissions]: <KeyIcon className="w-8 h-8 text-indigo-500" />,
+    };
+    return <>{icons[badgeId] || <TrophyIcon className="w-8 h-8 text-gray-400" />}</>;
+};
 
 const MotivationTab = ({ student }: { student: User }) => {
     const { badges } = useDataContext();
@@ -44,7 +57,7 @@ const MotivationTab = ({ student }: { student: User }) => {
                         return (
                             <div key={badge.id} title={`${badge.name}: ${badge.description}`} className={`text-center transition-opacity ${!isEarned && 'opacity-30'}`}>
                                 <div className={`p-3 rounded-full ${isEarned ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                                    <TrophyIcon className={`w-8 h-8 ${isEarned ? 'text-yellow-500' : 'text-gray-400'}`} />
+                                    <BadgeIcon badgeId={badge.id} />
                                 </div>
                                 <p className="text-xs mt-1 w-20 truncate">{badge.name}</p>
                             </div>

@@ -1,7 +1,3 @@
-
-
-
-
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Assignment, AssignmentStatus, User } from "../types";
 
@@ -450,9 +446,9 @@ export const generateAiTemplate = async (topic: string, level: string, duration:
     Önerilen Tamamlanma Süresi: "${duration}"
 
     Bu bilgilere dayanarak, aşağıdaki JSON formatında bir yanıt oluştur:
-    - title: Konuyla ilgili, dikkat çekici bir başlık. Örneğin: "Matematik: Türev Alma Kuralları".
-    - description: Ödevin amacını, kapsamını ve beklentileri açıklayan detaylı bir metin.
-    - checklist: Öğrencinin ödevi tamamlarken takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi. Her adım "text" anahtarına sahip bir obje olmalıdır.
+    - title: Konuyla ilgili, dikkat çekici ve seviyeye uygun bir başlık. Örneğin: "Matematik: Türev Alma Kuralları (${level})".
+    - description: Ödevin amacını, kapsamını ve beklentileri açıklayan detaylı bir metin. Metin, seçilen '${level}' seviyesine ve ödevin '${duration}' içinde tamamlanması beklentisine uygun olmalıdır.
+    - checklist: Öğrencinin ödevi tamamlarken takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi. Adımlar, öğrencinin ödevi '${duration}' içinde tamamlayabileceği şekilde mantıklı ve uygulanabilir olmalıdır.
     
     Cevabın sadece JSON objesi içermelidir. Başka hiçbir metin ekleme.`;
 

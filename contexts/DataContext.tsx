@@ -24,7 +24,7 @@ const getInitialState = (): AppState => {
     };
     
     const users: User[] = [
-        { id: userIDs.SUPER_ADMIN_ID, name: 'Admin Kullanıcı', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com`, isOnline: true },
+        { id: userIDs.SUPER_ADMIN_ID, name: 'Mahmut Hoca', email: 'admin@egitim.com', role: UserRole.SuperAdmin, profilePicture: `https://i.pravatar.cc/150?u=admin@egitim.com`, isOnline: true },
         { id: userIDs.COACH_ID, name: 'Ahmet Yılmaz', email: 'ahmet.yilmaz@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com`, isOnline: true },
         { id: userIDs.COACH_2_ID, name: 'Zeynep Güler', email: 'zeynep.guler@egitim.com', role: UserRole.Coach, profilePicture: `https://i.pravatar.cc/150?u=zeynep.guler@egitim.com`, isOnline: false },
         { id: userIDs.STUDENT_1_ID, name: 'Leyla Kaya', email: 'leyla.kaya@mail.com', role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=leyla.kaya@mail.com`, assignedCoachId: userIDs.COACH_ID, gradeLevel: '12', academicTrack: AcademicTrack.Sayisal, xp: 1250, streak: 3, earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever], parentIds: [userIDs.PARENT_1_ID], isOnline: true },
@@ -187,6 +187,7 @@ interface DataContextType {
     getGoalsForStudent: (studentId: string) => Goal[];
     updateGoal: (updatedGoal: Goal) => Promise<void>;
     addGoal: (newGoal: Omit<Goal, 'id'>) => Promise<void>;
+    deleteGoal: (goalId: string) => Promise<void>;
     addReaction: (messageId: string, emoji: string) => Promise<void>;
     voteOnPoll: (messageId: string, optionIndex: number) => Promise<void>;
     findMessageById: (messageId: string) => Message | undefined;
@@ -445,7 +446,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
                 await sendMessage({
                     senderId: state.currentUser.id,
                     conversationId,
-                    text: `${state.currentUser.name}, sizi Eğitim Koçu platformuna davet etti. Başarıya giden bu yolda size destek olmaktan mutluluk duyacağım!`,
+                    text: `${state.currentUser.name}, sizi Mahmut Hoca platformuna davet etti. Başarıya giden bu yolda size destek olmaktan mutluluk duyacağım!`,
                     type: 'system',
                 });
             }
@@ -580,6 +581,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => {
         const goalWithId = { ...newGoal, id: uuid() };
         dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'goals', data: goalWithId }});
+    }, []);
+    const deleteGoal = useCallback(async (goalId: string) => {
+        dispatch({ type: 'REMOVE_DOC', payload: { collection: 'goals', id: goalId }});
     }, []);
     const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
         if(!state.currentUser) return;
@@ -740,6 +744,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         getGoalsForStudent,
         updateGoal,
         addGoal,
+        deleteGoal,
         addReaction,
         voteOnPoll,
         toggleResourceAssignment,
@@ -769,7 +774,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         getAssignmentsForStudent, getMessagesForConversation, findMessageById,
         login, logout, register, inviteStudent, sendMessage, addAssignment, updateAssignment, deleteAssignments,
         updateUser, deleteUser, addUser, markMessagesAsRead, markNotificationsAsRead, updateTypingStatus,
-        getGoalsForStudent, updateGoal, addGoal, addReaction, voteOnPoll, toggleResourceAssignment,
+        getGoalsForStudent, updateGoal, addGoal, deleteGoal, addReaction, voteOnPoll, toggleResourceAssignment,
         assignResourceToStudents, addResource, deleteResource, addTemplate, updateTemplate, deleteTemplate,
         uploadFile, updateStudentNotes, awardXp, startGroupChat, findOrCreateConversation, addUserToConversation,
         removeUserFromConversation, endConversation, setConversationArchived, updateBadge, addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
