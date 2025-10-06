@@ -196,7 +196,28 @@ const OdakModu = () => {
                         </div>
 
                         <div className="relative w-64 h-64">
-                            <svg className="w-full h-full" viewBox="0 0 36 36"><path className="text-gray-200 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" /><path className="text-primary-500 transition-all duration-500" strokeDasharray={`${progress}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                <circle
+                                    className="text-gray-200 dark:text-gray-700"
+                                    cx="18"
+                                    cy="18"
+                                    r="15.9155"
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                />
+                                <circle
+                                    className="text-primary-500 transition-all duration-500"
+                                    style={{ strokeDasharray: `${progress}, 100` }}
+                                    cx="18"
+                                    cy="18"
+                                    r="15.9155"
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                />
+                            </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-6xl font-bold tracking-tighter">{formatTime(timeLeft)}</span>
                                 <span className="text-gray-500 text-sm mt-1">{selectedTasks.length > 0 ? allTasks.find(t => t.id === selectedTasks[0])?.text : 'Görev seçilmedi'}</span>

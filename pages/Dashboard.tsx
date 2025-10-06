@@ -481,7 +481,7 @@ const CoachDashboard = () => {
     }, [assignments]);
     
     const handleBarClick = (data: any) => {
-        const studentId = data?.id;
+        const studentId = data?.payload?.id;
         if (studentId) {
             setActivePage('students', { studentId });
         }

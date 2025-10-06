@@ -8,10 +8,9 @@ interface VideoRecorderProps {
     onSave?: (videoUrl: string | null) => void;
     initialVideo?: string | null;
     readOnly?: boolean;
-    uploadPath?: string;
 }
 
-const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPath }: VideoRecorderProps) => {
+const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false }: VideoRecorderProps) => {
     const [status, setStatus] = useState<'idle' | 'recording' | 'preview' | 'uploading'>('idle');
     const [videoSrc, setVideoSrc] = useState<string | null>(initialVideo);
     const [isMuted, setIsMuted] = useState(true);

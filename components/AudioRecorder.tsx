@@ -7,10 +7,9 @@ interface AudioRecorderProps {
     onSave?: (audioUrl: string) => void;
     initialAudio?: string | null;
     readOnly?: boolean;
-    uploadPath?: string;
 }
 
-const AudioRecorder = ({ onSave, initialAudio, readOnly = false, uploadPath }: AudioRecorderProps) => {
+const AudioRecorder = ({ onSave, initialAudio, readOnly = false }: AudioRecorderProps) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioURL, setAudioURL] = useState(initialAudio || '');
