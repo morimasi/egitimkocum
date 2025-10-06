@@ -1,11 +1,21 @@
-// v4 - Added self-healing mechanism to automatically fix schema on startup.
+// v5 - Added Gemini proxy endpoint to secure API key.
 const express = require('express');
 const { sql } = require('@vercel/postgres');
 const cors = require('cors');
+const { GoogleGenAI, Type } = require("@google/genai");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(cors());
+
+// Initialize Gemini AI
+let ai;
+if (process.env.API_KEY) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+} else {
+    console.warn("API_KEY environment variable not found. Gemini API features will be disabled.");
+}
+
 
 const createTables = async () => {
     await sql`
@@ -316,7 +326,7 @@ app.post('/calendarEvents/batch', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// --- GENERIC ENDPOINTS ---
+// --- GENERIC CRUD ENDPOINTS ---
 app.post('/:collection', async (req, res) => {
     const { collection } = req.params;
     const data = req.body;
@@ -357,6 +367,208 @@ app.delete('/:collection', async (req, res) => {
     } catch (error) {
         console.error(`Error deleting from ${collection}:`, error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- GEMINI PROXY ENDPOINTS ---
+
+const getSubject = (title) => {
+    const SUBJECT_KEYWORDS = {
+        'Matematik': ['matematik', 'türev', 'limit', 'problem', 'geometri'], 'Fizik': ['fizik', 'deney', 'sarkaç', 'vektörler', 'optik', 'elektrik'], 'Kimya': ['kimya', 'formül', 'organik', 'mol'], 'Biyoloji': ['biyoloji', 'hücre', 'bölünme', 'çizim'], 'Türkçe': ['türkçe', 'kompozisyon', 'paragraf', 'özet', 'makale', 'kitap', 'edebiyat'], 'Tarih': ['tarih', 'ihtilal', 'araştırma', 'savaş'], 'Coğrafya': ['coğrafya', 'iklim', 'sunum', 'göller'], 'İngilizce': ['ingilizce', 'kelime', 'essay'], 'Felsefe': ['felsefe']
+    };
+    for (const subject in SUBJECT_KEYWORDS) {
+        if (SUBJECT_KEYWORDS[subject].some(keyword => title.toLowerCase().includes(keyword))) {
+            return subject;
+        }
+    }
+    return 'Diğer';
+};
+
+app.post('/gemini-chat', async (req, res) => {
+    if (!ai) return res.status(500).json({ message: 'Gemini API is not configured.' });
+    try {
+        const { history, systemInstruction } = req.body;
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: history,
+            config: { systemInstruction }
+        });
+        res.json({ text: response.text });
+    } catch (error) {
+        console.error('Gemini Chat error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post('/gemini', async (req, res) => {
+    if (!ai) return res.status(500).json({ message: 'Gemini API is not configured.' });
+    
+    try {
+        const { task, payload } = req.body;
+        let response;
+        let prompt;
+
+        switch (task) {
+            // Cases returning { text: '...' }
+            case 'generateAssignmentDescription':
+                prompt = `Bir eğitim koçu olarak, "${payload.title}" başlıklı bir ödev için öğrencilere yol gösterecek, motive edici ve net bir açıklama metni oluştur. Açıklama, ödevin amacını, beklentileri ve teslimat kriterlerini içermeli.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } });
+                return res.json({ text: response.text });
+
+            case 'generateSmartFeedback':
+                const { assignmentToGrade, allStudentAssignments } = payload;
+                const currentSubject = getSubject(assignmentToGrade.title);
+                const previousAssignmentsInSubject = allStudentAssignments.filter(a => a.id !== assignmentToGrade.id && getSubject(a.title) === currentSubject && a.status === 'graded' && a.grade !== null);
+                let subjectContext = "";
+                if (previousAssignmentsInSubject.length > 0) {
+                    const previousAvg = Math.round(previousAssignmentsInSubject.reduce((sum, a) => sum + a.grade, 0) / previousAssignmentsInSubject.length);
+                    subjectContext = `Öğrencinin bu dersteki önceki not ortalaması yaklaşık ${previousAvg}.`;
+                }
+                prompt = `Bir öğrencinin "${assignmentToGrade.title}" ödevinden 100 üzerinden ${assignmentToGrade.grade} aldığını varsayarak, hem yapıcı hem de motive edici bir geri bildirim yaz. Ek Bilgi: ${subjectContext}. Bu ek bilgiyi kullanarak geri bildirimini kişiselleştir: Eğer not yüksekse (85+), öğrencinin güçlü yönlerini vurgula. Eğer not ortalamaysa (60-84), hem iyi yaptığı noktaları belirt hem de geliştirmesi gereken alanlara odaklan. Eğer not düşükse (<60), öğrenciyi kırmadan, temel eksikliklere odaklan.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } });
+                return res.json({ text: response.text });
+
+            case 'getVisualAssignmentHelp':
+                const textPart = { text: `Sen yardımsever bir öğretmen asistanısın. Bir öğrenci, "${payload.assignment.title}" başlıklı ödevde zorlanıyor ve aşağıdaki resimle ilgili yardım istiyor. Ödevin açıklaması: "${payload.assignment.description}". Lütfen görseli analiz ederek öğrenciye soruyu çözmesi için adım adım ipuçları ver. Cevabı doğrudan verme, düşünmesini sağla.` };
+                const imagePart = { inlineData: { mimeType: payload.image.mimeType, data: payload.image.base64Data } };
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [textPart, imagePart] } });
+                return res.json({ text: response.text });
+            
+            case 'suggestStudentGoal':
+                prompt = `Öğrenci ${payload.studentName} için bir S.M.A.R.T. (Belirli, Ölçülebilir, Ulaşılabilir, İlgili, Zamanında) hedef öner. Mevcut durumu: Ortalama notu ${payload.averageGrade}, teslimi gecikmiş ödev sayısı ${payload.overdueAssignments}. Önerin tek bir cümlelik bir hedef başlığı olmalı.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.9 } });
+                return res.json({ text: response.text });
+
+            case 'generateWeeklySummary':
+                 prompt = `Öğrenci ${payload.studentName} için bu haftaki performansını özetleyen kısa, motive edici bir mesaj yaz. İstatistikler: ${payload.stats.completed} ödev tamamlandı, not ortalaması ${payload.stats.avgGrade}, ${payload.stats.goals} hedefe ulaşıldı. Başarılarını kutla ve bir sonraki hafta için küçük bir tavsiye ver.`;
+                 response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } });
+                 return res.json({ text: response.text });
+
+            case 'generateStudentFocusSuggestion':
+                const pending = payload.assignments.filter(a => a.status === 'pending').length;
+                const overdue = payload.assignments.filter(a => a.status === 'pending' && new Date(a.dueDate) < new Date()).length;
+                prompt = `Öğrenci ${payload.studentName}'e güne başlaması için kısa ve motive edici bir tavsiye ver. Şu an ${pending} bekleyen ödevi var ve bunlardan ${overdue} tanesinin tarihi geçmiş. Bu durumu göz önünde bulundurarak onu teşvik et.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.9 } });
+                return res.json({ text: response.text });
+            
+            case 'suggestFocusAreas':
+                const subjects = {};
+                payload.assignments.forEach(a => {
+                    const subject = getSubject(a.title);
+                    if (!subjects[subject]) subjects[subject] = { grades: [], count: 0 };
+                    subjects[subject].count++;
+                    if (a.grade !== null) subjects[subject].grades.push(a.grade);
+                });
+                const subjectStats = Object.entries(subjects).map(([name, data]) => ({ name, avg: data.grades.length > 0 ? data.grades.reduce((s, g) => s + g, 0) / data.grades.length : null })).filter(s => s.avg !== null).sort((a, b) => a.avg - b.avg);
+                const weakSubjects = subjectStats.slice(0, 2).map(s => s.name).join(', ');
+                prompt = `Öğrenci ${payload.studentName} için bu haftaki odaklanması gereken 1-2 dersi veya konuyu öner. Düşük performans gösterdiği alanlar şunlar olabilir: ${weakSubjects || 'henüz yok'}. Önerini kısa ve eyleme geçirilebilir bir şekilde ifade et.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                return res.json({ text: response.text });
+
+            case 'generatePersonalCoachSummary':
+                 const studentCount = payload.students.length;
+                 const toGradeCount = payload.assignments.filter(a => a.status === 'submitted').length;
+                 const overdueCount = payload.assignments.filter(a => a.status === 'pending' && new Date(a.dueDate) < new Date()).length;
+                 prompt = `Eğitim koçu ${payload.coachName} için haftalık bir özet oluştur. Toplam ${studentCount} öğrencisi var. Şu an ${toGradeCount} ödevi notlandırmayı bekliyor ve öğrencilerinin toplam ${overdueCount} gecikmiş ödevi var. Bu bilgilere dayanarak ona önceliklerini belirlemesinde yardımcı olacak kısa bir özet ve teşvik edici bir mesaj yaz.`;
+                 response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.7 } });
+                 return res.json({ text: response.text });
+
+            case 'generateStudentAnalyticsInsight':
+                prompt = `Öğrenci ${payload.studentName}'in analitik verilerini yorumla ve ona özel bir içgörü sun. Veriler: Not ortalaması ${payload.data.avgGrade}, ödev tamamlama oranı %${payload.data.completionRate.toFixed(0)}, en başarılı olduğu ders ${payload.data.topSubject}, en çok zorlandığı ders ${payload.data.lowSubject}. Güçlü yönlerini öv ve zayıf yönleri için somut bir tavsiye ver.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                return res.json({ text: response.text });
+
+            case 'generateCoachAnalyticsInsight':
+                const { studentsData } = payload;
+                const statsSummary = `Toplam ${studentsData.length} öğrenci. Genel not ortalaması ${ (studentsData.reduce((sum, s) => sum + s.avgGrade, 0) / studentsData.length).toFixed(1) }.`;
+                const highAchievers = studentsData.filter(s => s.avgGrade > 85).map(s => s.name).join(', ');
+                const needsAttention = studentsData.filter(s => s.avgGrade < 60 || s.overdue > 2).map(s => s.name).join(', ');
+                prompt = `Bir koçun sınıfının genel performansını analiz et ve stratejik bir özet sun. Veriler: ${statsSummary}. Yüksek başarılı öğrenciler: ${highAchievers || 'yok'}. İlgi gerektiren öğrenciler: ${needsAttention || 'yok'}. Koçun nelere odaklanması gerektiği konusunda 2-3 maddelik bir eylem planı öner.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.8 } });
+                return res.json({ text: response.text });
+                
+            case 'generateExamPerformanceInsight':
+                const subjectAvgsText = payload.performanceData.subjectAvgs.map(s => `${s.subject}: ${s.average}`).join(', ');
+                prompt = `Öğrenci ${payload.studentName}'in sınav performansını analiz et. Genel ortalaması ${payload.performanceData.overallAvg}. Ders bazında ortalamaları: ${subjectAvgsText}. Bu verilere göre öğrencinin güçlü ve zayıf yönlerini "### Güçlü Yönler" ve "### Geliştirilmesi Gereken Yönler" başlıkları altında madde madde listele. Son olarak "### Eylem Planı" başlığı altında 2-3 somut öneride bulun. Cevabını markdown formatında başlıklarla ver.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.5 } });
+                return res.json({ text: response.text });
+
+            case 'generateExamAnalysis':
+                const subjectsSummary = payload.exam.subjects.map(s => `${s.name}: ${s.netScore} net`).join(', ');
+                prompt = `Öğrenci ${payload.studentName}'in "${payload.exam.title}" sınav sonucunu analiz et. Genel net: ${payload.exam.netScore}. Ders bazında netler: ${subjectsSummary}. Bu sonuçlara göre, öğrencinin performansını özetleyen, güçlü olduğu ve zorlandığı konuları belirten ve gelecek için 1-2 tavsiye veren bir analiz metni oluştur. Cevabını markdown formatında, ### başlıklar kullanarak ver.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                return res.json({ text: response.text });
+
+            case 'generateComprehensiveStudentReport':
+                prompt = `Öğrenci ${payload.student.name} için kapsamlı bir performans raporu oluştur. Raporu markdown formatında, aşağıdaki başlıkları kullanarak hazırla: ### Genel Durum, ### Akademik Performans (Ödevler ve Sınavlar), ### Hedeflere Ulaşma Durumu, ### Güçlü Yönler, ### Geliştirilmesi Gereken Yönler, ### Öneriler. Analizini aşağıdaki verilere dayandır: Ödevler: ${payload.assignments.length} adet, Sınavlar: ${payload.exams.length} adet, Hedefler: ${payload.goals.length} adet.`;
+                response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature: 0.6 } });
+                return res.json({ text: response.text });
+
+
+            // Cases returning JSON objects
+            case 'generateAssignmentChecklist':
+                prompt = `Bir eğitim koçu olarak, "${payload.title}" başlıklı ve "${payload.description}" açıklamalı bir ödev için öğrencilerin takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi oluştur.`;
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } },
+                });
+                return res.json(JSON.parse(response.text.trim()));
+
+            case 'suggestGrade':
+                 prompt = `Bir öğrencinin "${payload.assignment.title}" başlıklı ödevine yaptığı teslimatı analiz et ve 100 üzerinden bir not öner. Ayrıca notu neden önerdiğini 'rationale' alanında kısaca açıkla. Teslimat içeriği: "${payload.assignment.submissionType === 'text' ? payload.assignment.textSubmission : 'Dosya yüklendi (içeriği analiz edilemiyor, başlığa ve açıklamaya göre tahmin yürüt)'}". Ödev açıklaması: "${payload.assignment.description}".`;
+                 response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { suggestedGrade: { type: Type.INTEGER }, rationale: { type: Type.STRING } }, required: ['suggestedGrade', 'rationale'] } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+
+            case 'generateAiTemplate':
+                prompt = `Bir ödev şablonu oluştur. Konu: "${payload.topic}", seviye: "${payload.level}", ve süresi: "${payload.duration}". Şablon için uygun bir 'title', 'description' ve 3-5 adımlık bir 'checklist' oluştur. Checklist maddeleri 'text' alanına sahip objelerden oluşmalı.`;
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING }, checklist: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }, required: ['title', 'description', 'checklist'] } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+
+            case 'generateStudyPlan':
+                const { params } = payload;
+                prompt = `Bir öğrenci için haftalık ders çalışma planı oluştur. Bilgiler: Hedef sınavlar: ${params.targetExams.join(', ')}. Odak dersler: ${params.focusSubjects.join(', ')}. Haftalık müsait zamanlar: ${JSON.stringify(params.weeklyAvailability)}. Bir ders süresi ${params.sessionDuration} dakika, mola süresi ${params.breakDuration} dakika. Bu bilgilere göre, önümüzdeki 7 gün için bir plan oluştur. Her plan öğesi için 'title', 'date' (YYYY-MM-DD formatında, bugünden başlayarak), 'startTime', 'endTime', ve 'description' alanlarını içeren bir JSON dizisi döndür.`;
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, date: { type: Type.STRING }, startTime: { type: Type.STRING }, endTime: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'date', 'startTime', 'endTime'] } } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+            
+            case 'generateGoalWithMilestones':
+                 prompt = `"${payload.goalTitle}" hedefi için motive edici bir 'description' ve bu hedefe ulaşmayı sağlayacak 3-4 adımlık 'milestones' (kilometre taşları) oluştur. Kilometre taşları 'text' alanına sahip objelerden oluşmalı.`;
+                 response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { description: { type: Type.STRING }, milestones: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }, required: ['description', 'milestones'] } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+
+            case 'generateExamDetails':
+                 prompt = `${payload.studentGrade}. sınıf öğrencisi için, "${payload.category}" dersinin "${payload.topic}" konusuyla ilgili bir konu tarama testi için AI tarafından oluşturulmuş bir başlık ('title'), kısa bir açıklama ('description'), toplam soru sayısı ('totalQuestions', 10 ile 25 arası) ve 1 hafta sonrası için teslim tarihi ('dueDate', YYYY-MM-DD formatında) oluştur.`;
+                 response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING }, totalQuestions: { type: Type.INTEGER }, dueDate: { type: Type.STRING } }, required: ['title', 'description', 'totalQuestions', 'dueDate'] } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+            
+            case 'generateQuestion':
+                prompt = `"${payload.category}" dersi ve "${payload.topic}" konusu için, "${payload.difficulty}" zorluk seviyesinde, 4 seçenekli bir çoktan seçmeli soru oluştur. Cevabı JSON formatında, 'questionText' (soru metni), 'options' (4 elemanlı string dizisi), 'correctOptionIndex' (0-3 arası sayı) ve 'explanation' (doğru cevabın açıklaması) alanlarını içerecek şekilde ver.`;
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash', contents: prompt,
+                    config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { questionText: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, correctOptionIndex: { type: Type.INTEGER }, explanation: { type: Type.STRING } }, required: ['questionText', 'options', 'correctOptionIndex', 'explanation'] } }
+                });
+                return res.json(JSON.parse(response.text.trim()));
+
+            default:
+                return res.status(400).json({ message: 'Invalid task' });
+        }
+    } catch (error) {
+        console.error('Gemini API error:', error);
+        res.status(500).json({ message: error.message });
     }
 });
 
