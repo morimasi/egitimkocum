@@ -351,6 +351,33 @@ const Exams = () => {
                                         <td className="px-4 py-3 text-center font-semibold whitespace-nowrap">
                                             <span className="text-green-500">{exam.correct}D</span> / <span className="text-red-500">{exam.incorrect}Y</span> / <span className="text-blue-500 font-bold">{exam.netScore.toFixed(2)}N</span>
                                         </td>
-                                        {
+                                        {/* FIX: Replaced corrupted code with correct action buttons */}
+                                        {isCoachOrAdmin && (
+                                            <td className="px-4 py-3 text-right space-x-2">
+                                                <button onClick={(e) => { e.stopPropagation(); setExamToEdit(exam); setIsModalOpen(true); }} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
+                                                <button onClick={(e) => { e.stopPropagation(); setExamToDelete(exam); }} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            ) : (
+                 <EmptyState 
+                    icon={<ClipboardCheckIcon className="w-12 h-12"/>}
+                    title="Sınav Sonucu Bulunamadı"
+                    description="Filtrelerinize uygun bir sınav sonucu bulunamadı veya henüz hiç sonuç eklenmedi."
+                />
+            )}
+
+            {(isModalOpen || examToEdit) && <AddExamModal isOpen={true} onClose={() => { setIsModalOpen(false); setExamToEdit(null); }} examToEdit={examToEdit} studentId={isCoachOrAdmin ? filterStudent === 'all' ? null : filterStudent : currentUser?.id} category={filterCategory} topic={filterTopic} />}
+            {selectedExam && <ExamDetailModal exam={selectedExam} onClose={() => setSelectedExam(null)}/>}
+            {examToDelete && <ConfirmationModal isOpen={true} onClose={() => setExamToDelete(null)} onConfirm={() => { if(examToDelete) deleteExam(examToDelete.id); setExamToDelete(null); }} title="Sınavı Sil" message={`'${examToDelete.title}' sınav sonucunu silmek istediğinizden emin misiniz?`}/>}
+        </div>
+    );
+};
+
 // FIX: Add default export
 export default Exams;
