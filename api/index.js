@@ -1,10 +1,11 @@
 // v5 - Added Gemini proxy endpoint to secure API key.
-const express = require('express');
-const { sql } = require('@vercel/postgres');
-const cors = require('cors');
-const { GoogleGenAI, Type } = require("@google/genai");
+import express from 'express';
+import { sql } from '@vercel/postgres';
+import cors from 'cors';
+import { GoogleGenAI, Type } from "@google/genai";
 
 const app = express();
+const router = express.Router(); // Use a router
 app.use(express.json({ limit: '10mb' }));
 app.use(cors());
 
@@ -183,7 +184,7 @@ const resetAndSeedDatabase = async () => {
 };
 
 
-app.get('/seed', async (req, res) => {
+router.get('/seed', async (req, res) => {
     try {
         const message = await resetAndSeedDatabase();
         res.status(200).send(message);
@@ -193,7 +194,7 @@ app.get('/seed', async (req, res) => {
     }
 });
 
-app.get('/data', async (req, res) => {
+router.get('/data', async (req, res) => {
     try {
         // A simple check to see if the main table exists and has the correct schema.
         await sql`SELECT id, "readBy" FROM messages LIMIT 1`;
@@ -255,7 +256,7 @@ app.get('/data', async (req, res) => {
 });
 
 // LOGIN
-app.post('/login', async (req, res) => {
+router.post('/login', async (req, res) => {
     const { email } = req.body;
     try {
         const { rows } = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()};`;
@@ -274,7 +275,7 @@ app.post('/login', async (req, res) => {
 });
 
 // --- CUSTOM ENDPOINTS ---
-app.post('/conversations/:id/mark-as-read', async (req, res) => {
+router.post('/conversations/:id/mark-as-read', async (req, res) => {
     const { id: conversationId } = req.params;
     const { userId } = req.body;
     try {
@@ -292,7 +293,7 @@ app.post('/conversations/:id/mark-as-read', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/notifications/mark-as-read', async (req, res) => {
+router.post('/notifications/mark-as-read', async (req, res) => {
     const { userId } = req.body;
     try {
         await sql`UPDATE notifications SET "isRead" = true WHERE "userId" = ${userId} AND "isRead" = false`;
@@ -300,7 +301,7 @@ app.post('/notifications/mark-as-read', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/calendarEvents/batch', async (req, res) => {
+router.post('/calendarEvents/batch', async (req, res) => {
     const events = req.body;
     if (!Array.isArray(events) || events.length === 0) return res.status(400).json({ message: 'Invalid body.' });
     try {
@@ -322,7 +323,7 @@ app.post('/calendarEvents/batch', async (req, res) => {
 });
 
 // --- GENERIC CRUD ENDPOINTS ---
-app.post('/:collection', async (req, res) => {
+router.post('/:collection', async (req, res) => {
     const { collection } = req.params;
     const data = req.body;
     try {
@@ -337,7 +338,7 @@ app.post('/:collection', async (req, res) => {
     }
 });
 
-app.put('/:collection/:id', async (req, res) => {
+router.put('/:collection/:id', async (req, res) => {
     const { collection, id } = req.params;
     const data = req.body;
     try {
@@ -351,7 +352,7 @@ app.put('/:collection/:id', async (req, res) => {
     }
 });
 
-app.delete('/:collection', async (req, res) => {
+router.delete('/:collection', async (req, res) => {
     const { collection } = req.params;
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid body, expected array of IDs.' });
@@ -379,7 +380,7 @@ const getSubject = (title) => {
     return 'Diğer';
 };
 
-app.post('/gemini-chat', async (req, res) => {
+router.post('/gemini-chat', async (req, res) => {
     if (!ai) return res.status(500).json({ message: 'Gemini API is not configured.' });
     try {
         const { history, systemInstruction } = req.body;
@@ -395,7 +396,7 @@ app.post('/gemini-chat', async (req, res) => {
     }
 });
 
-app.post('/gemini', async (req, res) => {
+router.post('/gemini', async (req, res) => {
     if (!ai) return res.status(500).json({ message: 'Gemini API is not configured.' });
     
     try {
@@ -567,5 +568,6 @@ app.post('/gemini', async (req, res) => {
     }
 });
 
+app.use('/backend', router);
 
-module.exports = app;
+export default app;
