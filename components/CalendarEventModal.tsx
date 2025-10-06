@@ -23,7 +23,6 @@ const CalendarEventModal = ({ isOpen, onClose, eventDate }: CalendarEventModalPr
 
     const handleSubmit = async () => {
         if (!title || !currentUser) return;
-        // FIX: Add missing 'userId' property.
         await addCalendarEvent({
             userId: currentUser.id,
             title,

@@ -74,7 +74,6 @@ const AkilliPlanlayici = () => {
     };
 
     const handleSavePlan = async () => {
-        // Fix: Add Array.isArray check to ensure 'plan' is an array before using .map
         if (!plan || !Array.isArray(plan) || !currentUser) return;
         const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map(item => ({
             title: item.title,

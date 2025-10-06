@@ -1,3 +1,4 @@
+// v3 - Forcing redeploy to clear potential Vercel cache issues for database schema.
 const express = require('express');
 const { sql } = require('@vercel/postgres');
 const cors = require('cors');
