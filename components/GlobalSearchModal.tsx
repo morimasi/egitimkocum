@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';
-import { UserRole, Assignment, Resource } from '../types';
+import { UserRole } from '../types';
 import {
     SearchIcon,
-    StudentsIcon,
     AssignmentsIcon,
     LibraryIcon,
 } from './Icons';

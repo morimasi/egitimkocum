@@ -273,8 +273,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
         if (!currentUser) return;
-        // FIX: The type annotation `Omit<Message, 'id'>` was incorrect as the object literal includes an 'id'.
-        // The correct type is `Message`.
         const message: Message = { ...messageData, id: uuid(), timestamp: new Date().toISOString(), readBy: [currentUser.id] };
         const added = await apiFetch('messages', { method: 'POST', body: JSON.stringify(message) });
         setMessages(prev => [...prev, added]);

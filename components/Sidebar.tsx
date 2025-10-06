@@ -53,7 +53,7 @@ interface SidebarProps {
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     const { theme, toggleTheme } = useUI();
-    const { currentUser, students, logout, unreadCounts } = useDataContext();
+    const { currentUser, logout, unreadCounts } = useDataContext();
 
     const totalUnreadMessages = useMemo(() => 
         Array.from(unreadCounts.values()).reduce((sum: number, count: number) => sum + count, 0),

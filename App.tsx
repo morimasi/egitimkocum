@@ -75,7 +75,7 @@ const AppSkeleton = () => (
 
 
 const AppContent = () => {
-    const { activePage, setActivePage, startTour } = useUI();
+    const { activePage, startTour } = useUI();
     const { currentUser, isLoading, isDbInitialized } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);

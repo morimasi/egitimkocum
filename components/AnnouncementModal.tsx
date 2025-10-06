@@ -1,6 +1,7 @@
 
 
-import React, { useState } from 'react';
+
+import { useState } from 'react';
 import Modal from './Modal';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';

@@ -1,5 +1,4 @@
-import React from 'react';
-import { SkeletonCard, SkeletonText } from './SkeletonLoader';
+import { SkeletonCard } from './SkeletonLoader';
 
 const PageSkeleton = () => (
     <div className="p-4 md:p-6 lg:p-8 animate-pulse">

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
-import { Page, UserRole, User } from '../types';
+import { Page, UserRole } from '../types';
 import {
-    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, TargetIcon, ClipboardCheckIcon
+    DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon, SettingsIcon, CalendarIcon, ParentIcon, FlameIcon, ClipboardCheckIcon
 } from './Icons';
 
 interface TabItemProps {

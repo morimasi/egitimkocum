@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';

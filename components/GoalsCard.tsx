@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Card from './Card';
 import { useDataContext } from '../contexts/DataContext';
 import { SparklesIcon, CheckIcon } from './Icons';

@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { BotIcon, XIcon, SendIcon } from './Icons';
 import { useDataContext } from '../contexts/DataContext';
 
@@ -32,7 +33,6 @@ const AIChatbot = () => {
         if (!input.trim() || isLoading) return;
 
         const userMessage: Message = { sender: 'user', text: input };
-        const currentInput = input;
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);

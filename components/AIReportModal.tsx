@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
-import { User, Assignment, Exam, Goal } from '../types';
+import { User } from '../types';
 import { useDataContext } from '../contexts/DataContext';
 import { generateComprehensiveStudentReport } from '../services/geminiService';
 import { SkeletonText } from './SkeletonLoader';
-import { BrainCircuitIcon } from './Icons';
 
 interface AIReportModalProps {
     isOpen: boolean;
