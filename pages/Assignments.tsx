@@ -13,7 +13,6 @@ import VideoRecorder from '../components/VideoRecorder';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useDropzone } from 'react-dropzone';
 import { SkeletonText } from '../components/SkeletonLoader';
-import { GoogleGenAI, Chat } from "@google/genai";
 
 
 const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmission }: { 
@@ -25,45 +24,48 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
     const [messages, setMessages] = useState<{ sender: 'user' | 'ai'; text: string }[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const chatRef = useRef<Chat | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const aiRef = useRef<GoogleGenAI | null>(null);
     const { addToast } = useUI();
 
     useEffect(() => {
         if (isOpen) {
-            if (!aiRef.current) {
-                 if (!process.env.API_KEY) {
-                    console.error("API_KEY not set");
-                    setMessages([{ sender: 'ai', text: "Üzgünüm, API anahtarı yapılandırılmamış." }]);
-                    return;
-                }
-                aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            }
-            
-            chatRef.current = aiRef.current.chats.create({
-                model: 'gemini-2.5-flash',
-                config: {
-                    systemInstruction: `Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Bir öğrenciye "${assignment.title}" başlıklı ödevde yardımcı oluyorsun. Ödevin açıklaması: "${assignment.description}". Öğrenci sana bu ödevle ilgili sorular soracak. Ona doğrudan cevapları verme, bunun yerine düşünmesini sağlayacak ipuçları ver, yol göster ve konuyu anlamasına yardımcı ol. Cesaretlendirici ve samimi bir dil kullan.`,
-                },
-            });
             setMessages([{ sender: 'ai', text: "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Sana yardımcı olmak için buradayım!" }]);
         }
-    }, [isOpen, assignment]);
+    }, [isOpen]);
 
      useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
     const handleSendMessage = async () => {
-        if (!input.trim() || isLoading || !chatRef.current) return;
+        if (!input.trim() || isLoading) return;
         const userMessage = { sender: 'user' as const, text: input };
-        setMessages(prev => [...prev, userMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setInput('');
         setIsLoading(true);
+
         try {
-            const response = await chatRef.current.sendMessage({ message: input });
-            setMessages(prev => [...prev, { sender: 'ai', text: response.text }]);
+            const history = newMessages.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            }));
+
+            const response = await fetch('/api/gemini-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    history,
+                    systemInstruction: `Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Bir öğrenciye "${assignment.title}" başlıklı ödevde yardımcı oluyorsun. Ödevin açıklaması: "${assignment.description}". Öğrenci sana bu ödevle ilgili sorular soracak. Ona doğrudan cevapları verme, bunun yerine düşünmesini sağlayacak ipuçları ver, yol göster ve konuyu anlamasına yardımcı ol. Cesaretlendirici ve samimi bir dil kullan.`
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("API isteği başarısız oldu");
+            }
+            
+            const data = await response.json();
+            setMessages(prev => [...prev, { sender: 'ai', text: data.text }]);
         } catch (error) {
             setMessages(prev => [...prev, { sender: 'ai', text: "Üzgünüm, bir hata oluştu." }]);
         } finally {
