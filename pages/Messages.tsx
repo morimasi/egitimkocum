@@ -549,7 +549,8 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
         if (!files || files.length === 0 || !currentUser) return;
         for (const file of files) {
             try {
-                const url = await uploadFile(file, `chat_files/${currentUser.id}/${file.name}`);
+                // FIX: Removed the second argument from the uploadFile call
+                const url = await uploadFile(file);
                 const messageType = file.type.startsWith('image/') ? 'file' : 'file'; 
                 handleSendMessage(messageType, { fileUrl: url, fileName: file.name, fileType: file.type, imageUrl: file.type.startsWith('image/') ? url : undefined });
             } catch (error) { addToast("Dosya yüklenirken hata oluştu.", "error"); }

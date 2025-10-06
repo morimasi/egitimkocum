@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, AssignmentStatus, User, Assignment } from '../types';
+import { UserRole, AssignmentStatus, User } from '../types';
 import Card from '../components/Card';
 import { useUI } from '../contexts/UIContext';
 import { AssignmentsIcon, CheckCircleIcon, StudentsIcon, AlertTriangleIcon, SparklesIcon, MegaphoneIcon, MessagesIcon, PlusCircleIcon, LibraryIcon, TargetIcon, TrendingUpIcon, XIcon, PieChartIcon } from '../components/Icons';
@@ -480,8 +480,9 @@ const CoachDashboard = () => {
         ];
     }, [assignments]);
     
-     const handleBarClick = (data: { activePayload?: { payload: BarClickPayload }[] }) => {
-        const studentId = data?.activePayload?.[0]?.payload?.id;
+    // FIX: Changed handler to correctly interpret the 'data' parameter from recharts Bar onClick.
+    const handleBarClick = (data: any) => {
+        const studentId = data?.id;
         if (studentId) {
             setActivePage('students', { studentId });
         }

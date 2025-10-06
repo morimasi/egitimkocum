@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useDataContext } from '../contexts/DataContext';
 import { generateWeeklySummary } from '../services/geminiService';
 import { SparklesIcon } from './Icons';
-import { SkeletonCard, SkeletonText } from './SkeletonLoader';
+import { SkeletonText } from './SkeletonLoader';
 
 const ReportSkeleton = () => (
     <div className="space-y-4">

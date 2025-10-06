@@ -62,7 +62,8 @@ const AddUserForm = ({ onClose }: { onClose: () => void }) => {
         try {
             let profilePictureUrl = `https://i.pravatar.cc/150?u=${email}`;
             if (profilePictureFile) {
-                profilePictureUrl = await uploadFile(profilePictureFile, `profile-pictures/${Date.now()}-${profilePictureFile.name}`);
+                // FIX: Removed the second argument from the uploadFile call
+                profilePictureUrl = await uploadFile(profilePictureFile);
             }
             
             const newUser: Omit<User, 'id'> = {

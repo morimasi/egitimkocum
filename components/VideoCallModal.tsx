@@ -20,7 +20,7 @@ const VideoCallModal = () => {
     const participants = isGroupCall
         ? users.filter(u => callConversation.participantIds.includes(u.id))
         : [callContact, currentUser].filter((u): u is User => !!u);
-    const callTitle = isGroupCall ? callConversation.groupName : callContact?.name;
+    const callTitle = (isGroupCall ? callConversation.groupName : callContact?.name) ?? undefined;
     const activeSpeaker = users.find(u => u.id === activeSpeakerId);
     
     useEffect(() => {

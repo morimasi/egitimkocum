@@ -1,9 +1,8 @@
-
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, UserRole, AssignmentStatus, CalendarEvent } from '../types';
 import Card from '../components/Card';
-import { CalendarIcon as PageIcon, TrashIcon } from '../components/Icons';
+import { TrashIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import CalendarEventModal from '../components/CalendarEventModal';
 

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, User, BadgeID } from '../types';
@@ -28,7 +26,8 @@ const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }
         if (file) {
             setIsUploading(true);
             try {
-                const newProfilePictureUrl = await uploadFile(file, `profile-pictures/${user.id}`);
+                // FIX: Removed the second argument from the uploadFile call
+                const newProfilePictureUrl = await uploadFile(file);
                 await updateUser({ ...user, profilePicture: newProfilePictureUrl });
                 addToast("Profil fotoğrafı güncellendi.", "success");
             } catch (error) {

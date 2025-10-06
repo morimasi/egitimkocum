@@ -1,6 +1,4 @@
-
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
 import { useUI } from '../contexts/UIContext';

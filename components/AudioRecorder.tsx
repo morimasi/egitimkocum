@@ -54,7 +54,8 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false, uploadPath }: A
                 if (onSave && currentUser) {
                     setIsUploading(true);
                     try {
-                        const uploadedUrl = await uploadFile(new File([blob], "audio.webm"), uploadPath || `audio-feedback/${currentUser.id}`);
+                        // FIX: Removed the second argument from the uploadFile call
+                        const uploadedUrl = await uploadFile(new File([blob], "audio.webm"));
                         setAudioURL(uploadedUrl);
                         onSave(uploadedUrl);
                     } catch (error) {

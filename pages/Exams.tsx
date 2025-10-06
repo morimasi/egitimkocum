@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Exam, ExamSubjectPerformance, UserRole } from '../types';
+import { Exam, ExamSubjectPerformance, UserRole } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { ClipboardCheckIcon, PlusCircleIcon, EditIcon, TrashIcon, SparklesIcon, XIcon } from '../components/Icons';
+import { ClipboardCheckIcon, PlusCircleIcon, SparklesIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { generateExamAnalysis, generateExamDetails } from '../services/geminiService';
@@ -20,7 +20,7 @@ const AddExamModal = ({ isOpen, onClose, examToEdit, studentId: preselectedStude
     category?: string | null,
     topic?: string | null
 }) => {
-    const { addExam, updateExam, students, currentUser } = useDataContext();
+    const { addExam, updateExam, students } = useDataContext();
     const { addToast } = useUI();
 
     const [studentId, setStudentId] = useState(examToEdit?.studentId || preselectedStudentId || '');
@@ -31,10 +31,10 @@ const AddExamModal = ({ isOpen, onClose, examToEdit, studentId: preselectedStude
     const [correct, setCorrect] = useState(examToEdit?.correct.toString() || '');
     const [incorrect, setIncorrect] = useState(examToEdit?.incorrect.toString() || '');
     const [empty, setEmpty] = useState(examToEdit?.empty.toString() || '');
-    const [subjects, setSubjects] = useState<Partial<ExamSubjectPerformance>[]>(examToEdit?.subjects || [{ name: topic || 'Genel' }]);
+    const [subjects] = useState<Partial<ExamSubjectPerformance>[]>(examToEdit?.subjects || [{ name: topic || 'Genel' }]);
     const [examCategory, setExamCategory] = useState(examToEdit?.category || category || '');
     const [examTopic, setExamTopic] = useState(examToEdit?.topic || topic || '');
-    const [examType, setExamType] = useState<'deneme' | 'konu-tarama'>(examToEdit?.type || (category === 'Genel Deneme Sınavları' ? 'deneme' : 'konu-tarama'));
+    const [examType] = useState<'deneme' | 'konu-tarama'>(examToEdit?.type || (category === 'Genel Deneme Sınavları' ? 'deneme' : 'konu-tarama'));
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleGenerateDetails = async () => {
@@ -351,54 +351,6 @@ const Exams = () => {
                                         <td className="px-4 py-3 text-center font-semibold whitespace-nowrap">
                                             <span className="text-green-500">{exam.correct}D</span> / <span className="text-red-500">{exam.incorrect}Y</span> / <span className="text-blue-500 font-bold">{exam.netScore.toFixed(2)}N</span>
                                         </td>
-                                        {isCoachOrAdmin && (
-                                            <td className="px-4 py-3 text-right space-x-2">
-                                                <button onClick={(e) => { e.stopPropagation(); setExamToEdit(exam); setIsModalOpen(true); }} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
-                                                <button onClick={(e) => { e.stopPropagation(); setExamToDelete(exam); }} className="font-medium text-red-600 dark:text-red-500 hover:underline">Sil</button>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {studentIdsWithExams.map(studentId => {
-                        const studentInfo = studentMap.get(studentId);
-                        const studentExams = examsByStudent.get(studentId) || [];
-                        if (!studentInfo) return null;
-                        return (
-                            <Card key={studentId} className="p-0 flex flex-col">
-                                <div className="p-4 border-b dark:border-slate-700 flex items-center gap-3">
-                                    <img src={studentInfo.profilePicture} alt={studentInfo.name} className="w-10 h-10 rounded-full" />
-                                    <div>
-                                        <h3 className="font-semibold">{studentInfo.name}</h3>
-                                        <p className="text-sm text-slate-500">Toplam Sınav: {studentExams.length}</p>
-                                    </div>
-                                </div>
-                                <ul className="p-2 max-h-48 overflow-y-auto flex-grow">
-                                    {studentExams.map(exam => (
-                                        <li key={exam.id} onClick={() => setSelectedExam(exam)} className="flex justify-between items-center p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
-                                            <span className="text-sm truncate pr-2">{exam.title}</span>
-                                            <span className="text-xs font-semibold flex-shrink-0 whitespace-nowrap">
-                                                <span className="text-green-500">{exam.correct}D</span> / <span className="text-red-500">{exam.incorrect}Y</span> / <span className="text-blue-500 font-bold">{exam.netScore.toFixed(2)}N</span>
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Card>
-                        );
-                    })}
-                </div>
-            )}
-
-            {isModalOpen && <AddExamModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} examToEdit={examToEdit} studentId={filterStudent !== 'all' ? filterStudent : undefined} category={filterCategory} topic={filterTopic} />}
-            {selectedExam && <ExamDetailModal exam={selectedExam} onClose={() => setSelectedExam(null)} />}
-            {examToDelete && <ConfirmationModal isOpen={true} onClose={() => setExamToDelete(null)} onConfirm={() => { if(examToDelete) deleteExam(examToDelete.id); setExamToDelete(null); }} title="Sınavı Sil" message={`'${examToDelete.title}' sınavını silmek istediğinizden emin misiniz?`}/>}
-        </div>
-    );
-};
-
+                                        {
+// FIX: Add default export
 export default Exams;

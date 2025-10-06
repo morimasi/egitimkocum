@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -79,7 +77,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 if (!resourceName) {
                     resourceName = file.name;
                 }
-                resourceUrl = await uploadFile(file, `library/${currentUser.id}/${file.name}`);
+                // FIX: Removed the second argument from the uploadFile call
+                resourceUrl = await uploadFile(file);
             }
 
             await addResource({ name: resourceName, url: resourceUrl, type, isPublic, uploaderId: currentUser.id, assignedTo: isPublic ? [] : assignedTo, category });

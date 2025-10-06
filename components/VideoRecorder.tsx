@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MicIcon, VideoIcon, StopIcon, PlayIcon, PauseIcon, XIcon } from './Icons';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
@@ -95,7 +94,7 @@ const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPa
         try {
             const file = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], "video.webm", { type: "video/webm" });
             const finalUploadPath = uploadPath ? `${uploadPath}/${Date.now()}.webm` : `video-uploads/${currentUser.id}/${Date.now()}.webm`;
-            const uploadedUrl = await uploadFile(file, finalUploadPath);
+            const uploadedUrl = await uploadFile(file);
             onSave?.(uploadedUrl);
             setVideoSrc(uploadedUrl); // Update src to the persistent URL
             addToast("Video başarıyla yüklendi.", "success");

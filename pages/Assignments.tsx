@@ -1,10 +1,9 @@
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -568,7 +567,7 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
             };
     
             if (submissionFile) {
-                const fileUrl = await uploadFile(submissionFile, `submissions/${currentUser.id}`);
+                const fileUrl = await uploadFile(submissionFile);
                 updatedAssignment.fileUrl = fileUrl;
                 updatedAssignment.fileName = submissionFile.name;
             }

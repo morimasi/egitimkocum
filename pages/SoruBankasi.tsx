@@ -584,7 +584,8 @@ const QuestionFormModal = ({ isOpen, onClose, questionToEdit }: { isOpen: boolea
         }
         setIsUploading(true);
         try {
-            const url = await uploadFile(file, `questions/${Date.now()}_${file.name}`);
+            // FIX: Removed the second argument from the uploadFile call
+            const url = await uploadFile(file);
             if (mediaType === 'image') setQuestionData(prev => ({ ...prev, imageUrl: url, videoUrl: undefined, audioUrl: undefined, documentUrl: undefined }));
             if (mediaType === 'document') setQuestionData(prev => ({ ...prev, documentUrl: url, documentName: file.name, imageUrl: undefined, videoUrl: undefined, audioUrl: undefined }));
         } catch (e) {

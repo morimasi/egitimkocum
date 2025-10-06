@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useState } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useState } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, Badge, CalendarEvent, Exam, Question } from '../types';
 import { useUI } from './UIContext';
 
@@ -76,7 +76,7 @@ interface DataContextType {
     addTemplate: (templateData: Omit<AssignmentTemplate, 'id'>) => Promise<void>;
     updateTemplate: (template: AssignmentTemplate) => Promise<void>;
     deleteTemplate: (templateId: string) => Promise<void>;
-    uploadFile: (file: File, path: string) => Promise<string>;
+    uploadFile: (file: File) => Promise<string>;
     updateStudentNotes: (studentId: string, notes: string) => Promise<void>;
     awardXp: (amount: number, reason: string) => Promise<void>;
     startGroupChat: (participantIds: string[], groupName: string) => Promise<string | undefined>;
@@ -158,7 +158,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         initialize();
     }, [addToast]);
     
-    const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
+    const uploadFile = useCallback(async (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -195,7 +195,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const id = uuid();
         let profilePicture = `https://i.pravatar.cc/150?u=${email}`;
         if (profilePictureFile) {
-            profilePicture = await uploadFile(profilePictureFile, `profile-pictures/${id}`);
+            profilePicture = await uploadFile(profilePictureFile);
         }
         const user = await apiFetch('register', {
             method: 'POST',
@@ -356,12 +356,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [currentUser, messages]);
 
     // Add generic update/delete functions that call API and update state
-    const updateMessage = useCallback(async (msg) => {
+    const updateMessage = useCallback(async (msg: Message) => {
         const updated = await apiFetch(`messages/${msg.id}`, { method: 'PUT', body: JSON.stringify(msg) });
         setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
     }, []);
 
-    const updateConversation = useCallback(async (conv) => {
+    const updateConversation = useCallback(async (conv: Conversation) => {
         const updated = await apiFetch(`conversations/${conv.id}`, { method: 'PUT', body: JSON.stringify(conv) });
         setConversations(prev => prev.map(c => c.id === updated.id ? updated : c));
     }, []);

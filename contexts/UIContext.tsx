@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Page, ToastMessage, ToastType, User, AssignmentStatus, Conversation } from '../types';
 
 type Theme = 'light' | 'dark';
