@@ -1,4 +1,4 @@
-// v3 - Forcing redeploy to clear potential Vercel cache issues for database schema.
+// v4 - Added self-healing mechanism to automatically fix schema on startup.
 const express = require('express');
 const { sql } = require('@vercel/postgres');
 const cors = require('cors');
@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const ensureTablesExist = async () => {
+const createTables = async () => {
     await sql`
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(255) PRIMARY KEY,
@@ -61,6 +61,7 @@ const ensureTablesExist = async () => {
         );
     `;
 
+    // Corrected schema with quoted "readBy"
     await sql`
         CREATE TABLE IF NOT EXISTS messages (
             id VARCHAR(255) PRIMARY KEY,
@@ -105,119 +106,101 @@ const ensureTablesExist = async () => {
     await sql`CREATE TABLE IF NOT EXISTS questions (id VARCHAR(255) PRIMARY KEY, "creatorId" VARCHAR(255), category VARCHAR(50), topic VARCHAR(255), "questionText" TEXT, options TEXT, "correctOptionIndex" INT, difficulty VARCHAR(50), explanation TEXT, "imageUrl" TEXT, "videoUrl" TEXT, "audioUrl" TEXT, "documentUrl" TEXT, "documentName" VARCHAR(255))`;
 };
 
+const resetAndSeedDatabase = async () => {
+    // Drop tables first to ensure a clean schema
+    await sql`DROP TABLE IF EXISTS questions CASCADE;`;
+    await sql`DROP TABLE IF EXISTS exams CASCADE;`;
+    await sql`DROP TABLE IF EXISTS calendarEvents CASCADE;`;
+    await sql`DROP TABLE IF EXISTS badges CASCADE;`;
+    await sql`DROP TABLE IF EXISTS goals CASCADE;`;
+    await sql`DROP TABLE IF EXISTS resources CASCADE;`;
+    await sql`DROP TABLE IF EXISTS templates CASCADE;`;
+    await sql`DROP TABLE IF EXISTS notifications CASCADE;`;
+    await sql`DROP TABLE IF EXISTS conversations CASCADE;`;
+    await sql`DROP TABLE IF EXISTS messages CASCADE;`;
+    await sql`DROP TABLE IF EXISTS assignments CASCADE;`;
+    await sql`DROP TABLE IF EXISTS users CASCADE;`;
 
-// Helper to run migrations/seeding
+    await createTables();
+
+    // Seed data
+    await sql`
+        INSERT INTO users (id, name, email, role, "profilePicture", "isOnline", "assignedCoachId", "gradeLevel", "academicTrack", xp, streak, "parentIds", "childIds") VALUES
+        ('user_admin', 'Mahmut Hoca', 'admin@egitim.com', 'superadmin', 'https://i.pravatar.cc/150?u=admin@egitim.com', true, null, null, null, 0, 0, null, null),
+        ('user_coach_1', 'Ahmet Yılmaz', 'ahmet.yilmaz@egitim.com', 'coach', 'https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com', true, null, null, null, 0, 0, null, null),
+        ('user_student_1', 'Leyla Kaya', 'leyla.kaya@mail.com', 'student', 'https://i.pravatar.cc/150?u=leyla.kaya@mail.com', true, 'user_coach_1', '12', 'sayisal', 1250, 5, 'user_parent_1', null),
+        ('user_student_2', 'Mehmet Öztürk', 'mehmet.ozturk@mail.com', 'student', 'https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com', true, 'user_coach_1', '11', 'esit-agirlik', 800, 2, null, null),
+        ('user_student_3', 'Ali Veli', 'ali.veli@mail.com', 'student', 'https://i.pravatar.cc/150?u=ali.veli@mail.com', false, 'user_coach_1', '12', 'sayisal', 1500, 0, null, null),
+        ('user_coach_2', 'Zeynep Çelik', 'zeynep.celik@egitim.com', 'coach', 'https://i.pravatar.cc/150?u=zeynep.celik@egitim.com', true, null, null, null, 0, 0, null, null),
+        ('user_student_4', 'Elif Naz', 'elif.naz@mail.com', 'student', 'https://i.pravatar.cc/150?u=elif.naz@mail.com', true, 'user_coach_2', '10', 'dil', 450, 0, null, null),
+        ('user_parent_1', 'Sema Kaya', 'sema.kaya@mail.com', 'parent', 'https://i.pravatar.cc/150?u=sema.kaya@mail.com', true, null, null, null, 0, 0, null, 'user_student_1');
+    `;
+    await sql`
+        INSERT INTO assignments (id, title, description, "dueDate", status, "studentId", "coachId", "submissionType", grade, feedback, "submittedAt", checklist) VALUES
+        ('assign_1', 'Matematik: Türev Alma Kuralları Testi', 'Türev alma kurallarını içeren 20 soruluk testi çözün ve sonuçlarınızı yükleyin. Özellikle çarpım ve bölüm türevine odaklanın.', ${new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()}, 'pending', 'user_student_1', 'user_coach_1', 'file', null, '', null, '[{"text": "Konu tekrarı yapıldı."}, {"text": "20 soru çözüldü."}, {"text": "Yanlışlar kontrol edildi."}]'),
+        ('assign_2', 'Türkçe: Paragraf Soru Çözümü', 'Verilen kaynaktan 50 paragraf sorusu çözülecek.', ${new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()}, 'graded', 'user_student_1', 'user_coach_1', 'completed', 95, 'Harika bir iş çıkardın Leyla! Paragraf anlama hızın ve doğruluğun gözle görülür şekilde artmış. Bu tempoyu koru!', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, '[]'),
+        ('assign_3', 'Fizik: Vektörler Konu Özeti', 'Fizik dersi vektörler konusunun özetini çıkarıp metin olarak gönderin. Bileşke vektör bulma yöntemlerine özellikle değinin.', ${new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()}, 'pending', 'user_student_2', 'user_coach_1', 'text', null, '', null, '[]'),
+        ('assign_4', 'Kimya: Mol Kavramı Soru Bankası', 'Soru bankasındaki mol kavramı ile ilgili ilk 3 testi bitir.', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, 'submitted', 'user_student_2', 'user_coach_1', 'completed', null, '', ${new Date().toISOString()}, '[]'),
+        ('assign_5', 'İngilizce: Kelime Çalışması', 'Verilen 20 kelimeyi ezberle ve her biriyle birer cümle kur.', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, 'submitted', 'user_student_4', 'user_coach_2', 'text', null, '', ${new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()}, '[]');
+    `;
+    await sql`
+        INSERT INTO conversations (id, "participantIds", "isGroup", "groupName", "groupImage", "adminId") VALUES
+        ('conv-1', 'user_coach_1,user_student_1', false, null, null, null),
+        ('conv-2', 'user_coach_1,user_student_2', false, null, null, null),
+        ('conv-3', 'user_coach_1,user_student_3', false, null, null, null),
+        ('conv-4', 'user_coach_2,user_student_4', false, null, null, null),
+        ('conv-announcements', 'user_admin,user_coach_1,user_coach_2,user_student_1,user_student_2,user_student_3,user_student_4', true, '📢 Duyurular', 'https://i.pravatar.cc/150?u=announcements', 'user_admin'),
+        ('conv-group-1', 'user_coach_1,user_student_1,user_student_3', true, 'Sayısal Çalışma Grubu', 'https://i.pravatar.cc/150?u=sayisal', 'user_coach_1'),
+        ('conv-teachers-lounge', 'user_admin,user_coach_1,user_coach_2', true, 'Öğretmenler Odası', 'https://i.pravatar.cc/150?u=teachers', 'user_admin');
+    `;
+    await sql`
+        INSERT INTO messages (id, "senderId", "conversationId", text, timestamp, type, "readBy") VALUES
+        ('msg-1', 'user_coach_1', 'conv-1', 'Merhaba Leyla, haftalık programını gözden geçirdim. Matematik netlerin yükselişte, tebrikler!', ${new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}, 'text', '["user_coach_1"]'),
+        ('msg-2', 'user_student_1', 'conv-1', 'Teşekkür ederim öğretmenim! Türev testinde biraz zorlandım ama halledeceğim.', ${new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()}, 'text', '["user_student_1"]'),
+        ('msg-3', 'user_admin', 'conv-announcements', 'Arkadaşlar, yarınki deneme sınavı için son tekrar yapmayı unutmayın! Başarılar dilerim.', ${new Date().toISOString()}, 'announcement', '["user_admin"]');
+    `;
+    await sql`
+        INSERT INTO badges (id, name, description) VALUES
+        ('first-assignment', 'İlk Adım', 'İlk ödevini başarıyla tamamladın!'),
+        ('high-achiever', 'Yüksek Başarı', 'Not ortalaman 90''ın üzerinde!'),
+        ('perfect-score', 'Mükemmel Skor', 'Bir ödevden 100 tam puan aldın!'),
+        ('goal-getter', 'Hedef Avcısı', 'Haftalık hedeflerinin hepsine ulaştın!'),
+        ('streak-starter', 'Seri Başladı', '3 gün üst üste ödev teslim ettin.'),
+        ('streak-master', 'Seri Ustası', '7 gün üst üste ödev teslim ettin.'),
+        ('on-time-submissions', 'Dakik Oyuncu', '5 ödevi zamanında teslim ettin.');
+    `;
+    return 'Database reset and seeded successfully.';
+};
+
+
 app.get('/seed', async (req, res) => {
     try {
-        // Drop tables first to ensure a clean schema on each seed
-        await sql`DROP TABLE IF EXISTS questions CASCADE;`;
-        await sql`DROP TABLE IF EXISTS exams CASCADE;`;
-        await sql`DROP TABLE IF EXISTS calendarEvents CASCADE;`;
-        await sql`DROP TABLE IF EXISTS badges CASCADE;`;
-        await sql`DROP TABLE IF EXISTS goals CASCADE;`;
-        await sql`DROP TABLE IF EXISTS resources CASCADE;`;
-        await sql`DROP TABLE IF EXISTS templates CASCADE;`;
-        await sql`DROP TABLE IF EXISTS notifications CASCADE;`;
-        await sql`DROP TABLE IF EXISTS conversations CASCADE;`;
-        await sql`DROP TABLE IF EXISTS messages CASCADE;`;
-        await sql`DROP TABLE IF EXISTS assignments CASCADE;`;
-        await sql`DROP TABLE IF EXISTS users CASCADE;`;
-
-        await ensureTablesExist();
-
-        let messages = [];
-
-        const { rows: users } = await sql`SELECT * FROM users;`;
-        if (users.length === 0) {
-            await sql`
-                INSERT INTO users (id, name, email, role, "profilePicture", "isOnline", "assignedCoachId", "gradeLevel", "academicTrack", xp, streak, "parentIds", "childIds") VALUES
-                ('user_admin', 'Mahmut Hoca', 'admin@egitim.com', 'superadmin', 'https://i.pravatar.cc/150?u=admin@egitim.com', true, null, null, null, 0, 0, null, null),
-                ('user_coach_1', 'Ahmet Yılmaz', 'ahmet.yilmaz@egitim.com', 'coach', 'https://i.pravatar.cc/150?u=ahmet.yilmaz@egitim.com', true, null, null, null, 0, 0, null, null),
-                ('user_student_1', 'Leyla Kaya', 'leyla.kaya@mail.com', 'student', 'https://i.pravatar.cc/150?u=leyla.kaya@mail.com', true, 'user_coach_1', '12', 'sayisal', 1250, 5, 'user_parent_1', null),
-                ('user_student_2', 'Mehmet Öztürk', 'mehmet.ozturk@mail.com', 'student', 'https://i.pravatar.cc/150?u=mehmet.ozturk@mail.com', true, 'user_coach_1', '11', 'esit-agirlik', 800, 2, null, null),
-                ('user_student_3', 'Ali Veli', 'ali.veli@mail.com', 'student', 'https://i.pravatar.cc/150?u=ali.veli@mail.com', false, 'user_coach_1', '12', 'sayisal', 1500, 0, null, null),
-                ('user_coach_2', 'Zeynep Çelik', 'zeynep.celik@egitim.com', 'coach', 'https://i.pravatar.cc/150?u=zeynep.celik@egitim.com', true, null, null, null, 0, 0, null, null),
-                ('user_student_4', 'Elif Naz', 'elif.naz@mail.com', 'student', 'https://i.pravatar.cc/150?u=elif.naz@mail.com', true, 'user_coach_2', '10', 'dil', 450, 0, null, null),
-                ('user_parent_1', 'Sema Kaya', 'sema.kaya@mail.com', 'parent', 'https://i.pravatar.cc/150?u=sema.kaya@mail.com', true, null, null, null, 0, 0, null, 'user_student_1');
-            `;
-            messages.push('Users seeded.');
-        } else {
-            messages.push('Users table already has data.');
-        }
-
-        const { rows: assignments } = await sql`SELECT * FROM assignments;`;
-        if (assignments.length === 0) {
-             await sql`
-                INSERT INTO assignments (id, title, description, "dueDate", status, "studentId", "coachId", "submissionType", grade, feedback, "submittedAt", checklist) VALUES
-                ('assign_1', 'Matematik: Türev Alma Kuralları Testi', 'Türev alma kurallarını içeren 20 soruluk testi çözün ve sonuçlarınızı yükleyin. Özellikle çarpım ve bölüm türevine odaklanın.', ${new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()}, 'pending', 'user_student_1', 'user_coach_1', 'file', null, '', null, '[{"text": "Konu tekrarı yapıldı."}, {"text": "20 soru çözüldü."}, {"text": "Yanlışlar kontrol edildi."}]'),
-                ('assign_2', 'Türkçe: Paragraf Soru Çözümü', 'Verilen kaynaktan 50 paragraf sorusu çözülecek.', ${new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()}, 'graded', 'user_student_1', 'user_coach_1', 'completed', 95, 'Harika bir iş çıkardın Leyla! Paragraf anlama hızın ve doğruluğun gözle görülür şekilde artmış. Bu tempoyu koru!', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, '[]'),
-                ('assign_3', 'Fizik: Vektörler Konu Özeti', 'Fizik dersi vektörler konusunun özetini çıkarıp metin olarak gönderin. Bileşke vektör bulma yöntemlerine özellikle değinin.', ${new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()}, 'pending', 'user_student_2', 'user_coach_1', 'text', null, '', null, '[]'),
-                ('assign_4', 'Kimya: Mol Kavramı Soru Bankası', 'Soru bankasındaki mol kavramı ile ilgili ilk 3 testi bitir.', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, 'submitted', 'user_student_2', 'user_coach_1', 'completed', null, '', ${new Date().toISOString()}, '[]'),
-                ('assign_5', 'İngilizce: Kelime Çalışması', 'Verilen 20 kelimeyi ezberle ve her biriyle birer cümle kur.', ${new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}, 'submitted', 'user_student_4', 'user_coach_2', 'text', null, '', ${new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()}, '[]');
-            `;
-            messages.push('Assignments seeded.');
-        }
-
-        const { rows: conversations } = await sql`SELECT * FROM conversations;`;
-        if (conversations.length === 0) {
-            await sql`
-                INSERT INTO conversations (id, "participantIds", "isGroup", "groupName", "groupImage", "adminId") VALUES
-                ('conv-1', 'user_coach_1,user_student_1', false, null, null, null),
-                ('conv-2', 'user_coach_1,user_student_2', false, null, null, null),
-                ('conv-3', 'user_coach_1,user_student_3', false, null, null, null),
-                ('conv-4', 'user_coach_2,user_student_4', false, null, null, null),
-                ('conv-announcements', 'user_admin,user_coach_1,user_coach_2,user_student_1,user_student_2,user_student_3,user_student_4', true, '📢 Duyurular', 'https://i.pravatar.cc/150?u=announcements', 'user_admin'),
-                ('conv-group-1', 'user_coach_1,user_student_1,user_student_3', true, 'Sayısal Çalışma Grubu', 'https://i.pravatar.cc/150?u=sayisal', 'user_coach_1'),
-                ('conv-teachers-lounge', 'user_admin,user_coach_1,user_coach_2', true, 'Öğretmenler Odası', 'https://i.pravatar.cc/150?u=teachers', 'user_admin');
-            `;
-            messages.push('Conversations seeded.');
-        } else {
-             messages.push('Conversations table already has data.');
-        }
-
-        const { rows: dbMessages } = await sql`SELECT * FROM messages;`;
-        if (dbMessages.length === 0) {
-            await sql`
-                INSERT INTO messages (id, "senderId", "conversationId", text, timestamp, type, "readBy") VALUES
-                ('msg-1', 'user_coach_1', 'conv-1', 'Merhaba Leyla, haftalık programını gözden geçirdim. Matematik netlerin yükselişte, tebrikler!', ${new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()}, 'text', '["user_coach_1"]'),
-                ('msg-2', 'user_student_1', 'conv-1', 'Teşekkür ederim öğretmenim! Türev testinde biraz zorlandım ama halledeceğim.', ${new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()}, 'text', '["user_student_1"]'),
-                ('msg-3', 'user_admin', 'conv-announcements', 'Arkadaşlar, yarınki deneme sınavı için son tekrar yapmayı unutmayın! Başarılar dilerim.', ${new Date().toISOString()}, 'announcement', '["user_admin"]');
-            `;
-            messages.push('Messages seeded.');
-        } else {
-            messages.push('Messages table already has data.');
-        }
-
-        const { rows: badges } = await sql`SELECT * FROM badges;`;
-        if (badges.length === 0) {
-            await sql`
-                INSERT INTO badges (id, name, description) VALUES
-                ('first-assignment', 'İlk Adım', 'İlk ödevini başarıyla tamamladın!'),
-                ('high-achiever', 'Yüksek Başarı', 'Not ortalaman 90''ın üzerinde!'),
-                ('perfect-score', 'Mükemmel Skor', 'Bir ödevden 100 tam puan aldın!'),
-                ('goal-getter', 'Hedef Avcısı', 'Haftalık hedeflerinin hepsine ulaştın!'),
-                ('streak-starter', 'Seri Başladı', '3 gün üst üste ödev teslim ettin.'),
-                ('streak-master', 'Seri Ustası', '7 gün üst üste ödev teslim ettin.'),
-                ('on-time-submissions', 'Dakik Oyuncu', '5 ödevi zamanında teslim ettin.');
-            `;
-            messages.push('Badges seeded.');
-        } else {
-            messages.push('Badges table already has data.');
-        }
-        
-        res.status(200).send(messages.join(' '));
-
+        const message = await resetAndSeedDatabase();
+        res.status(200).send(message);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
 
-
 app.get('/data', async (req, res) => {
     try {
-        await ensureTablesExist();
-
+        // Self-healing mechanism
+        try {
+            // Check if the problematic column exists. This is a lightweight query.
+            await sql`SELECT "readBy" FROM messages LIMIT 1;`;
+        } catch (error) {
+            // If the query fails with the specific error, the schema is wrong.
+            if (error.message.includes('column "readBy" of relation "messages" does not exist')) {
+                console.warn('Schema error detected ("readBy" column missing). Automatically resetting and seeding database.');
+                await resetAndSeedDatabase();
+            } else {
+                // If it's another error, re-throw it to be caught by the outer block.
+                throw error;
+            }
+        }
+        
+        // Fetch all data
         const { rows: users } = await sql`SELECT * FROM users;`;
         const { rows: assignments } = await sql`SELECT * FROM assignments;`;
         const { rows: messages } = await sql`SELECT * FROM messages;`;
