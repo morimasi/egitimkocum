@@ -770,6 +770,21 @@ export default function Messages() {
         [conversations, selectedConversationId]
     );
 
+    // New state for animation handling
+    const [renderedConversation, setRenderedConversation] = useState(selectedConversation);
+
+    useEffect(() => {
+        if (selectedConversation) {
+            setRenderedConversation(selectedConversation);
+        } else {
+            // Wait for the slide-out animation to finish before removing the component from the DOM
+            const timer = setTimeout(() => {
+                setRenderedConversation(null);
+            }, 300); // This duration should match the transition duration
+            return () => clearTimeout(timer);
+        }
+    }, [selectedConversation]);
+
     const handleSelectConversation = useCallback((id: string) => {
         setSelectedConversationId(id);
     }, []);
@@ -779,8 +794,14 @@ export default function Messages() {
     };
     
     return (
-        <div className="flex h-[calc(100vh-128px)] lg:h-[calc(100vh-96px)] bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className={`w-full lg:w-1/3 xl:w-1/4 border-r dark:border-gray-700 flex-col ${isMobileView && selectedConversation ? 'hidden' : 'flex'}`}>
+        <div className="relative h-[calc(100vh-128px)] lg:h-[calc(100vh-96px)] bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden lg:flex">
+            {/* Contact List Wrapper */}
+            <div className={`
+                w-full lg:w-1/3 xl:w-1/4 border-r dark:border-gray-700
+                transition-transform duration-300 ease-in-out
+                ${isMobileView ? 'absolute top-0 left-0 h-full w-full z-10' : 'lg:relative lg:flex-shrink-0'}
+                ${isMobileView && selectedConversation ? '-translate-x-full' : 'translate-x-0'}
+            `}>
                 <ContactList 
                     selectedConversationId={selectedConversationId} 
                     onSelectConversation={handleSelectConversation}
@@ -788,11 +809,17 @@ export default function Messages() {
                 />
             </div>
 
-            <div className={`w-full lg:w-2/3 xl:w-3/4 flex-col ${isMobileView && !selectedConversation ? 'hidden' : 'flex'}`}>
-                {selectedConversation ? (
-                    <ChatWindow conversation={selectedConversation} onBack={handleBack}/>
+            {/* Chat Window Wrapper */}
+            <div className={`
+                w-full lg:w-2/3 xl:w-3/4
+                transition-transform duration-300 ease-in-out
+                ${isMobileView ? 'absolute top-0 left-0 h-full w-full' : 'relative'}
+                ${isMobileView && !selectedConversation ? 'translate-x-full' : 'translate-x-0'}
+            `}>
+                {renderedConversation ? (
+                    <ChatWindow conversation={renderedConversation} onBack={handleBack}/>
                 ) : (
-                    <div className="h-full flex items-center justify-center">
+                    <div className="h-full items-center justify-center hidden lg:flex">
                         <EmptyState 
                             icon={<MessagesIcon className="w-12 h-12" />}
                             title="Bir sohbet seçin"
@@ -801,6 +828,7 @@ export default function Messages() {
                     </div>
                 )}
             </div>
+            
             {isNewChatModalOpen && (
                 <NewChatModal 
                     isOpen={isNewChatModalOpen} 
