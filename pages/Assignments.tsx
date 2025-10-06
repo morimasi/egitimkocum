@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
@@ -51,7 +52,7 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
                 parts: [{ text: msg.text }]
             }));
 
-            const response = await fetch('/backend/gemini-chat', {
+            const response = await fetch('/api/gemini/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

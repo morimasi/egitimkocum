@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BotIcon, XIcon, SendIcon } from './Icons';
 import { useDataContext } from '../contexts/DataContext';
@@ -42,7 +43,7 @@ const AIChatbot = () => {
                 parts: [{ text: msg.text }]
             }));
 
-            const response = await fetch('/backend/gemini-chat', {
+            const response = await fetch('/api/gemini/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

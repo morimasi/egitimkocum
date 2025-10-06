@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { ImageIcon } from '../components/Icons';
@@ -48,11 +49,12 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
         setIsLoading(true);
 
         try {
-            await register(name, email, profilePicture);
-            // On successful registration, user is automatically logged in.
+            await register(name, email, password, profilePicture);
+            // On successful registration, user is automatically logged in by DataContext.
         } catch (err: any) {
-             setIsLoading(false);
              setError(err.message || 'Kayıt sırasında bir hata oluştu.');
+        } finally {
+            setIsLoading(false);
         }
     };
 

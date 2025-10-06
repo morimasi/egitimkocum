@@ -1,4 +1,5 @@
 
+
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -16,7 +17,7 @@ import PageSkeleton from './components/PageSkeleton';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import TabBar from './components/TabBar';
 import AIChatbot from './components/AIChatbot';
-import SetupWizard from './components/SetupWizard';
+import { SparklesIcon } from './components/Icons';
 
 
 // Lazy load pages for better initial performance
@@ -32,6 +33,7 @@ const ParentPortal = React.lazy(() => import('./pages/ParentPortal'));
 const TemplateManager = React.lazy(() => import('./pages/TemplateManager'));
 const SuperAdminDashboard = React.lazy(() => import('./pages/SuperAdminDashboard'));
 const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
+const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
 const Motivasyon = React.lazy(() => import('./pages/Motivasyon'));
 const OdakModu = React.lazy(() => import('./pages/OdakModu'));
 const AkilliPlanlayici = React.lazy(() => import('./pages/AkilliPlanlayici'));
@@ -78,6 +80,7 @@ const AppContent = () => {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [showLogin, setShowLogin] = useState(true);
     
     useEffect(() => {
         if (currentUser && currentUser.role === UserRole.Student) {
@@ -158,13 +161,23 @@ const AppContent = () => {
     }
 
     if (!isDbInitialized) {
-        return <SetupWizard />;
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
+                <SparklesIcon className="w-16 h-16 text-primary-500 animate-spin" />
+                <h1 className="text-2xl font-bold mt-4">Veritabanı hazırlanıyor...</h1>
+                <p className="text-slate-500 mt-2">Bu işlem ilk kurulumda biraz zaman alabilir.</p>
+            </div>
+        );
     }
-
+    
     if (!currentUser) {
         return (
             <Suspense fallback={<AppSkeleton />}>
-                <LoginScreen />
+                {showLogin ? (
+                    <LoginScreen onSwitchToRegister={() => setShowLogin(false)} />
+                ) : (
+                    <RegisterScreen onSwitchToLogin={() => setShowLogin(true)} />
+                )}
             </Suspense>
         );
     }

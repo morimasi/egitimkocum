@@ -1,55 +1,38 @@
 
+
 import React, { useState } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import Card from '../components/Card';
 import { User } from '../types';
 
-const getRoleLabel = (role: string) => {
-    switch (role) {
-        case 'superadmin': return 'Süper Admin';
-        case 'coach': return 'Koç';
-        case 'student': return 'Öğrenci';
-        case 'parent': return 'Veli';
-        default: return role;
-    }
-};
+interface LoginScreenProps {
+    onSwitchToRegister: () => void;
+}
 
-const UserCard = ({ user, onLogin }: { user: User, onLogin: (email: string) => void }) => {
-    return (
-        <Card 
-            className="text-center p-4 transition-all duration-300"
-            onClick={() => onLogin(user.email)}
-        >
-            <img src={user.profilePicture} alt={user.name} className="w-20 h-20 rounded-full mx-auto mb-3" />
-            <h3 className="font-bold">{user.name}</h3>
-            <p className="text-sm text-slate-500">{getRoleLabel(user.role)}</p>
-        </Card>
-    );
-};
-
-export default function LoginScreen() {
-    const { users, login } = useDataContext();
-    const [isLoading, setIsLoading] = useState<string | null>(null); // store user id being loaded
+export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
+    const { login } = useDataContext();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleLogin = async (email: string) => {
-        const user = users.find(u => u.email === email);
-        if (!user) return;
-
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
         setError('');
-        setIsLoading(user.id);
+        setIsLoading(true);
         
         try {
-            await login(email);
+            await login(email, password);
         } catch (err: any) {
             setError(err.message || 'Giriş sırasında bir hata oluştu.');
-            setIsLoading(null);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 p-4">
-            <div className="w-full max-w-4xl p-8 space-y-8 bg-white dark:bg-slate-800 rounded-2xl shadow-xl">
+            <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-slate-800 rounded-2xl shadow-xl">
                 <div className="text-center">
                      <div className="flex items-center justify-center mb-4">
                         <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20 text-slate-800 dark:text-white">
@@ -66,23 +49,49 @@ export default function LoginScreen() {
                             </g>
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Kullanıcı Seçimi</h1>
-                    <p className="mt-2 text-slate-500 dark:text-slate-400">Giriş yapmak için bir kullanıcı profili seçin.</p>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Giriş Yap</h1>
+                    <p className="mt-2 text-slate-500 dark:text-slate-400">Hesabınıza erişmek için giriş yapın.</p>
                 </div>
 
-                {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {users.map(user => (
-                        <div key={user.id} className="relative">
-                            <UserCard user={user} onLogin={handleLogin} />
-                            {isLoading === user.id && (
-                                <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 rounded-2xl flex items-center justify-center">
-                                    <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                <form className="space-y-6" onSubmit={handleLogin}>
+                    <input
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="E-posta Adresi"
+                    />
+                    <input
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Şifre"
+                    />
+
+                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                    
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+                        </button>
+                    </div>
+                </form>
+                 <div className="text-center text-sm">
+                    <p className="text-slate-600 dark:text-slate-400">
+                        Hesabınız yok mu?{' '}
+                        <button onClick={onSwitchToRegister} className="font-medium text-primary-600 hover:text-primary-500">
+                            Kayıt Olun
+                        </button>
+                    </p>
                 </div>
             </div>
         </div>
