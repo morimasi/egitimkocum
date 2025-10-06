@@ -650,6 +650,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         } catch (error: any) { addToast(`Soru silinemedi: ${error.message}`, 'error'); }
     }, [addToast]);
     
+    const updateBadge = useCallback(async (updatedBadge: Badge) => {
+        try {
+            await apiRequest(`/badges/${updatedBadge.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedBadge)
+            });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'badges', data: updatedBadge } });
+            addToast("Rozet güncellendi.", "success");
+        } catch (error: any) {
+            addToast(`Rozet güncellenemedi: ${error.message}`, 'error');
+        }
+    }, [addToast]);
+    
     const coach = useMemo(() => state.currentUser?.role === UserRole.Student ? state.users.find(u => u.id === state.currentUser.assignedCoachId) || null : (state.currentUser?.role === UserRole.Coach || state.currentUser?.role === UserRole.SuperAdmin ? state.currentUser : state.users.find(u => u.role === UserRole.Coach) || null), [state.users, state.currentUser]);
     const students = useMemo(() => state.currentUser?.role === UserRole.Coach ? state.users.filter(u => u.role === UserRole.Student && u.assignedCoachId === state.currentUser.id) : (state.currentUser?.role === UserRole.SuperAdmin ? state.users.filter(u => u.role === UserRole.Student) : []), [state.users, state.currentUser]);
     const getAssignmentsForStudent = useCallback((studentId: string) => state.assignments.filter(a => a.studentId === studentId), [state.assignments]);
@@ -665,7 +678,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         getAssignmentsForStudent, getGoalsForStudent, findMessageById, getMessagesForConversation, sendMessage, seedDatabase, uploadFile, updateGoal, addGoal,
         deleteGoal, addReaction, voteOnPoll, updateStudentNotes, startGroupChat, findOrCreateConversation, markMessagesAsRead,
         markNotificationsAsRead, updateTypingStatus: async () => {}, awardXp, addUserToConversation, removeUserFromConversation, endConversation, setConversationArchived,
-        updateBadge: async () => {}, addCalendarEvent, deleteCalendarEvent, addMultipleCalendarEvents, toggleTemplateFavorite, addResource, deleteResource,
+        updateBadge, addCalendarEvent, deleteCalendarEvent, addMultipleCalendarEvents, toggleTemplateFavorite, addResource, deleteResource,
         assignResourceToStudents, addTemplate, updateTemplate, deleteTemplate, addExam, updateExam, deleteExam, addQuestion, updateQuestion, deleteQuestion,
         unreadCounts: new Map(), lastMessagesMap: new Map(),
     };

@@ -98,6 +98,7 @@ const ensureTablesExist = async () => {
     await sql`CREATE TABLE IF NOT EXISTS templates (id VARCHAR(255) PRIMARY KEY, title VARCHAR(255), description TEXT, checklist TEXT, isFavorite BOOLEAN)`;
     await sql`CREATE TABLE IF NOT EXISTS resources (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255), type VARCHAR(50), url TEXT, isPublic BOOLEAN, uploaderId VARCHAR(255), assignedTo TEXT, category VARCHAR(50))`;
     await sql`CREATE TABLE IF NOT EXISTS goals (id VARCHAR(255) PRIMARY KEY, studentId VARCHAR(255), title VARCHAR(255), description TEXT, isCompleted BOOLEAN, milestones TEXT)`;
+    await sql`CREATE TABLE IF NOT EXISTS badges (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255), description TEXT)`;
     await sql`CREATE TABLE IF NOT EXISTS calendarEvents (id VARCHAR(255) PRIMARY KEY, userId VARCHAR(255), title VARCHAR(255), date TIMESTAMPTZ, type VARCHAR(50), color VARCHAR(50), startTime VARCHAR(50), endTime VARCHAR(50))`;
     await sql`CREATE TABLE IF NOT EXISTS exams (id VARCHAR(255) PRIMARY KEY, studentId VARCHAR(255), title VARCHAR(255), date TIMESTAMPTZ, totalQuestions INT, correct INT, incorrect INT, empty INT, netScore NUMERIC, subjects TEXT, coachNotes TEXT, studentReflections TEXT, category VARCHAR(255), topic VARCHAR(255), type VARCHAR(50))`;
     await sql`CREATE TABLE IF NOT EXISTS questions (id VARCHAR(255) PRIMARY KEY, creatorId VARCHAR(255), category VARCHAR(50), topic VARCHAR(255), questionText TEXT, options TEXT, correctOptionIndex INT, difficulty VARCHAR(50), explanation TEXT, imageUrl TEXT, videoUrl TEXT, audioUrl TEXT, documentUrl TEXT, documentName VARCHAR(255))`;
@@ -109,11 +110,10 @@ app.get('/api/seed', async (req, res) => {
     try {
         await ensureTablesExist();
 
-        // Simple check to prevent re-seeding
+        let messages = [];
+
         const { rows: users } = await sql`SELECT * FROM users;`;
         if (users.length === 0) {
-            // Seed data here (simplified)
-            // In a real app, you would import and process your seedData file
             await sql`
                 INSERT INTO users (id, name, email, role, profilePicture, isOnline) VALUES
                 ('user_admin', 'Mahmut Hoca', 'admin@egitim.com', 'superadmin', 'https://i.pravatar.cc/150?u=admin@egitim.com', true),
@@ -124,10 +124,29 @@ app.get('/api/seed', async (req, res) => {
                 INSERT INTO assignments (id, title, description, dueDate, status, studentId, coachId, submissionType) VALUES
                 ('assign_1', 'Matematik: Türev Alma Kuralları Testi', 'Türev alma kurallarını içeren 20 soruluk testi çözün.', ${new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()}, 'pending', 'user_student_1', 'user_coach_1', 'file');
             `;
-             res.status(200).send('Database seeded successfully.');
+            messages.push('Users and assignments seeded.');
         } else {
-             res.status(200).send('Database already contains data. No seeding performed.');
+            messages.push('Users table already has data.');
         }
+
+        const { rows: badges } = await sql`SELECT * FROM badges;`;
+        if (badges.length === 0) {
+            await sql`
+                INSERT INTO badges (id, name, description) VALUES
+                ('first-assignment', 'İlk Adım', 'İlk ödevini başarıyla tamamladın!'),
+                ('high-achiever', 'Yüksek Başarı', 'Not ortalaman 90''ın üzerinde!'),
+                ('perfect-score', 'Mükemmel Skor', 'Bir ödevden 100 tam puan aldın!'),
+                ('goal-getter', 'Hedef Avcısı', 'Haftalık hedeflerinin hepsine ulaştın!'),
+                ('streak-starter', 'Seri Başladı', '3 gün üst üste ödev teslim ettin.'),
+                ('streak-master', 'Seri Ustası', '7 gün üst üste ödev teslim ettin.'),
+                ('on-time-submissions', 'Dakik Oyuncu', '5 ödevi zamanında teslim ettin.');
+            `;
+            messages.push('Badges seeded.');
+        } else {
+            messages.push('Badges table already has data.');
+        }
+        
+        res.status(200).send(messages.join(' '));
 
     } catch (error) {
         console.error(error);
@@ -148,6 +167,7 @@ app.get('/api/data', async (req, res) => {
         const { rows: templates } = await sql`SELECT * FROM templates`;
         const { rows: resources } = await sql`SELECT * FROM resources`;
         const { rows: goals } = await sql`SELECT * FROM goals`;
+        const { rows: badges } = await sql`SELECT * FROM badges`;
         const { rows: calendarEvents } = await sql`SELECT * FROM calendarEvents`;
         const { rows: exams } = await sql`SELECT * FROM exams`;
         const { rows: questions } = await sql`SELECT * FROM questions`;
@@ -180,7 +200,7 @@ app.get('/api/data', async (req, res) => {
             try { q.options = q.options ? JSON.parse(q.options) : []; } catch (e) { q.options = []; }
         });
         
-        res.status(200).json({ users, assignments, messages, conversations, notifications, templates, resources, goals, calendarEvents, exams, questions });
+        res.status(200).json({ users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions });
     } catch (error) {
         console.error("Error fetching data:", error);
         res.status(500).json({ error: error.message });
