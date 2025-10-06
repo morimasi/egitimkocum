@@ -292,8 +292,6 @@ const Exams = () => {
         return map;
     }, [filteredExams]);
 
-    const studentIdsWithExams = useMemo(() => Array.from(examsByStudent.keys()), [examsByStudent]);
-
     return (
         <div className="space-y-6">
             <Card>
