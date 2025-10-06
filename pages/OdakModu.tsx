@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Assignment, Goal, AssignmentStatus } from '../types';
 import Card from '../components/Card';
@@ -207,81 +207,73 @@ const OdakModu = () => {
                             <button onClick={() => selectMode('shortBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'shortBreak' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Kısa Mola</button>
                             <button onClick={() => selectMode('longBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'longBreak' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Uzun Mola</button>
                         </div>
-
-                        <div className="relative w-[300px] h-[300px] mx-auto mb-8">
+                        {/* Timer Circle */}
+                        <div className="relative w-72 h-72 mx-auto">
                             <svg className="w-full h-full" viewBox="0 0 300 300">
                                 <circle
-                                    strokeWidth={CIRCLE_STROKE_WIDTH}
-                                    stroke="currentColor"
-                                    fill="transparent"
-                                    r={CIRCLE_RADIUS}
-                                    cx="150"
-                                    cy="150"
                                     className="text-gray-200 dark:text-gray-700"
-                                />
+                                    stroke="currentColor" strokeWidth={CIRCLE_STROKE_WIDTH} fill="transparent"
+                                    r={CIRCLE_RADIUS} cx="150" cy="150" />
                                 <circle
-                                    strokeWidth={CIRCLE_STROKE_WIDTH}
-                                    stroke="currentColor"
-                                    fill="transparent"
-                                    r={CIRCLE_RADIUS}
-                                    cx="150"
-                                    cy="150"
-                                    className={modeClasses[mode].progress}
-                                    strokeLinecap="round"
-                                    transform="rotate(-90 150 150)"
-                                    style={{
-                                        strokeDasharray: CIRCLE_CIRCUMFERENCE,
-                                        strokeDashoffset: strokeDashoffset,
-                                        transition: 'stroke-dashoffset 1s linear'
-                                    }}
+                                    className={`${modeClasses[mode].progress} transition-all duration-1000`}
+                                    stroke="currentColor" strokeWidth={CIRCLE_STROKE_WIDTH} fill="transparent"
+                                    r={CIRCLE_RADIUS} cx="150" cy="150"
+                                    strokeLinecap="round" transform="rotate(-90 150 150)"
+                                    style={{ strokeDasharray: CIRCLE_CIRCUMFERENCE, strokeDashoffset }}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <p className="font-bold text-7xl tabular-nums">{formatTime(timeLeft)}</p>
-                                <p className="font-semibold text-base mt-2 h-7 truncate max-w-[200px] text-gray-500 dark:text-gray-400">{selectedTask ? selectedTask.title : 'Bir görev seçin...'}</p>
+                                <span className="text-6xl font-bold font-mono">{formatTime(timeLeft)}</span>
+                                <p className="text-gray-500 mt-2">
+                                    {isActive ? (mode === 'work' ? 'Odaklan!' : 'Mola zamanı!') : 'Başlamaya hazır...'}
+                                </p>
                             </div>
                         </div>
-
-                        <button onClick={toggleTimer} className={`w-24 h-24 text-2xl font-bold rounded-full text-white transition-all transform hover:scale-105 shadow-lg flex items-center justify-center mx-auto ${isActive ? 'bg-red-500 hover:bg-red-600' : `${modeClasses[mode].bg} hover:opacity-90`}`}>
-                            {isActive ? <PauseIcon className="w-10 h-10"/> : <PlayIcon className="w-10 h-10 ml-1"/>}
-                        </button>
-                        
-                        <div className="mt-8 flex justify-center items-center gap-4">
-                             <p className="text-sm text-gray-500">Tamamlanan Pomodoro: {pomodoros}</p>
-                             <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"><SettingsIcon className="w-5 h-5"/></button>
+                        <div className="mt-8 flex items-center justify-center gap-4">
+                            <button onClick={toggleTimer} className={`w-20 h-20 rounded-full text-white flex items-center justify-center text-2xl ${isActive ? 'bg-red-500' : modeClasses[mode].bg}`}>
+                                {isActive ? <PauseIcon className="w-8 h-8"/> : <PlayIcon className="w-8 h-8 ml-1"/>}
+                            </button>
+                             <button onClick={() => setIsSettingsOpen(true)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                <SettingsIcon className="w-6 h-6"/>
+                            </button>
                         </div>
                     </div>
                 </Card>
-                 <Card title="Oturum Kaydı">
-                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                         {sessionLog.length > 0 ? sessionLog.map((log, i) => (
-                            <li key={i} className="flex items-center gap-3 text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                                <CheckIcon className="w-4 h-4 text-green-500"/>
-                                <span className="flex-1">{log.taskTitle}</span>
-                                <span className="text-xs text-gray-400">{log.timestamp}</span>
+                <Card title="Bugünkü Seanslar">
+                    {sessionLog.length > 0 ? (
+                        <ul className="space-y-2 max-h-40 overflow-y-auto">
+                            {sessionLog.map((log, index) => (
+                                <li key={index} className="flex items-center gap-3 text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                                    <CheckIcon className="w-4 h-4 text-green-500 flex-shrink-0"/>
+                                    <span className="flex-1 truncate">{log.taskTitle}</span>
+                                    <span className="text-xs text-gray-400">{log.timestamp}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500">Henüz tamamlanmış bir seans yok.</p>
+                    )}
+                </Card>
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+                <Card title="Bugünün Görevleri">
+                    <ul className="space-y-2 max-h-96 overflow-y-auto">
+                        {tasks.map(task => (
+                            <li key={task.id} onClick={() => setSelectedTask(task)} className={`p-3 rounded-lg cursor-pointer ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100'}`}>
+                                <div className="flex items-center gap-2">
+                                    {'dueDate' in task ? <ClipboardListIcon className="w-4 h-4 text-yellow-500"/> : <TargetIcon className="w-4 h-4 text-green-500"/>}
+                                    <p className="font-semibold text-sm">{task.title}</p>
+                                </div>
                             </li>
-                         )) : <p className="text-sm text-center text-gray-500 py-4">Henüz tamamlanan bir oturum yok.</p>}
+                        ))}
+                        {tasks.length === 0 && <p className="text-sm text-gray-500">Bugün için öncelikli bir görevin yok. Harika!</p>}
                     </ul>
                 </Card>
             </div>
-            
-             <Card title="Bugünün Görevleri" icon={<ClipboardListIcon/>}>
-                <ul className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
-                    {tasks.map(task => (
-                        <li key={task.id} onClick={() => setSelectedTask(task)} className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                            <p className="font-semibold text-sm flex items-center gap-2">
-                                <TargetIcon className="w-4 h-4 flex-shrink-0"/>
-                                {task.title}
-                            </p>
-                            {'dueDate' in task && <p className="text-xs text-gray-400 mt-1 ml-6">Ödev - {new Date(task.dueDate).toLocaleDateString('tr-TR')}</p>}
-                            {'milestones' in task && <p className="text-xs text-gray-400 mt-1 ml-6">Hedef</p>}
-                        </li>
-                    ))}
-                </ul>
-            </Card>
-             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} durations={durations} setDurations={setDurations} alertSound={alertSound} setAlertSound={setAlertSound} />
+            {isSettingsOpen && <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} durations={durations} setDurations={setDurations} alertSound={alertSound} setAlertSound={setAlertSound} />}
         </div>
     );
 };
 
+// FIX: Add default export to allow for lazy loading.
 export default OdakModu;

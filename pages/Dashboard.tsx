@@ -480,7 +480,6 @@ const CoachDashboard = () => {
         ];
     }, [assignments]);
     
-    // FIX: Changed handler to correctly interpret the 'data' parameter from recharts Bar onClick.
     const handleBarClick = (data: any) => {
         const studentId = data?.id;
         if (studentId) {

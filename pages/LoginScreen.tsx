@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import Card from '../components/Card';
-import { User } from '../types';
+
 
 interface LoginScreenProps {
     onSwitchToRegister: () => void;

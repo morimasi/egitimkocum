@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { Goal, ChecklistItem, User } from '../types';
+import { Goal, ChecklistItem } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';

@@ -93,7 +93,6 @@ const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPa
         setStatus('uploading');
         try {
             const file = blobOrFile instanceof File ? blobOrFile : new File([blobOrFile], "video.webm", { type: "video/webm" });
-            const finalUploadPath = uploadPath ? `${uploadPath}/${Date.now()}.webm` : `video-uploads/${currentUser.id}/${Date.now()}.webm`;
             const uploadedUrl = await uploadFile(file);
             onSave?.(uploadedUrl);
             setVideoSrc(uploadedUrl); // Update src to the persistent URL
