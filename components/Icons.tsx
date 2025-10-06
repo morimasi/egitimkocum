@@ -206,9 +206,9 @@ export const MinimizeIcon = (props: IconProps) => (
 );
 export const PhoneOffIcon = (props: IconProps) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l3.17-3.17a2 2 0 0 1 2.83 0l1.27 1.27a2 2 0 0 1 0 2.83l-4.24 4.24a2 2 0 0 1-2.83 0l-3.18-3.18"/>
-        <path d="m13.31 10.68-3.41-3.41a2 2 0 0 0-2.83 0L3.17 11.1a2 2 0 0 0 0 2.83l4.24 4.24a2 2 0 0 0 2.83 0l3.18-3.18"/>
-        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l3.17-3.17a2 2 0 0 1 2.83 0l1.27 1.27a2 2 0 0 1 0 2.83l-4.24 4.24a2 2 0 0 1-2.83 0l-3.18-3.18" />
+        <path d="m13.31 10.68-3.41-3.41a2 2 0 0 0-2.83 0L3.17 11.1a2 2 0 0 0 0 2.83l4.24 4.24a2 2 0 0 0 2.83 0l3.18-3.18" />
+        <line x1="22" x2="2" y1="2" y2="22" />
     </svg>
 );
 export const MicOffIcon = (props: IconProps) => (
