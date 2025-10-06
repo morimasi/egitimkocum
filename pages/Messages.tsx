@@ -252,7 +252,7 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
             </div>
         </div>
     );
-});
+};
 const MemoizedMessageBubble = React.memo(MessageBubble);
 
 const GroupInfoModal = ({ conversation, onClose }: { conversation: Conversation | null; onClose: () => void; }) => {
