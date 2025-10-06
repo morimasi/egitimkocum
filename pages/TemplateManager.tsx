@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { AssignmentTemplate, ChecklistItem } from '../types';
 import Card from '../components/Card';

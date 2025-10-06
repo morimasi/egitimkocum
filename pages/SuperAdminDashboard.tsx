@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, UserRole, AssignmentStatus, Badge, AcademicTrack } from '../types';
+import { User, UserRole, Badge } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { StudentsIcon, AssignmentsIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { StudentsIcon, AssignmentsIcon, EditIcon } from '../components/Icons';
 import AddUserForm from '../components/AddStudentForm';
 import EditUserModal from '../components/EditUserModal';
 

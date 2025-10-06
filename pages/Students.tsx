@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID, Resource } from '../types';
+import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon, ArrowLeftIcon, XIcon, BrainCircuitIcon } from '../components/Icons';
+import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, TrashIcon, GridIcon, ListIcon, ArrowLeftIcon, XIcon, BrainCircuitIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverviewTab from '../components/studentDetail/OverviewTab';
@@ -283,6 +283,11 @@ export default function Students() {
             sorted.sort((a, b) => {
                 const valA = a[sortConfig.key];
                 const valB = b[sortConfig.key];
+                
+                if (valA == null && valB == null) return 0;
+                if (valA == null) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valB == null) return sortConfig.direction === 'asc' ? 1 : -1;
+
                 if (valA < valB) {
                     return sortConfig.direction === 'asc' ? -1 : 1;
                 }

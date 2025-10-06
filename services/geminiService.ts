@@ -1,4 +1,4 @@
-import { Assignment, Exam, Goal, Question, QuestionDifficulty } from "../types";
+import { Assignment, Exam, Goal, Question } from "../types";
 
 const geminiFetch = async (endpoint: string, body: object) => {
     try {
