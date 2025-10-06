@@ -10,7 +10,7 @@ interface CalendarEventModalProps {
 }
 
 const CalendarEventModal = ({ isOpen, onClose, eventDate }: CalendarEventModalProps) => {
-    const { addCalendarEvent } = useDataContext();
+    const { addCalendarEvent, currentUser } = useDataContext();
     const [title, setTitle] = useState('');
     const [type, setType] = useState<'personal' | 'study'>('study');
     const [startTime, setStartTime] = useState('10:00');
@@ -22,8 +22,10 @@ const CalendarEventModal = ({ isOpen, onClose, eventDate }: CalendarEventModalPr
     };
 
     const handleSubmit = async () => {
-        if (!title) return;
+        if (!title || !currentUser) return;
+        // FIX: Add missing 'userId' property.
         await addCalendarEvent({
+            userId: currentUser.id,
             title,
             date: eventDate.toISOString().split('T')[0],
             type,

@@ -133,11 +133,9 @@ interface DataContextType {
     deleteUser: (userId: string) => Promise<void>;
     addUser: (newUser: Omit<User, 'id'>) => Promise<User | null>;
     markMessagesAsRead: (conversationId: string) => Promise<void>;
-    // ... other functions ...
     unreadCounts: Map<string, number>;
     lastMessagesMap: Map<string, Message>;
-    // The rest of the functions from the original interface
-    markNotificationsAsRead: () => Promise<void>;
+    markNotificationsAsRead: (userId: string) => Promise<void>;
     updateTypingStatus: (isTyping: boolean) => Promise<void>;
     getGoalsForStudent: (studentId: string) => Goal[];
     updateGoal: (updatedGoal: Goal) => Promise<void>;
@@ -146,9 +144,8 @@ interface DataContextType {
     addReaction: (messageId: string, emoji: string) => Promise<void>;
     voteOnPoll: (messageId: string, optionIndex: number) => Promise<void>;
     findMessageById: (messageId: string) => Message | undefined;
-    toggleResourceAssignment: (resourceId: string, studentId: string) => Promise<void>;
     assignResourceToStudents: (resourceId: string, studentIds: string[]) => Promise<void>;
-    addResource: (newResource: Omit<Resource, 'id' | 'uploaderId' | 'assignedTo'> & { isPublic: boolean; assignedTo?: string[] }) => Promise<void>;
+    addResource: (newResource: Omit<Resource, 'id'>) => Promise<void>;
     deleteResource: (resourceId: string) => Promise<void>;
     addTemplate: (templateData: Omit<AssignmentTemplate, 'id'>) => Promise<void>;
     updateTemplate: (template: AssignmentTemplate) => Promise<void>;
@@ -163,7 +160,7 @@ interface DataContextType {
     endConversation: (conversationId: string) => Promise<void>;
     setConversationArchived: (conversationId: string, isArchived: boolean) => Promise<void>;
     updateBadge: (updatedBadge: Badge) => Promise<void>;
-    addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'userId'>) => Promise<void>;
+    addCalendarEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<void>;
     addMultipleCalendarEvents: (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => Promise<void>;
     deleteCalendarEvent: (eventId: string) => Promise<void>;
     toggleTemplateFavorite: (templateId: string) => Promise<void>;
@@ -183,7 +180,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [state, dispatch] = useReducer(dataReducer, getInitialState());
     const { addToast } = useUI();
     
-    // Create a ref for messages to stabilize callbacks that depend on it.
     const messagesRef = useRef(state.messages);
     useEffect(() => {
         messagesRef.current = state.messages;
@@ -205,13 +201,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [addToast]);
     
      const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
-        // This remains client-side for now, as setting up backend file uploads is complex.
-        // In a real app, this would be an API call to a signed URL or a backend endpoint.
         return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                resolve(reader.result as string);
-            };
+            reader.onloadend = () => { resolve(reader.result as string); };
             reader.readAsDataURL(file);
         });
     }, []);
@@ -255,7 +247,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
                 profilePicture = await uploadFile(profilePictureFile, `profile_pictures/${uuid()}`);
             }
     
-            // The first user registered becomes the superadmin
             const role = state.users.length === 0 ? UserRole.SuperAdmin : UserRole.Student;
             
             const newUser: Omit<User, 'id'> = {
@@ -285,10 +276,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateUser = useCallback(async (updatedUser: User) => {
         try {
             const userToSave = { ...updatedUser };
-            // Convert arrays to strings for DB
-            if (Array.isArray(userToSave.childIds)) userToSave.childIds = userToSave.childIds.join(',') as any;
-            if (Array.isArray(userToSave.parentIds)) userToSave.parentIds = userToSave.parentIds.join(',') as any;
-            if (Array.isArray(userToSave.earnedBadgeIds)) userToSave.earnedBadgeIds = userToSave.earnedBadgeIds.join(',') as any;
+            userToSave.childIds = (userToSave.childIds || []).join(',') as any;
+            userToSave.parentIds = (userToSave.parentIds || []).join(',') as any;
+            userToSave.earnedBadgeIds = (userToSave.earnedBadgeIds || []).join(',') as any;
 
             await apiRequest(`/users/${updatedUser.id}`, {
                 method: 'PUT',
@@ -318,170 +308,108 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const findOrCreateConversation = useCallback(async (otherParticipantId: string): Promise<string | undefined> => {
         if (!state.currentUser) return;
     
-        const existing = state.conversations.find(c => 
-            !c.isGroup && 
-            c.participantIds.includes(state.currentUser!.id) && 
-            c.participantIds.includes(otherParticipantId)
-        );
+        const existing = state.conversations.find(c => !c.isGroup && c.participantIds.length === 2 && c.participantIds.includes(state.currentUser!.id) && c.participantIds.includes(otherParticipantId));
         if (existing) return existing.id;
     
-        const newConversation: Conversation = {
-            id: uuid(),
-            participantIds: [state.currentUser.id, otherParticipantId],
-            isGroup: false,
-        };
+        const newConversation: Conversation = { id: uuid(), participantIds: [state.currentUser.id, otherParticipantId], isGroup: false };
         try {
-            await apiRequest('/conversations', {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...newConversation,
-                    participantIds: newConversation.participantIds.join(','),
-                }),
-            });
+            await apiRequest('/conversations', { method: 'POST', body: JSON.stringify({ ...newConversation, participantIds: newConversation.participantIds.join(',') }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
             return newConversation.id;
-        } catch (error: any) {
-            addToast(`Sohbet oluşturulamadı: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Sohbet oluşturulamadı: ${error.message}`, 'error'); }
         return undefined;
     }, [state.currentUser, state.conversations, addToast]);
     
     const inviteStudent = useCallback(async (name: string, email: string): Promise<void> => {
         if (!state.currentUser || (state.currentUser.role !== UserRole.Coach && state.currentUser.role !== UserRole.SuperAdmin)) {
-            addToast("Sadece koçlar öğrenci davet edebilir.", "error");
-            return;
+            addToast("Sadece koçlar öğrenci davet edebilir.", "error"); return;
         }
         try {
-            const newUser = await addUser({
-                name,
-                email,
-                role: UserRole.Student,
-                profilePicture: `https://i.pravatar.cc/150?u=${email}`,
-                assignedCoachId: state.currentUser.id, // Assign to current coach
-            });
-    
+            const newUser = await addUser({ name, email, role: UserRole.Student, profilePicture: `https://i.pravatar.cc/150?u=${email}`, assignedCoachId: state.currentUser.id });
             if (newUser) {
                 await findOrCreateConversation(newUser.id);
                 addToast(`${name} başarıyla davet edildi ve bir sohbet başlatıldı.`, "success");
             }
-        } catch (error: any) {
-            addToast(`Öğrenci davet edilemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Öğrenci davet edilemedi: ${error.message}`, 'error'); }
     }, [state.currentUser, addUser, findOrCreateConversation, addToast]);
     
      const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
         try {
+            const addedAssignments = [];
             for (const studentId of studentIds) {
-                const newAssignment = {
-                    ...assignmentData,
-                    id: uuid(),
-                    studentId,
-                    checklist: JSON.stringify(assignmentData.checklist || []),
-                };
-                const addedAssignment = await apiRequest('/assignments', {
-                    method: 'POST',
-                    body: JSON.stringify(newAssignment)
-                });
-                dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: { ...addedAssignment, checklist: assignmentData.checklist || [] } } });
+                const newAssignment = { ...assignmentData, id: uuid(), studentId, checklist: JSON.stringify(assignmentData.checklist || []) };
+                const added = await apiRequest('/assignments', { method: 'POST', body: JSON.stringify(newAssignment) });
+                addedAssignments.push({ ...added, checklist: assignmentData.checklist || [] });
+                dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: addedAssignments[addedAssignments.length-1] } });
             }
-             addToast("Ödev(ler) başarıyla oluşturuldu.", "success");
-        } catch (error: any) {
-             addToast(`Ödev oluşturulamadı: ${error.message}`, 'error');
-        }
+            addToast("Ödev(ler) başarıyla oluşturuldu.", "success");
+        } catch (error: any) { addToast(`Ödev oluşturulamadı: ${error.message}`, 'error'); }
     }, [addToast]);
 
     const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
         try {
-             await apiRequest(`/assignments/${updatedAssignment.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    ...updatedAssignment,
-                    checklist: JSON.stringify(updatedAssignment.checklist || [])
-                })
-            });
+             await apiRequest(`/assignments/${updatedAssignment.id}`, { method: 'PUT', body: JSON.stringify({ ...updatedAssignment, checklist: JSON.stringify(updatedAssignment.checklist || []) }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'assignments', data: updatedAssignment }});
-        } catch (error: any) {
-            addToast(`Ödev güncellenemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Ödev güncellenemedi: ${error.message}`, 'error'); }
     }, [addToast]);
 
     const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
         try {
-            await apiRequest('/assignments', {
-                method: 'DELETE',
-                body: JSON.stringify({ ids: assignmentIds })
-            });
+            await apiRequest('/assignments', { method: 'DELETE', body: JSON.stringify({ ids: assignmentIds }) });
             dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'assignments', ids: assignmentIds }});
-        } catch (error: any) {
-            addToast(`Ödevler silinemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Ödevler silinemedi: ${error.message}`, 'error'); }
     }, [addToast]);
 
     const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
         if (!state.currentUser) return;
-    
-        const message: Message = {
-            ...messageData,
-            id: uuid(),
-            timestamp: new Date().toISOString(),
-            readBy: [state.currentUser.id],
-        };
-    
+        const message: Message = { ...messageData, id: uuid(), timestamp: new Date().toISOString(), readBy: [state.currentUser.id] };
         try {
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: message } });
-    
-            const dataToSend = {
-                ...message,
-                readBy: JSON.stringify(message.readBy),
-                reactions: message.reactions ? JSON.stringify(message.reactions) : null,
-                poll: message.poll ? JSON.stringify(message.poll) : null,
-            };
-    
-            await apiRequest('/messages', {
-                method: 'POST',
-                body: JSON.stringify(dataToSend)
-            });
+            const dataToSend = { ...message, readBy: JSON.stringify(message.readBy), reactions: message.reactions ? JSON.stringify(message.reactions) : null, poll: message.poll ? JSON.stringify(message.poll) : null };
+            await apiRequest('/messages', { method: 'POST', body: JSON.stringify(dataToSend) });
         } catch (error: any) {
             addToast(`Mesaj gönderilemedi: ${error.message}`, 'error');
             console.error("Failed to send message:", error);
         }
     }, [state.currentUser, addToast]);
 
+    const markMessagesAsRead = useCallback(async (conversationId: string) => {
+        if (!state.currentUser) return;
+        const updatedMessages = messagesRef.current.map(m => (m.conversationId === conversationId && !m.readBy.includes(state.currentUser!.id)) ? { ...m, readBy: [...m.readBy, state.currentUser!.id] } : m);
+        dispatch({ type: 'SET_ALL_DATA', payload: { messages: updatedMessages }});
+        try {
+            await apiRequest(`/conversations/${conversationId}/mark-as-read`, { method: 'POST', body: JSON.stringify({ userId: state.currentUser.id }) });
+        } catch (error) { addToast("Mesajlar okundu olarak işaretlenemedi.", "error"); }
+    }, [state.currentUser, addToast]);
+    
+    const markNotificationsAsRead = useCallback(async (userId: string) => {
+        const updatedNotifs = state.notifications.map(n => (n.userId === userId && !n.isRead) ? { ...n, isRead: true } : n);
+        dispatch({ type: 'SET_ALL_DATA', payload: { notifications: updatedNotifs }});
+        try {
+            await apiRequest('/notifications/mark-as-read', { method: 'POST', body: JSON.stringify({ userId }) });
+        } catch (error) { addToast("Bildirimler okundu olarak işaretlenemedi.", "error"); }
+    }, [state.notifications, addToast]);
+    
     const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => {
         const goalWithId = { ...newGoal, id: uuid() };
         try {
-            await apiRequest('/goals', {
-                method: 'POST',
-                body: JSON.stringify({ ...goalWithId, milestones: JSON.stringify(goalWithId.milestones) })
-            });
+            await apiRequest('/goals', { method: 'POST', body: JSON.stringify({ ...goalWithId, milestones: JSON.stringify(goalWithId.milestones) }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'goals', data: goalWithId } });
-        } catch (error: any) {
-            addToast(`Hedef eklenemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Hedef eklenemedi: ${error.message}`, 'error'); }
     }, [addToast]);
     
     const updateGoal = useCallback(async (updatedGoal: Goal) => {
         try {
-            await apiRequest(`/goals/${updatedGoal.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ ...updatedGoal, milestones: JSON.stringify(updatedGoal.milestones) })
-            });
+            await apiRequest(`/goals/${updatedGoal.id}`, { method: 'PUT', body: JSON.stringify({ ...updatedGoal, milestones: JSON.stringify(updatedGoal.milestones) }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'goals', data: updatedGoal } });
-        } catch (error: any) {
-            addToast(`Hedef güncellenemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Hedef güncellenemedi: ${error.message}`, 'error'); }
     }, [addToast]);
     
     const deleteGoal = useCallback(async (goalId: string) => {
         try {
-            await apiRequest('/goals', {
-                method: 'DELETE',
-                body: JSON.stringify({ ids: [goalId] })
-            });
+            await apiRequest('/goals', { method: 'DELETE', body: JSON.stringify({ ids: [goalId] }) });
             dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'goals', ids: [goalId] } });
-        } catch (error: any) {
-            addToast(`Hedef silinemedi: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Hedef silinemedi: ${error.message}`, 'error'); }
     }, [addToast]);
 
     const addReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -490,7 +418,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!message) return;
     
         const updatedReactions = { ...(message.reactions || {}) };
-        
         if (updatedReactions[emoji]?.includes(state.currentUser.id)) {
             updatedReactions[emoji] = updatedReactions[emoji].filter(id => id !== state.currentUser!.id);
             if (updatedReactions[emoji].length === 0) delete updatedReactions[emoji];
@@ -503,10 +430,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         
         try {
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: updatedMessage } });
-            await apiRequest(`/messages/${messageId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ reactions: JSON.stringify(updatedReactions) })
-            });
+            await apiRequest(`/messages/${messageId}`, { method: 'PUT', body: JSON.stringify({ reactions: JSON.stringify(updatedReactions) }) });
         } catch (error: any) {
             addToast(`Tepki eklenemedi: ${error.message}`, 'error');
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: message } });
@@ -519,19 +443,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!message || !message.poll) return;
     
         const updatedPoll = { ...message.poll };
-        updatedPoll.options.forEach(opt => {
-            opt.votes = opt.votes.filter(id => id !== state.currentUser!.id);
-        });
+        updatedPoll.options.forEach(opt => { opt.votes = opt.votes.filter(id => id !== state.currentUser!.id); });
         updatedPoll.options[optionIndex].votes.push(state.currentUser.id);
     
         const updatedMessage = { ...message, poll: updatedPoll };
         
         try {
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: updatedMessage } });
-            await apiRequest(`/messages/${messageId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ poll: JSON.stringify(updatedPoll) })
-            });
+            await apiRequest(`/messages/${messageId}`, { method: 'PUT', body: JSON.stringify({ poll: JSON.stringify(updatedPoll) }) });
         } catch (error: any) {
             addToast(`Oy kullanılamadı: ${error.message}`, 'error');
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: message } });
@@ -542,147 +461,214 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!state.currentUser) return;
     
         const allParticipantIds = Array.from(new Set([...participantIds, state.currentUser.id]));
-        const newConversation: Conversation = {
-            id: uuid(),
-            participantIds: allParticipantIds,
-            isGroup: true,
-            groupName,
-            groupImage: `https://i.pravatar.cc/150?u=${uuid()}`,
-            adminId: state.currentUser.id,
-        };
+        const newConversation: Conversation = { id: uuid(), participantIds: allParticipantIds, isGroup: true, groupName, groupImage: `https://i.pravatar.cc/150?u=${uuid()}`, adminId: state.currentUser.id };
         try {
-            await apiRequest('/conversations', {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...newConversation,
-                    participantIds: newConversation.participantIds.join(','),
-                }),
-            });
+            await apiRequest('/conversations', { method: 'POST', body: JSON.stringify({ ...newConversation, participantIds: newConversation.participantIds.join(',') }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: newConversation }});
             return newConversation.id;
-        } catch (error: any) {
-            addToast(`Grup sohbeti oluşturulamadı: ${error.message}`, 'error');
-        }
+        } catch (error: any) { addToast(`Grup sohbeti oluşturulamadı: ${error.message}`, 'error'); }
         return undefined;
     }, [state.currentUser, addToast]);
 
     const updateStudentNotes = useCallback(async (studentId: string, notes: string) => {
         try {
-            await apiRequest(`/users/${studentId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ notes })
-            });
+            await apiRequest(`/users/${studentId}`, { method: 'PUT', body: JSON.stringify({ notes }) });
             const student = state.users.find(u => u.id === studentId);
-            if (student) {
-                dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: { ...student, notes } }});
-            }
-        } catch (error: any) {
-            addToast(`Notlar güncellenemedi: ${error.message}`, 'error');
-        }
+            if (student) dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'users', data: { ...student, notes } }});
+        } catch (error: any) { addToast(`Notlar güncellenemedi: ${error.message}`, 'error'); }
     }, [state.users, addToast]);
 
-
+    const awardXp = useCallback(async (amount: number, reason: string) => {
+        if (!state.currentUser) return;
+        const updatedUser = { ...state.currentUser, xp: (state.currentUser.xp || 0) + amount };
+        await updateUser(updatedUser);
+        addToast(`+${amount} XP! ${reason}`, 'xp');
+    }, [state.currentUser, updateUser, addToast]);
+    
     const seedDatabase = async () => {
          try {
             await fetch('/api/seed');
             addToast("Veritabanı deneme verileriyle dolduruldu.", "success");
             window.location.reload();
-        } catch (error: any) {
-            addToast(`Veritabanı doldurulamadı: ${error.message}`, 'error');
-        }
-    }
+        } catch (error: any) { addToast(`Veritabanı doldurulamadı: ${error.message}`, 'error'); }
+    };
+
+    const addResource = useCallback(async (newResource: Omit<Resource, 'id'>) => {
+        const resourceWithId = { ...newResource, id: uuid() };
+        try {
+            await apiRequest('/resources', { method: 'POST', body: JSON.stringify({ ...resourceWithId, assignedTo: JSON.stringify(resourceWithId.assignedTo || []) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: resourceWithId } });
+        } catch (error: any) { addToast(`Kaynak eklenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const deleteResource = useCallback(async (resourceId: string) => {
+        try {
+            await apiRequest('/resources', { method: 'DELETE', body: JSON.stringify({ ids: [resourceId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'resources', ids: [resourceId] } });
+        } catch (error: any) { addToast(`Kaynak silinemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const assignResourceToStudents = useCallback(async (resourceId: string, studentIds: string[]) => {
+        const resource = state.resources.find(r => r.id === resourceId);
+        if (!resource) return;
+        const updatedResource = { ...resource, assignedTo: Array.from(new Set([...(resource.assignedTo || []), ...studentIds])) };
+        try {
+            await apiRequest(`/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify({ assignedto: JSON.stringify(updatedResource.assignedTo) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: updatedResource } });
+        } catch (error: any) { addToast(`Kaynak atanamadı: ${error.message}`, 'error'); }
+    }, [state.resources, addToast]);
+
+    const addTemplate = useCallback(async (templateData: Omit<AssignmentTemplate, 'id'>) => {
+        const templateWithId = { ...templateData, id: uuid(), isFavorite: false };
+        try {
+            await apiRequest('/templates', { method: 'POST', body: JSON.stringify({ ...templateWithId, checklist: JSON.stringify(templateWithId.checklist) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: templateWithId } });
+        } catch (error: any) { addToast(`Şablon eklenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const updateTemplate = useCallback(async (template: AssignmentTemplate) => {
+        try {
+            await apiRequest(`/templates/${template.id}`, { method: 'PUT', body: JSON.stringify({ ...template, checklist: JSON.stringify(template.checklist) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'templates', data: template } });
+        } catch (error: any) { addToast(`Şablon güncellenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const deleteTemplate = useCallback(async (templateId: string) => {
+        try {
+            await apiRequest('/templates', { method: 'DELETE', body: JSON.stringify({ ids: [templateId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'templates', ids: [templateId] } });
+        } catch (error: any) { addToast(`Şablon silinemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
     
-    // Most memoized calculations and getters can remain the same
-    const coach = useMemo(() => {
-        if (state.currentUser?.role === UserRole.Student) {
-            return state.users.find(u => u.id === state.currentUser.assignedCoachId) || null;
-        }
-        if (state.currentUser?.role === UserRole.Coach || state.currentUser?.role === UserRole.SuperAdmin) {
-            return state.currentUser;
-        }
-        return state.users.find(u => u.role === UserRole.Coach) || null;
-    }, [state.users, state.currentUser]);
+    const toggleTemplateFavorite = useCallback(async (templateId: string) => {
+        const template = state.templates.find(t => t.id === templateId);
+        if(template) await updateTemplate({ ...template, isFavorite: !template.isFavorite });
+    }, [state.templates, updateTemplate]);
+    
+    const addUserToConversation = useCallback(async (conversationId: string, userId: string) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        if (!conversation || conversation.participantIds.includes(userId)) return;
+        const updatedConversation = { ...conversation, participantIds: [...conversation.participantIds, userId] };
+        try {
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantids: updatedConversation.participantIds.join(',') }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
+        } catch(e: any) { addToast(`Kullanıcı eklenemedi: ${e.message}`, 'error'); }
+    }, [state.conversations, addToast]);
+    
+    const removeUserFromConversation = useCallback(async (conversationId: string, userId: string) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        if (!conversation) return;
+        const updatedConversation = { ...conversation, participantIds: conversation.participantIds.filter(id => id !== userId) };
+        try {
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantids: updatedConversation.participantIds.join(',') }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
+        } catch(e: any) { addToast(`Kullanıcı çıkarılamadı: ${e.message}`, 'error'); }
+    }, [state.conversations, addToast]);
 
-    const students = useMemo(() => {
-        if (state.currentUser?.role === UserRole.Coach) {
-            return state.users.filter(u => u.role === UserRole.Student && u.assignedCoachId === state.currentUser.id);
-        }
-        if (state.currentUser?.role === UserRole.SuperAdmin) {
-            return state.users.filter(u => u.role === UserRole.Student);
-        }
-        return [];
-    }, [state.users, state.currentUser]);
+    const endConversation = useCallback(async (conversationId: string) => {
+        try {
+            await apiRequest('/conversations', { method: 'DELETE', body: JSON.stringify({ ids: [conversationId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'conversations', ids: [conversationId] }});
+        } catch (error: any) { addToast(`Grup sonlandırılamadı: ${error.message}`, 'error'); }
+    }, [addToast]);
 
-    // ... The rest of the provider would be filled with converted functions
+    const setConversationArchived = useCallback(async (conversationId: string, isArchived: boolean) => {
+        const conversation = state.conversations.find(c => c.id === conversationId);
+        if (!conversation) return;
+        const updatedConversation = { ...conversation, isArchived };
+        try {
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ isarchived: isArchived }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
+        } catch(e: any) { addToast(`Sohbet arşivlenemedi: ${e.message}`, 'error'); }
+    }, [state.conversations, addToast]);
+
+    const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>) => {
+        const eventWithId = { ...event, id: uuid() };
+        try {
+            await apiRequest('/calendarEvents', { method: 'POST', body: JSON.stringify(eventWithId) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: eventWithId } });
+        } catch (error: any) { addToast(`Etkinlik eklenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+    
+    const addMultipleCalendarEvents = useCallback(async (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => {
+        if (!state.currentUser) return;
+        const eventsWithIds = events.map(e => ({...e, id: uuid(), userId: state.currentUser!.id}));
+        try {
+            await apiRequest('/calendarEvents/batch', { method: 'POST', body: JSON.stringify(eventsWithIds) });
+            eventsWithIds.forEach(e => dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'calendarEvents', data: e } }));
+        } catch (error: any) { addToast(`Etkinlikler eklenemedi: ${error.message}`, 'error'); }
+    }, [state.currentUser, addToast]);
+
+    const deleteCalendarEvent = useCallback(async (eventId: string) => {
+        try {
+            await apiRequest('/calendarEvents', { method: 'DELETE', body: JSON.stringify({ ids: [eventId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'calendarEvents', ids: [eventId] } });
+        } catch (error: any) { addToast(`Etkinlik silinemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const addExam = useCallback(async (exam: Omit<Exam, 'id'>) => {
+        const examWithId = { ...exam, id: uuid() };
+        try {
+            await apiRequest('/exams', { method: 'POST', body: JSON.stringify({ ...examWithId, subjects: JSON.stringify(examWithId.subjects) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'exams', data: examWithId } });
+        } catch (error: any) { addToast(`Sınav eklenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+    
+    const updateExam = useCallback(async (updatedExam: Exam) => {
+        try {
+            await apiRequest(`/exams/${updatedExam.id}`, { method: 'PUT', body: JSON.stringify({ ...updatedExam, subjects: JSON.stringify(updatedExam.subjects) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'exams', data: updatedExam } });
+        } catch (error: any) { addToast(`Sınav güncellenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+    
+    const deleteExam = useCallback(async (examId: string) => {
+        try {
+            await apiRequest('/exams', { method: 'DELETE', body: JSON.stringify({ ids: [examId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'exams', ids: [examId] } });
+        } catch (error: any) { addToast(`Sınav silinemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+    
+    const addQuestion = useCallback(async (questionData: Omit<Question, 'id'>) => {
+        const questionWithId = { ...questionData, id: uuid() };
+        try {
+            await apiRequest('/questions', { method: 'POST', body: JSON.stringify({ ...questionWithId, options: JSON.stringify(questionWithId.options) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'questions', data: questionWithId } });
+        } catch (error: any) { addToast(`Soru eklenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const updateQuestion = useCallback(async (question: Question) => {
+        try {
+            await apiRequest(`/questions/${question.id}`, { method: 'PUT', body: JSON.stringify({ ...question, options: JSON.stringify(question.options) }) });
+            dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'questions', data: question } });
+        } catch (error: any) { addToast(`Soru güncellenemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+
+    const deleteQuestion = useCallback(async (questionId: string) => {
+        try {
+            await apiRequest('/questions', { method: 'DELETE', body: JSON.stringify({ ids: [questionId] }) });
+            dispatch({ type: 'REMOVE_DOCS', payload: { collection: 'questions', ids: [questionId] } });
+        } catch (error: any) { addToast(`Soru silinemedi: ${error.message}`, 'error'); }
+    }, [addToast]);
+    
+    const coach = useMemo(() => state.currentUser?.role === UserRole.Student ? state.users.find(u => u.id === state.currentUser.assignedCoachId) || null : (state.currentUser?.role === UserRole.Coach || state.currentUser?.role === UserRole.SuperAdmin ? state.currentUser : state.users.find(u => u.role === UserRole.Coach) || null), [state.users, state.currentUser]);
+    const students = useMemo(() => state.currentUser?.role === UserRole.Coach ? state.users.filter(u => u.role === UserRole.Student && u.assignedCoachId === state.currentUser.id) : (state.currentUser?.role === UserRole.SuperAdmin ? state.users.filter(u => u.role === UserRole.Student) : []), [state.users, state.currentUser]);
     const getAssignmentsForStudent = useCallback((studentId: string) => state.assignments.filter(a => a.studentId === studentId), [state.assignments]);
     const getGoalsForStudent = useCallback((studentId: string) => state.goals.filter(g => g.studentId === studentId), [state.goals]);
     const findMessageById = useCallback((messageId: string) => state.messages.find(m => m.id === messageId), [state.messages]);
     const getMessagesForConversation = useCallback((conversationId: string) => {
          if (!state.currentUser) return [];
-         return state.messages.filter(m => m.conversationId === conversationId)
-            .sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+         return state.messages.filter(m => m.conversationId === conversationId).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     }, [state.messages, state.currentUser]);
     
-    const value = {
-        ...state,
-        coach,
-        students,
-        login,
-        logout,
-        addUser,
-        updateUser,
-        deleteUser,
-        register,
-        inviteStudent,
-        addAssignment,
-        updateAssignment,
-        deleteAssignments,
-        getAssignmentsForStudent,
-        getGoalsForStudent,
-        findMessageById,
-        getMessagesForConversation,
-        sendMessage,
-        seedDatabase,
-        uploadFile,
-        updateGoal,
-        addGoal,
-        deleteGoal,
-        addReaction,
-        voteOnPoll,
-        updateStudentNotes,
-        startGroupChat,
-        findOrCreateConversation,
-        // Provide placeholder or converted implementations for all other functions
-        markMessagesAsRead: async () => {},
-        markNotificationsAsRead: async () => {},
-        updateTypingStatus: async () => {},
-        toggleResourceAssignment: async () => { addToast('toggleResourceAssignment function not implemented for DB.', 'info')},
-        assignResourceToStudents: async () => { addToast('assignResourceToStudents function not implemented for DB.', 'info')},
-        addResource: async () => { addToast('addResource function not implemented for DB.', 'info')},
-        deleteResource: async () => { addToast('deleteResource function not implemented for DB.', 'info')},
-        addTemplate: async () => { addToast('addTemplate function not implemented for DB.', 'info')},
-        updateTemplate: async () => { addToast('updateTemplate function not implemented for DB.', 'info')},
-        deleteTemplate: async () => { addToast('deleteTemplate function not implemented for DB.', 'info')},
-        awardXp: async () => { /* XP logic is client-side for now */},
-        addUserToConversation: async () => { addToast('addUserToConversation function not implemented for DB.', 'info')},
-        removeUserFromConversation: async () => { addToast('removeUserFromConversation function not implemented for DB.', 'info')},
-        endConversation: async () => { addToast('endConversation function not implemented for DB.', 'info')},
-        setConversationArchived: async () => { addToast('setConversationArchived function not implemented for DB.', 'info')},
-        updateBadge: async () => { addToast('updateBadge function not implemented for DB.', 'info')},
-        addCalendarEvent: async () => { addToast('addCalendarEvent function not implemented for DB.', 'info')},
-        addMultipleCalendarEvents: async () => { addToast('addMultipleCalendarEvents function not implemented for DB.', 'info')},
-        deleteCalendarEvent: async () => { addToast('deleteCalendarEvent function not implemented for DB.', 'info')},
-        toggleTemplateFavorite: async () => { addToast('toggleTemplateFavorite function not implemented for DB.', 'info')},
-        addExam: async () => { addToast('addExam function not implemented for DB.', 'info')},
-        updateExam: async () => { addToast('updateExam function not implemented for DB.', 'info')},
-        deleteExam: async () => { addToast('deleteExam function not implemented for DB.', 'info')},
-        addQuestion: async () => { addToast('addQuestion function not implemented for DB.', 'info')},
-        updateQuestion: async () => { addToast('updateQuestion function not implemented for DB.', 'info')},
-        deleteQuestion: async () => { addToast('deleteQuestion function not implemented for DB.', 'info')},
-        unreadCounts: new Map(),
-        lastMessagesMap: new Map(),
-    } as unknown as DataContextType;
-
+    const value: DataContextType = {
+        ...state, coach, students, login, logout, addUser, updateUser, deleteUser, register, inviteStudent, addAssignment, updateAssignment, deleteAssignments,
+        getAssignmentsForStudent, getGoalsForStudent, findMessageById, getMessagesForConversation, sendMessage, seedDatabase, uploadFile, updateGoal, addGoal,
+        deleteGoal, addReaction, voteOnPoll, updateStudentNotes, startGroupChat, findOrCreateConversation, markMessagesAsRead,
+        markNotificationsAsRead, updateTypingStatus: async () => {}, awardXp, addUserToConversation, removeUserFromConversation, endConversation, setConversationArchived,
+        updateBadge: async () => {}, addCalendarEvent, deleteCalendarEvent, addMultipleCalendarEvents, toggleTemplateFavorite, addResource, deleteResource,
+        assignResourceToStudents, addTemplate, updateTemplate, deleteTemplate, addExam, updateExam, deleteExam, addQuestion, updateQuestion, deleteQuestion,
+        unreadCounts: new Map(), lastMessagesMap: new Map(),
+    };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

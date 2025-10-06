@@ -132,7 +132,8 @@ const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (ope
                        <SearchIcon className="h-5 w-5" />
                        <span className="hidden md:inline text-xs border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5">Ctrl+K</span>
                    </button>
-                   {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={markNotificationsAsRead} />}
+                   {/* FIX: Pass a function that calls markNotificationsAsRead with the current user's ID. */}
+                   {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={() => currentUser && markNotificationsAsRead(currentUser.id)} />}
                     <div className="hidden sm:flex items-center">
                         <img className="h-9 w-9 rounded-full" src={currentUser?.profilePicture} alt={`${currentUser?.name} avatarı`} loading="lazy" />
                     </div>

@@ -154,53 +154,33 @@ app.get('/api/data', async (req, res) => {
 
         // Process arrays from text
         users.forEach(u => {
-            if (u.childids) u.childIds = u.childids.split(','); else u.childIds = [];
-            if (u.parentids) u.parentIds = u.parentids.split(','); else u.parentIds = [];
-            if (u.earnedbadgeids) u.earnedBadgeIds = u.earnedbadgeids.split(','); else u.earnedBadgeIds = [];
+            u.childIds = u.childids ? u.childids.split(',') : [];
+            u.parentIds = u.parentids ? u.parentids.split(',') : [];
+            u.earnedBadgeIds = u.earnedbadgeids ? u.earnedbadgeids.split(',') : [];
         });
          conversations.forEach(c => {
-            if (c.participantids) c.participantIds = c.participantids.split(','); else c.participantIds = [];
+            c.participantIds = c.participantids ? c.participantids.split(',') : [];
         });
         assignments.forEach(a => {
-            try {
-                if (a.checklist) a.checklist = JSON.parse(a.checklist); else a.checklist = [];
-            } catch (e) {
-                a.checklist = [];
-            }
+            try { a.checklist = a.checklist ? JSON.parse(a.checklist) : []; } catch (e) { a.checklist = []; }
+            try { a.coachAttachments = a.coachattachments ? JSON.parse(a.coachattachments) : []; } catch (e) { a.coachAttachments = []; }
         });
         messages.forEach(m => {
-            try {
-                if (m.readby) m.readBy = JSON.parse(m.readby); else m.readBy = [];
-                if (m.reactions) m.reactions = JSON.parse(m.reactions); else m.reactions = undefined;
-                if (m.poll) m.poll = JSON.parse(m.poll); else m.poll = undefined;
-            } catch (e) {
-                console.error(`Failed to parse message fields for id ${m.id}`, e);
-                m.readBy = [];
-                m.reactions = undefined;
-                m.poll = undefined;
-            }
+            try { m.readBy = m.readby ? JSON.parse(m.readby) : []; } catch (e) { m.readBy = []; }
+            try { m.reactions = m.reactions ? JSON.parse(m.reactions) : undefined; } catch (e) { m.reactions = undefined; }
+            try { m.poll = m.poll ? JSON.parse(m.poll) : undefined; } catch (e) { m.poll = undefined; }
         });
         goals.forEach(g => {
-            try {
-                if (g.milestones) g.milestones = JSON.parse(g.milestones); else g.milestones = [];
-            } catch (e) { g.milestones = []; }
+            try { g.milestones = g.milestones ? JSON.parse(g.milestones) : []; } catch (e) { g.milestones = []; }
+        });
+         exams.forEach(ex => {
+            try { ex.subjects = ex.subjects ? JSON.parse(ex.subjects) : []; } catch (e) { ex.subjects = []; }
+        });
+         questions.forEach(q => {
+            try { q.options = q.options ? JSON.parse(q.options) : []; } catch (e) { q.options = []; }
         });
         
-        // Add more processing as needed for other tables
-
-        res.status(200).json({
-            users,
-            assignments,
-            messages,
-            conversations,
-            notifications,
-            templates,
-            resources,
-            goals,
-            calendarEvents,
-            exams,
-            questions
-        });
+        res.status(200).json({ users, assignments, messages, conversations, notifications, templates, resources, goals, calendarEvents, exams, questions });
     } catch (error) {
         console.error("Error fetching data:", error);
         res.status(500).json({ error: error.message });
@@ -214,10 +194,9 @@ app.post('/api/login', async (req, res) => {
         const { rows } = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()};`;
         if (rows.length > 0) {
             const user = rows[0];
-            // Process arrays from text
-            if (user.childids) user.childIds = user.childids.split(','); else user.childIds = [];
-            if (user.parentids) user.parentIds = user.parentids.split(','); else user.parentIds = [];
-            if (user.earnedbadgeids) user.earnedBadgeIds = user.earnedbadgeids.split(','); else user.earnedBadgeIds = [];
+            user.childIds = user.childids ? user.childids.split(',') : [];
+            user.parentIds = user.parentids ? user.parentids.split(',') : [];
+            user.earnedBadgeIds = user.earnedbadgeids ? user.earnedbadgeids.split(',') : [];
             res.status(200).json(user);
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -227,7 +206,55 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Generic CREATE endpoint
+// --- CUSTOM ENDPOINTS ---
+app.post('/api/conversations/:id/mark-as-read', async (req, res) => {
+    const { id: conversationId } = req.params;
+    const { userId } = req.body;
+    try {
+        const { rows: messages } = await sql`SELECT id, "readBy" FROM messages WHERE "conversationId" = ${conversationId}`;
+        const updates = [];
+        for (const message of messages) {
+            const readBy = message.readby ? JSON.parse(message.readby) : [];
+            if (!readBy.includes(userId)) {
+                readBy.push(userId);
+                updates.push(sql`UPDATE messages SET "readBy" = ${JSON.stringify(readBy)} WHERE id = ${message.id}`);
+            }
+        }
+        if (updates.length > 0) await Promise.all(updates);
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/notifications/mark-as-read', async (req, res) => {
+    const { userId } = req.body;
+    try {
+        await sql`UPDATE notifications SET "isRead" = true WHERE "userId" = ${userId} AND "isRead" = false`;
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/calendarEvents/batch', async (req, res) => {
+    const events = req.body;
+    if (!Array.isArray(events) || events.length === 0) return res.status(400).json({ message: 'Invalid body.' });
+    try {
+        const client = await sql.connect();
+        try {
+            await client.query('BEGIN');
+            for (const event of events) {
+                await client.query( `INSERT INTO calendarEvents (id, "userId", title, date, type, color, "startTime", "endTime") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [event.id, event.userId, event.title, event.date, event.type, event.color, event.startTime, event.endTime]);
+            }
+            await client.query('COMMIT');
+        } catch(e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+        res.status(201).json(events);
+    } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// --- GENERIC ENDPOINTS ---
 app.post('/api/:collection', async (req, res) => {
     const { collection } = req.params;
     const data = req.body;
@@ -235,9 +262,7 @@ app.post('/api/:collection', async (req, res) => {
         const columns = Object.keys(data).map(k => `"${k.toLowerCase()}"`).join(', ');
         const values = Object.values(data);
         const placeholders = Object.keys(data).map((_, i) => `$${i + 1}`).join(', ');
-        
         await sql.query(`INSERT INTO ${collection} (${columns}) VALUES (${placeholders})`, values);
-
         res.status(201).json(data);
     } catch (error) {
         console.error(`Error inserting into ${collection}:`, error);
@@ -245,16 +270,13 @@ app.post('/api/:collection', async (req, res) => {
     }
 });
 
-// Generic UPDATE endpoint
 app.put('/api/:collection/:id', async (req, res) => {
     const { collection, id } = req.params;
     const data = req.body;
     try {
         const setClause = Object.keys(data).map((key, i) => `"${key.toLowerCase()}" = $${i + 1}`).join(', ');
         const values = [...Object.values(data), id];
-        
         await sql.query(`UPDATE ${collection} SET ${setClause} WHERE id = $${values.length}`, values);
-        
         res.status(200).json(data);
     } catch (error) {
         console.error(`Error updating ${collection}:`, error);
@@ -262,15 +284,10 @@ app.put('/api/:collection/:id', async (req, res) => {
     }
 });
 
-// Generic BATCH DELETE endpoint
 app.delete('/api/:collection', async (req, res) => {
     const { collection } = req.params;
-    const { ids } = req.body; // Expect an array of IDs
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ message: 'Invalid request body, expected an array of IDs.' });
-    }
-
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid body, expected array of IDs.' });
     try {
         const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
         await sql.query(`DELETE FROM ${collection} WHERE id IN (${placeholders})`, ids);

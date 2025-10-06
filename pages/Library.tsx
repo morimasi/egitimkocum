@@ -82,7 +82,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 resourceUrl = await uploadFile(file, `library/${currentUser.id}/${file.name}`);
             }
 
-            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, assignedTo: isPublic ? [] : assignedTo, category });
+            // FIX: Add missing 'uploaderId' property.
+            await addResource({ name: resourceName, url: resourceUrl, type, isPublic, uploaderId: currentUser.id, assignedTo: isPublic ? [] : assignedTo, category });
             addToast("Kaynak başarıyla eklendi.", "success");
             onClose();
         } catch (error) {
