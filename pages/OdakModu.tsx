@@ -80,6 +80,7 @@ const OdakModu = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Assignment | Goal | null>(null);
     const [sessionLog, setSessionLog] = useState<{ taskTitle: string; timestamp: string }[]>([]);
+    const [notificationPermission, setNotificationPermission] = useState('default');
     const audioRef = useRef<HTMLAudioElement | null>(null);
     
     useEffect(() => {
@@ -92,6 +93,12 @@ const OdakModu = () => {
             }
         } catch (e) { console.error("Could not load settings", e); }
     }, [currentUser?.id]);
+
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission !== 'denied') {
+            Notification.requestPermission().then(setNotificationPermission);
+        }
+    }, []);
 
     useEffect(() => {
         setTimeLeft(durations[mode]);
@@ -146,15 +153,22 @@ const OdakModu = () => {
                     }
                 ]);
                 
-                if (newPomodoroCount % 4 === 0) selectMode('longBreak');
-                else selectMode('shortBreak');
-            } else {
+                const isLongBreak = newPomodoroCount % 4 === 0;
+                if (notificationPermission === 'granted') {
+                    new Notification('Odak Modu', { body: `Çalışma süresi bitti! Şimdi ${isLongBreak ? 'uzun' : 'kısa'} bir mola zamanı.`, icon: '/vite.svg' });
+                }
+                selectMode(isLongBreak ? 'longBreak' : 'shortBreak');
+
+            } else { // It's a break
+                if (notificationPermission === 'granted') {
+                    new Notification('Odak Modu', { body: 'Mola bitti! Tekrar odaklanmaya hazır mısın?', icon: '/vite.svg' });
+                }
                 selectMode('work');
             }
             setIsActive(false);
         }
         return () => clearInterval(interval);
-    }, [isActive, timeLeft, mode, pomodoros, selectMode, awardXp, selectedTask]);
+    }, [isActive, timeLeft, mode, pomodoros, selectMode, awardXp, selectedTask, notificationPermission]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -169,24 +183,67 @@ const OdakModu = () => {
         }
         setIsActive(!isActive);
     };
+    
+    const CIRCLE_RADIUS = 140;
+    const CIRCLE_STROKE_WIDTH = 12;
+    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+
+    const modeClasses: Record<TimerMode, { progress: string, bg: string }> = {
+        work: { progress: 'text-primary-500', bg: 'bg-primary-500' },
+        shortBreak: { progress: 'text-green-500', bg: 'bg-green-500' },
+        longBreak: { progress: 'text-blue-500', bg: 'bg-blue-500' },
+    };
+
+    const progress = (timeLeft / durations[mode]);
+    const strokeDashoffset = CIRCLE_CIRCUMFERENCE - progress * CIRCLE_CIRCUMFERENCE;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-6">
                 <Card>
                     <div className="text-center">
                         <div className="flex justify-center gap-2 mb-8">
-                            <button onClick={() => selectMode('work')} className={`px-4 py-2 rounded-md ${mode === 'work' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Çalışma</button>
-                            <button onClick={() => selectMode('shortBreak')} className={`px-4 py-2 rounded-md ${mode === 'shortBreak' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Kısa Mola</button>
-                            <button onClick={() => selectMode('longBreak')} className={`px-4 py-2 rounded-md ${mode === 'longBreak' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Uzun Mola</button>
+                            <button onClick={() => selectMode('work')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'work' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Çalışma</button>
+                            <button onClick={() => selectMode('shortBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'shortBreak' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Kısa Mola</button>
+                            <button onClick={() => selectMode('longBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'longBreak' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Uzun Mola</button>
                         </div>
 
-                        <p className="font-bold text-8xl tabular-nums">{formatTime(timeLeft)}</p>
-                        
-                        <p className="font-semibold text-lg mt-4 h-7">{selectedTask ? selectedTask.title : 'Bir görev seçin...'}</p>
+                        <div className="relative w-[300px] h-[300px] mx-auto mb-8">
+                            <svg className="w-full h-full" viewBox="0 0 300 300">
+                                <circle
+                                    strokeWidth={CIRCLE_STROKE_WIDTH}
+                                    stroke="currentColor"
+                                    fill="transparent"
+                                    r={CIRCLE_RADIUS}
+                                    cx="150"
+                                    cy="150"
+                                    className="text-gray-200 dark:text-gray-700"
+                                />
+                                <circle
+                                    strokeWidth={CIRCLE_STROKE_WIDTH}
+                                    stroke="currentColor"
+                                    fill="transparent"
+                                    r={CIRCLE_RADIUS}
+                                    cx="150"
+                                    cy="150"
+                                    className={modeClasses[mode].progress}
+                                    strokeLinecap="round"
+                                    transform="rotate(-90 150 150)"
+                                    style={{
+                                        strokeDasharray: CIRCLE_CIRCUMFERENCE,
+                                        strokeDashoffset: strokeDashoffset,
+                                        transition: 'stroke-dashoffset 1s linear'
+                                    }}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <p className="font-bold text-7xl tabular-nums">{formatTime(timeLeft)}</p>
+                                <p className="font-semibold text-base mt-2 h-7 truncate max-w-[200px] text-gray-500 dark:text-gray-400">{selectedTask ? selectedTask.title : 'Bir görev seçin...'}</p>
+                            </div>
+                        </div>
 
-                        <button onClick={toggleTimer} className={`mt-8 w-48 h-16 text-2xl font-bold rounded-full text-white transition-transform transform hover:scale-105 ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}>
-                            {isActive ? 'DURDUR' : 'BAŞLAT'}
+                        <button onClick={toggleTimer} className={`w-24 h-24 text-2xl font-bold rounded-full text-white transition-all transform hover:scale-105 shadow-lg flex items-center justify-center mx-auto ${isActive ? 'bg-red-500 hover:bg-red-600' : `${modeClasses[mode].bg} hover:opacity-90`}`}>
+                            {isActive ? <PauseIcon className="w-10 h-10"/> : <PlayIcon className="w-10 h-10 ml-1"/>}
                         </button>
                         
                         <div className="mt-8 flex justify-center items-center gap-4">

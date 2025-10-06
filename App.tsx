@@ -1,3 +1,4 @@
+
 import React, { Suspense, useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -31,7 +32,6 @@ const ParentPortal = React.lazy(() => import('./pages/ParentPortal'));
 const TemplateManager = React.lazy(() => import('./pages/TemplateManager'));
 const SuperAdminDashboard = React.lazy(() => import('./pages/SuperAdminDashboard'));
 const LoginScreen = React.lazy(() => import('./pages/LoginScreen'));
-const RegisterScreen = React.lazy(() => import('./pages/RegisterScreen'));
 const Motivasyon = React.lazy(() => import('./pages/Motivasyon'));
 const OdakModu = React.lazy(() => import('./pages/OdakModu'));
 const AkilliPlanlayici = React.lazy(() => import('./pages/AkilliPlanlayici'));
@@ -76,7 +76,6 @@ const AppContent = () => {
     const { activePage, setActivePage, startTour } = useUI();
     const { currentUser, isLoading, isDbInitialized } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
-    const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     
@@ -165,11 +164,7 @@ const AppContent = () => {
     if (!currentUser) {
         return (
             <Suspense fallback={<AppSkeleton />}>
-                {showRegister ? (
-                    <RegisterScreen onSwitchToLogin={() => setShowRegister(false)} />
-                ) : (
-                    <LoginScreen onSwitchToRegister={() => setShowRegister(true)} />
-                )}
+                <LoginScreen />
             </Suspense>
         );
     }
