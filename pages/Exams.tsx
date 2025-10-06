@@ -278,20 +278,6 @@ const Exams = () => {
         return examsToFilter;
     }, [userExams, filterCategory, filterTopic]);
 
-
-    const examsByStudent = useMemo(() => {
-        const map = new Map<string, Exam[]>();
-        filteredExams.forEach(exam => {
-            const studentExams = map.get(exam.studentId) || [];
-            studentExams.push(exam);
-            map.set(exam.studentId, studentExams);
-        });
-        for (const studentExams of map.values()) {
-            studentExams.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
-        return map;
-    }, [filteredExams]);
-
     return (
         <div className="space-y-6">
             <Card>

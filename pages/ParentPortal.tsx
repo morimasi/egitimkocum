@@ -1,8 +1,6 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus } from '../types';
+import { AssignmentStatus } from '../types';
 import Card from '../components/Card';
 import { MegaphoneIcon, TrendingUpIcon, TargetIcon, TrophyIcon } from '../components/Icons';
 

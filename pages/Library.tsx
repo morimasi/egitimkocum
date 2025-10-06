@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { Resource, UserRole, AcademicTrack, ResourceCategory } from '../types';
+import { Resource, AcademicTrack, ResourceCategory } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';
@@ -10,16 +10,6 @@ import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
 import AudioRecorder from '../components/AudioRecorder';
 import { ResourceCategoryLabels } from '../services/examCategories';
-
-const getAcademicTrackLabel = (track: AcademicTrack): string => {
-    switch (track) {
-        case AcademicTrack.Sayisal: return 'Sayısal';
-        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
-        case AcademicTrack.Sozel: return 'Sözel';
-        case AcademicTrack.Dil: return 'Dil';
-        default: return '';
-    }
-};
 
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
     const { addResource, uploadFile, currentUser, students } = useDataContext();

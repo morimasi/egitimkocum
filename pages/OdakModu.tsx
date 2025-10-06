@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { Assignment, Goal, AssignmentStatus } from '../types';
+import { Goal, AssignmentStatus } from '../types';
 import Card from '../components/Card';
-import { TargetIcon, PlayIcon, PauseIcon, CheckIcon, ClipboardListIcon, SettingsIcon } from '../components/Icons';
+import { TargetIcon, PlayIcon, PauseIcon, CheckIcon, SettingsIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 
 type TimerMode = 'work' | 'shortBreak' | 'longBreak';

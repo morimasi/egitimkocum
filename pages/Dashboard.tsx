@@ -420,10 +420,6 @@ const QuickActions = () => {
     );
 };
 
-interface BarClickPayload {
-    id: string;
-}
-
 const CoachDashboard = () => {
     const { students, assignments } = useDataContext();
     const { setActivePage } = useUI();

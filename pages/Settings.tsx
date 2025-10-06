@@ -4,8 +4,7 @@ import { UserRole, User, BadgeID } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { CheckCircleIcon, EditIcon, KeyIcon, LogoutIcon, AwardIcon, StarIcon, ZapIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon, AlertTriangleIcon, TrophyIcon, FlameIcon } from '../components/Icons';
-import ConfirmationModal from '../components/ConfirmationModal';
+import { EditIcon, KeyIcon, LogoutIcon, StarIcon, RocketIcon, PlusCircleIcon, StudentsIcon, LibraryIcon, MegaphoneIcon, TrophyIcon, FlameIcon } from '../components/Icons';
 
 const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }) => {
     const { updateUser, uploadFile } = useDataContext();

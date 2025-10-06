@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
 import { ResourceCategory, Question, UserRole, QuestionDifficulty } from '../types';
@@ -415,7 +415,7 @@ const CoachView = () => {
                         </select>
                          <select value={filterTopic} onChange={e => setFilterTopic(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" disabled={filterCategory === 'all'}>
                             <option value="all">Tüm Konular</option>
-                            {topicsForCategory.map(topic => <option key={topic} value={topic}>{topic}</option>)}
+                            {topicsForCategory.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                         <button onClick={() => setIsAiModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold flex items-center gap-2">
                             <SparklesIcon className="w-5 h-5"/> AI ile Oluştur

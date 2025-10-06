@@ -1,7 +1,6 @@
-import React from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import Card from '../components/Card';
-import { Assignment, AssignmentStatus, UserRole } from '../types';
+import { AssignmentStatus } from '../types';
 import { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { generateExamPerformanceInsight } from '../services/geminiService';

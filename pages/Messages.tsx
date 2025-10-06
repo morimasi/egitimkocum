@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Message, UserRole, Poll, PollOption, Conversation, ToastType } from '../types';
-import { SendIcon, VideoIcon, MicIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon, PhoneIcon, EditIcon } from '../components/Icons';
+import { Message, UserRole, Poll, Conversation, ToastType } from '../types';
+import { SendIcon, VideoIcon, PaperclipIcon, DocumentIcon, ReplyIcon, EmojiIcon, CheckIcon, PollIcon, XIcon, UserPlusIcon, UserGroupIcon, ArrowLeftIcon, SearchIcon, MessagesIcon, ArchiveIcon, UnarchiveIcon, PhoneIcon, EditIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import AudioRecorder from '../components/AudioRecorder';
@@ -11,14 +11,6 @@ import { useDropzone } from 'react-dropzone';
 
 
 const MESSAGE_PAGE_SIZE = 20;
-
-const TypingIndicator = () => (
-    <div className="flex items-center space-x-1 p-3">
-        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-    </div>
-);
 
 const PollCreationModal = ({
     isOpen,
@@ -395,9 +387,8 @@ const NewChatModal = ({ isOpen, onClose, onChatCreated }: { isOpen: boolean; onC
 };
 
 
-const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, disabled, openFileDialog }: {
+const MessageInput = ({ onSendMessage, replyTo, onClearReply, disabled, openFileDialog }: {
     onSendMessage: (type: Message['type'], content: any) => void;
-    conversationId: string;
     replyTo: Message | null;
     onClearReply: () => void;
     disabled?: boolean;
@@ -571,7 +562,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
             <input {...getInputProps()} />
             <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
                 <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
-                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
+                <img src={(conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture) || undefined} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
                 <div className="ml-3">
                     <h2 className="font-semibold">{conversation.isGroup ? conversation.groupName : otherUser?.name}</h2>
                     {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}
@@ -605,7 +596,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
                 </div>
             </main>
             {canSend ? (
-                <MessageInput onSendMessage={handleSendMessage} conversationId={conversation.id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
+                <MessageInput onSendMessage={handleSendMessage} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
             ) : (
                 <div className="bg-gray-100 dark:bg-gray-900 p-4 text-center text-sm text-gray-500 border-t dark:border-gray-700">
                     Duyuru kanalına sadece koçlar mesaj gönderebilir.
@@ -698,7 +689,7 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                     return (
                         <li key={conv.id} onClick={() => onSelectConversation(conv.id)} className={`flex items-center p-3 cursor-pointer group relative ${selectedConversationId === conv.id ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
                             <div className="relative">
-                                <img src={profilePic} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
+                                <img src={profilePic || undefined} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
                                 {!conv.isGroup && otherUser && (
                                     <span className={`absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-800 ${otherUser.isOnline ? 'bg-green-500' : 'bg-gray-400'}`} title={otherUser.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}></span>
                                 )}
@@ -780,7 +771,7 @@ export default function Messages() {
         } else {
             // Wait for the slide-out animation to finish before removing the component from the DOM
             const timer = setTimeout(() => {
-                setRenderedConversation(null);
+                setRenderedConversation(undefined);
             }, 300); // This duration should match the transition duration
             return () => clearTimeout(timer);
         }
