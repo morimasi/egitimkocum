@@ -67,7 +67,6 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                 if (!resourceName) {
                     resourceName = file.name;
                 }
-                // FIX: Removed the second argument from the uploadFile call
                 resourceUrl = await uploadFile(file);
             }
 

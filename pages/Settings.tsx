@@ -25,7 +25,6 @@ const EditProfileModal = ({ user, onClose }: { user: User; onClose: () => void }
         if (file) {
             setIsUploading(true);
             try {
-                // FIX: Removed the second argument from the uploadFile call
                 const newProfilePictureUrl = await uploadFile(file);
                 await updateUser({ ...user, profilePicture: newProfilePictureUrl });
                 addToast("Profil fotoğrafı güncellendi.", "success");
@@ -250,6 +249,42 @@ const AdminSettings = () => {
     );
 };
 
+const ParentSettings = () => {
+    const { currentUser, logout } = useDataContext();
+    const { startTour, addToast } = useUI();
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    if (!currentUser) return null;
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+                <Card className="text-center">
+                    <img src={currentUser.profilePicture} alt="Profile" className="w-28 h-28 rounded-full mx-auto border-4 border-white dark:border-gray-800 shadow-lg -mt-16" loading="lazy" />
+                    <h2 className="text-2xl font-bold mt-4">{currentUser.name}</h2>
+                    <p className="text-gray-500 dark:text-gray-400">{currentUser.email}</p>
+                    <button onClick={() => setIsEditModalOpen(true)} className="mt-4 w-full px-4 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 font-semibold flex items-center justify-center gap-2">
+                        <EditIcon className="w-4 h-4" /> Profili Düzenle
+                    </button>
+                </Card>
+                 <Card title="Hesap Yönetimi">
+                     <div className="space-y-4">
+                        <div className="flex justify-between items-center"><p>Şifrenizi değiştirin.</p><button onClick={() => addToast("Bu özellik yakında eklenecektir.", "info")} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><KeyIcon className="w-4 h-4"/> Şifre Değiştir</button></div>
+                        <div className="flex justify-between items-center"><p>Uygulama tanıtım turunu yeniden başlatın.</p><button onClick={startTour} className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">Turu Başlat</button></div>
+                         <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700"><p>Oturumu güvenle kapatın.</p><button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold"><LogoutIcon className="w-4 h-4"/> Çıkış Yap</button></div>
+                    </div>
+                </Card>
+            </div>
+             <div className="lg:col-span-2 space-y-6">
+                <Card title="Çocuğunuz Hakkında">
+                    <p className="text-sm text-gray-500">Çocuğunuzun ödevlerini, notlarını ve ilerlemelerini Veli Portalı'ndan takip edebilirsiniz.</p>
+                </Card>
+            </div>
+            {isEditModalOpen && <EditProfileModal user={currentUser} onClose={() => setIsEditModalOpen(false)} />}
+        </div>
+    );
+};
+
 export default function Settings() {
     const { currentUser } = useDataContext();
     if (!currentUser) return null;
@@ -258,7 +293,7 @@ export default function Settings() {
         [UserRole.SuperAdmin]: <AdminSettings />,
         [UserRole.Coach]: <CoachSettings />,
         [UserRole.Student]: <StudentSettings />,
-        [UserRole.Parent]: <CoachSettings />, // Parents can use a simplified version of coach settings for profile management
+        [UserRole.Parent]: <ParentSettings />,
     };
 
     return (

@@ -335,7 +335,6 @@ const Exams = () => {
                                         <td className="px-4 py-3 text-center font-semibold whitespace-nowrap">
                                             <span className="text-green-500">{exam.correct}D</span> / <span className="text-red-500">{exam.incorrect}Y</span> / <span className="text-blue-500 font-bold">{exam.netScore.toFixed(2)}N</span>
                                         </td>
-                                        {/* FIX: Replaced corrupted code with correct action buttons */}
                                         {isCoachOrAdmin && (
                                             <td className="px-4 py-3 text-right space-x-2">
                                                 <button onClick={(e) => { e.stopPropagation(); setExamToEdit(exam); setIsModalOpen(true); }} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Düzenle</button>
@@ -363,5 +362,4 @@ const Exams = () => {
     );
 };
 
-// FIX: Add default export
 export default Exams;

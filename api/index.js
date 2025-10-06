@@ -450,8 +450,29 @@ app.post('/api/gemini/generateText', async (req, res) => {
 app.post('/api/gemini/generateWithImage', async (req, res) => {
     try {
         const { textPart, imagePart } = req.body;
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, textPart] } });
-        res.json({ result: response.text });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [imagePart, textPart] },
+            config: {
+                responseModalities: ['IMAGE', 'TEXT'],
+            }
+        });
+        
+        let textResult = '';
+        if (response.candidates && response.candidates[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.text) {
+                    textResult += part.text + ' ';
+                }
+            }
+        }
+        
+        // Use the convenience getter as a fallback
+        if (!textResult.trim() && response.text) {
+             textResult = response.text;
+        }
+
+        res.json({ result: textResult.trim() });
     } catch (error) {
         res.status(500).json({ error: 'Gemini API image generation failed.', details: error.message });
     }
