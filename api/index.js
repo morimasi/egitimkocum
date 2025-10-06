@@ -7,20 +7,6 @@ app.use(express.json());
 app.use(cors());
 
 const ensureTablesExist = async () => {
-    // Drop tables first to ensure a clean schema on each seed
-    await sql`DROP TABLE IF EXISTS questions CASCADE;`;
-    await sql`DROP TABLE IF EXISTS exams CASCADE;`;
-    await sql`DROP TABLE IF EXISTS calendarEvents CASCADE;`;
-    await sql`DROP TABLE IF EXISTS badges CASCADE;`;
-    await sql`DROP TABLE IF EXISTS goals CASCADE;`;
-    await sql`DROP TABLE IF EXISTS resources CASCADE;`;
-    await sql`DROP TABLE IF EXISTS templates CASCADE;`;
-    await sql`DROP TABLE IF EXISTS notifications CASCADE;`;
-    await sql`DROP TABLE IF EXISTS conversations CASCADE;`;
-    await sql`DROP TABLE IF EXISTS messages CASCADE;`;
-    await sql`DROP TABLE IF EXISTS assignments CASCADE;`;
-    await sql`DROP TABLE IF EXISTS users CASCADE;`;
-    
     await sql`
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(255) PRIMARY KEY,
@@ -122,6 +108,20 @@ const ensureTablesExist = async () => {
 // Helper to run migrations/seeding
 app.get('/seed', async (req, res) => {
     try {
+        // Drop tables first to ensure a clean schema on each seed
+        await sql`DROP TABLE IF EXISTS questions CASCADE;`;
+        await sql`DROP TABLE IF EXISTS exams CASCADE;`;
+        await sql`DROP TABLE IF EXISTS calendarEvents CASCADE;`;
+        await sql`DROP TABLE IF EXISTS badges CASCADE;`;
+        await sql`DROP TABLE IF EXISTS goals CASCADE;`;
+        await sql`DROP TABLE IF EXISTS resources CASCADE;`;
+        await sql`DROP TABLE IF EXISTS templates CASCADE;`;
+        await sql`DROP TABLE IF EXISTS notifications CASCADE;`;
+        await sql`DROP TABLE IF EXISTS conversations CASCADE;`;
+        await sql`DROP TABLE IF EXISTS messages CASCADE;`;
+        await sql`DROP TABLE IF EXISTS assignments CASCADE;`;
+        await sql`DROP TABLE IF EXISTS users CASCADE;`;
+
         await ensureTablesExist();
 
         let messages = [];
