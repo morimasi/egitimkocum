@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { PhoneOffIcon, MicIcon, MicOffIcon, MoveIcon, MaximizeIcon, MinimizeIcon } from './Icons';
 import { User } from '../types';
@@ -20,7 +20,7 @@ const VideoCallModal = () => {
     const participants = isGroupCall
         ? users.filter(u => callConversation.participantIds.includes(u.id))
         : [callContact, currentUser].filter((u): u is User => !!u);
-    const callTitle = (isGroupCall ? callConversation.groupName : callContact?.name) ?? undefined;
+    const callTitle = (isGroupCall ? callConversation.groupName : callContact?.name);
     const activeSpeaker = users.find(u => u.id === activeSpeakerId);
     
     useEffect(() => {
@@ -115,7 +115,7 @@ const VideoCallModal = () => {
             className="fixed z-[100] w-96 bg-gray-800 rounded-lg shadow-2xl border border-gray-600/50 transform transition-all duration-300 animate-fade-in"
             style={{ top: `${position.y}px`, left: `${position.x}px` }}
         >
-            <Header title={callTitle} />
+            <Header title={callTitle ?? undefined} />
 
             {!isMinimized && (
                 <>

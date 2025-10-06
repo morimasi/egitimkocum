@@ -60,220 +60,178 @@ const SettingsModal = ({ isOpen, onClose, durations, setDurations, alertSound, s
             </div>
             <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
                 <button type="button" onClick={onClose} className="px-4 py-2 mr-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
-                <button onClick={handleSave} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
+                <button type="button" onClick={handleSave} className="px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Kaydet</button>
             </div>
         </Modal>
     );
 };
 
 const OdakModu = () => {
-    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, awardXp } = useDataContext();
+    const { currentUser, getAssignmentsForStudent, getGoalsForStudent, updateGoal } = useDataContext();
     
-    const [durations, setDurations] = useState<Record<TimerMode, number>>({
-        work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [durations, setDurations] = useState<Record<TimerMode, number>>(() => {
+        try {
+            const saved = localStorage.getItem('pomodoroDurations');
+            return saved ? JSON.parse(saved) : { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+        } catch {
+            return { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+        }
     });
-    const [alertSound, setAlertSound] = useState('bell');
+    const [alertSound, setAlertSound] = useState(() => localStorage.getItem('pomodoroSound') || 'bell');
+
     const [mode, setMode] = useState<TimerMode>('work');
     const [timeLeft, setTimeLeft] = useState(durations.work);
     const [isActive, setIsActive] = useState(false);
-    const [pomodoros, setPomodoros] = useState(0);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [selectedTask, setSelectedTask] = useState<Assignment | Goal | null>(null);
-    const [sessionLog, setSessionLog] = useState<{ taskTitle: string; timestamp: string }[]>([]);
-    const [notificationPermission, setNotificationPermission] = useState('default');
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [sessionCount, setSessionCount] = useState(0);
+    const timerRef = useRef<number | null>(null);
+
+    const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+    
+    const allTasks = useMemo(() => {
+        if (!currentUser) return [];
+        const assignments = getAssignmentsForStudent(currentUser.id)
+            .filter(a => a.status === AssignmentStatus.Pending)
+            .map(a => ({ id: `a-${a.id}`, text: a.title, type: 'assignment' as const, original: a }));
+        const goals = getGoalsForStudent(currentUser.id)
+            .filter(g => !g.isCompleted)
+            .map(g => ({ id: `g-${g.id}`, text: g.title, type: 'goal' as const, original: g }));
+        return [...assignments, ...goals];
+    }, [currentUser, getAssignmentsForStudent, getGoalsForStudent]);
     
     useEffect(() => {
-        try {
-            const savedSettings = localStorage.getItem(`odakSettings_${currentUser?.id}`);
-            if (savedSettings) {
-                const { savedDurations, savedAlertSound } = JSON.parse(savedSettings);
-                setDurations(savedDurations);
-                setAlertSound(savedAlertSound);
-            }
-        } catch (e) { console.error("Could not load settings", e); }
-    }, [currentUser?.id]);
+        if (isActive && timeLeft > 0) {
+            timerRef.current = window.setInterval(() => {
+                setTimeLeft(t => t - 1);
+            }, 1000);
+        } else if (timeLeft === 0) {
+            new Audio(SOUNDS[alertSound]).play();
+            if (timerRef.current) clearInterval(timerRef.current);
+            setIsActive(false);
 
-    useEffect(() => {
-        if ('Notification' in window && Notification.permission !== 'denied') {
-            Notification.requestPermission().then(setNotificationPermission);
+            if (mode === 'work') {
+                setSessionCount(s => s + 1);
+                if ((sessionCount + 1) % 4 === 0) {
+                    setMode('longBreak');
+                } else {
+                    setMode('shortBreak');
+                }
+            } else {
+                setMode('work');
+            }
         }
-    }, []);
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [isActive, timeLeft, alertSound, mode, sessionCount]);
 
     useEffect(() => {
         setTimeLeft(durations[mode]);
         setIsActive(false);
     }, [mode, durations]);
-
-
-    useEffect(() => {
-        try {
-            const settings = { savedDurations: durations, savedAlertSound: alertSound };
-            localStorage.setItem(`odakSettings_${currentUser?.id}`, JSON.stringify(settings));
-        } catch (e) { console.error("Could not save settings", e); }
-    }, [durations, alertSound, currentUser?.id]);
     
     useEffect(() => {
-        if (SOUNDS[alertSound]) {
-            audioRef.current = new Audio(SOUNDS[alertSound]);
-        }
+        localStorage.setItem('pomodoroDurations', JSON.stringify(durations));
+    }, [durations]);
+
+    useEffect(() => {
+        localStorage.setItem('pomodoroSound', alertSound);
     }, [alertSound]);
-
-    const tasks: (Assignment | Goal)[] = useMemo(() => {
-        if (!currentUser) return [];
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-
-        const assignmentsToday = getAssignmentsForStudent(currentUser.id)
-            .filter(a => new Date(a.dueDate) <= today && a.status === AssignmentStatus.Pending);
-        const openGoals = getGoalsForStudent(currentUser.id).filter(g => !g.isCompleted);
-        return [...assignmentsToday, ...openGoals];
-    }, [currentUser, getAssignmentsForStudent, getGoalsForStudent]);
     
-    const selectMode = useCallback((newMode: TimerMode) => {
-        setIsActive(false);
-        setMode(newMode);
-    }, []);
+    const handleToggleTask = (taskId: string) => {
+        setSelectedTasks(prev => 
+            prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+        );
+    };
 
-    useEffect(() => {
-        let interval: number | undefined;
-        if (isActive && timeLeft > 0) {
-            interval = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (isActive && timeLeft === 0) {
-            audioRef.current?.play();
-            if (mode === 'work') {
-                const newPomodoroCount = pomodoros + 1;
-                setPomodoros(newPomodoroCount);
-                awardXp(25, 'Odak seansını tamamladın!');
-                setSessionLog(prev => [
-                    ...prev,
-                    {
-                        taskTitle: selectedTask ? selectedTask.title : 'Genel Çalışma',
-                        timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-                    }
-                ]);
-                
-                const isLongBreak = newPomodoroCount % 4 === 0;
-                if (notificationPermission === 'granted') {
-                    new Notification('Odak Modu', { body: `Çalışma süresi bitti! Şimdi ${isLongBreak ? 'uzun' : 'kısa'} bir mola zamanı.`, icon: '/vite.svg' });
-                }
-                selectMode(isLongBreak ? 'longBreak' : 'shortBreak');
-
-            } else { // It's a break
-                if (notificationPermission === 'granted') {
-                    new Notification('Odak Modu', { body: 'Mola bitti! Tekrar odaklanmaya hazır mısın?', icon: '/vite.svg' });
-                }
-                selectMode('work');
-            }
-            setIsActive(false);
+    const handleMarkTaskComplete = (taskId: string) => {
+        const task = allTasks.find(t => t.id === taskId);
+        if (task?.type === 'goal') {
+            updateGoal({...task.original as Goal, isCompleted: true });
         }
-        return () => clearInterval(interval);
-    }, [isActive, timeLeft, mode, pomodoros, selectMode, awardXp, selectedTask, notificationPermission]);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const secs = (seconds % 60).toString().padStart(2, '0');
-        return `${mins}:${secs}`;
+        setSelectedTasks(prev => prev.filter(id => id !== taskId));
     };
 
-    const toggleTimer = () => {
-        if (!selectedTask && tasks.length > 0) {
-            alert("Lütfen başlamadan önce bir görev seçin.");
-            return;
-        }
-        setIsActive(!isActive);
-    };
-    
-    const CIRCLE_RADIUS = 140;
-    const CIRCLE_STROKE_WIDTH = 12;
-    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
-
-    const modeClasses: Record<TimerMode, { progress: string, bg: string }> = {
-        work: { progress: 'text-primary-500', bg: 'bg-primary-500' },
-        shortBreak: { progress: 'text-green-500', bg: 'bg-green-500' },
-        longBreak: { progress: 'text-blue-500', bg: 'bg-blue-500' },
-    };
-
-    const progress = (timeLeft / durations[mode]);
-    const strokeDashoffset = CIRCLE_CIRCUMFERENCE - progress * CIRCLE_CIRCUMFERENCE;
+    const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    const progress = (timeLeft / durations[mode]) * 100;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <Card>
-                    <div className="text-center">
-                        <div className="flex justify-center gap-2 mb-8">
-                            <button onClick={() => selectMode('work')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'work' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Çalışma</button>
-                            <button onClick={() => selectMode('shortBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'shortBreak' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Kısa Mola</button>
-                            <button onClick={() => selectMode('longBreak')} className={`px-4 py-2 rounded-md font-semibold ${mode === 'longBreak' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Uzun Mola</button>
+        <div className="space-y-6">
+            <Card>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold">Odak Modu</h1>
+                    <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <SettingsIcon className="w-6 h-6" />
+                    </button>
+                </div>
+                <p className="text-gray-500 mt-2">Pomodoro tekniği ile verimliliğini artır. Bir görev seç ve zamanlayıcıyı başlat!</p>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <Card title="Bugünün Görevleri">
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {allTasks.length > 0 ? allTasks.map(task => (
+                                <label key={task.id} className="flex items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <input 
+                                        type="checkbox"
+                                        checked={selectedTasks.includes(task.id)}
+                                        onChange={() => handleToggleTask(task.id)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <span className="ml-3 text-sm font-medium">{task.text}</span>
+                                </label>
+                            )) : (
+                                <p className="text-sm text-gray-500 text-center py-4">Aktif ödev veya hedefin yok.</p>
+                            )}
                         </div>
-                        {/* Timer Circle */}
-                        <div className="relative w-72 h-72 mx-auto">
-                            <svg className="w-full h-full" viewBox="0 0 300 300">
-                                <circle
-                                    className="text-gray-200 dark:text-gray-700"
-                                    stroke="currentColor" strokeWidth={CIRCLE_STROKE_WIDTH} fill="transparent"
-                                    r={CIRCLE_RADIUS} cx="150" cy="150" />
-                                <circle
-                                    className={`${modeClasses[mode].progress} transition-all duration-1000`}
-                                    stroke="currentColor" strokeWidth={CIRCLE_STROKE_WIDTH} fill="transparent"
-                                    r={CIRCLE_RADIUS} cx="150" cy="150"
-                                    strokeLinecap="round" transform="rotate(-90 150 150)"
-                                    style={{ strokeDasharray: CIRCLE_CIRCUMFERENCE, strokeDashoffset }}
-                                />
-                            </svg>
+                    </Card>
+                </div>
+                <div className="lg:col-span-2">
+                    <Card className="flex flex-col items-center">
+                        <div className="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-full">
+                            <button onClick={() => setMode('work')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${mode === 'work' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>Çalışma</button>
+                            <button onClick={() => setMode('shortBreak')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${mode === 'shortBreak' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>Kısa Mola</button>
+                            <button onClick={() => setMode('longBreak')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${mode === 'longBreak' ? 'bg-white dark:bg-gray-800 shadow' : ''}`}>Uzun Mola</button>
+                        </div>
+
+                        <div className="relative w-64 h-64">
+                            <svg className="w-full h-full" viewBox="0 0 36 36"><path className="text-gray-200 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" /><path className="text-primary-500 transition-all duration-500" strokeDasharray={`${progress}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-6xl font-bold font-mono">{formatTime(timeLeft)}</span>
-                                <p className="text-gray-500 mt-2">
-                                    {isActive ? (mode === 'work' ? 'Odaklan!' : 'Mola zamanı!') : 'Başlamaya hazır...'}
-                                </p>
+                                <span className="text-6xl font-bold tracking-tighter">{formatTime(timeLeft)}</span>
+                                <span className="text-gray-500 text-sm mt-1">{selectedTasks.length > 0 ? allTasks.find(t => t.id === selectedTasks[0])?.text : 'Görev seçilmedi'}</span>
                             </div>
                         </div>
-                        <div className="mt-8 flex items-center justify-center gap-4">
-                            <button onClick={toggleTimer} className={`w-20 h-20 rounded-full text-white flex items-center justify-center text-2xl ${isActive ? 'bg-red-500' : modeClasses[mode].bg}`}>
-                                {isActive ? <PauseIcon className="w-8 h-8"/> : <PlayIcon className="w-8 h-8 ml-1"/>}
-                            </button>
-                             <button onClick={() => setIsSettingsOpen(true)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                                <SettingsIcon className="w-6 h-6"/>
+
+                        <div className="mt-8">
+                            <button onClick={() => setIsActive(!isActive)} className={`w-48 h-16 rounded-full text-white font-bold text-xl uppercase tracking-wider transition-colors ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-primary-600 hover:bg-primary-700'}`}>
+                                {isActive ? 'Duraklat' : 'Başlat'}
                             </button>
                         </div>
-                    </div>
-                </Card>
-                <Card title="Bugünkü Seanslar">
-                    {sessionLog.length > 0 ? (
-                        <ul className="space-y-2 max-h-40 overflow-y-auto">
-                            {sessionLog.map((log, index) => (
-                                <li key={index} className="flex items-center gap-3 text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                                    <CheckIcon className="w-4 h-4 text-green-500 flex-shrink-0"/>
-                                    <span className="flex-1 truncate">{log.taskTitle}</span>
-                                    <span className="text-xs text-gray-400">{log.timestamp}</span>
+                    </Card>
+                </div>
+            </div>
+
+            {selectedTasks.length > 0 && (
+                 <Card title="Seçilen Görevler">
+                    <ul className="space-y-2">
+                        {selectedTasks.map(taskId => {
+                            const task = allTasks.find(t => t.id === taskId);
+                            if (!task) return null;
+                            return (
+                                <li key={task.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                    <span className="font-medium">{task.text}</span>
+                                    <button onClick={() => handleMarkTaskComplete(task.id)} className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 rounded-full hover:bg-green-200"><CheckIcon className="w-3 h-3"/> Tamamlandı</button>
                                 </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500">Henüz tamamlanmış bir seans yok.</p>
-                    )}
-                </Card>
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-                <Card title="Bugünün Görevleri">
-                    <ul className="space-y-2 max-h-96 overflow-y-auto">
-                        {tasks.map(task => (
-                            <li key={task.id} onClick={() => setSelectedTask(task)} className={`p-3 rounded-lg cursor-pointer ${selectedTask?.id === task.id ? 'bg-primary-100 dark:bg-primary-900/50 ring-2 ring-primary-500' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100'}`}>
-                                <div className="flex items-center gap-2">
-                                    {'dueDate' in task ? <ClipboardListIcon className="w-4 h-4 text-yellow-500"/> : <TargetIcon className="w-4 h-4 text-green-500"/>}
-                                    <p className="font-semibold text-sm">{task.title}</p>
-                                </div>
-                            </li>
-                        ))}
-                        {tasks.length === 0 && <p className="text-sm text-gray-500">Bugün için öncelikli bir görevin yok. Harika!</p>}
+                            );
+                        })}
                     </ul>
-                </Card>
-            </div>
-            {isSettingsOpen && <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} durations={durations} setDurations={setDurations} alertSound={alertSound} setAlertSound={setAlertSound} />}
+                 </Card>
+            )}
+            
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} durations={durations} setDurations={setDurations} alertSound={alertSound} setAlertSound={setAlertSound} />
         </div>
     );
 };
 
-// FIX: Add default export to allow for lazy loading.
 export default OdakModu;
