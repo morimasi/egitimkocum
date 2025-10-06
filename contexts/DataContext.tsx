@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll, PollOption, AcademicTrack, Exam, Question, NotificationPriority, Page } from '../types';
 import { useUI } from './UIContext';
 import { seedData as initialSeedData } from '../services/seedData';
@@ -182,6 +182,13 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [state, dispatch] = useReducer(dataReducer, getInitialState());
     const { addToast } = useUI();
+    
+    // Create a ref for messages to stabilize callbacks that depend on it.
+    const messagesRef = useRef(state.messages);
+    useEffect(() => {
+        messagesRef.current = state.messages;
+    }, [state.messages]);
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -479,7 +486,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addReaction = useCallback(async (messageId: string, emoji: string) => {
         if (!state.currentUser) return;
-        const message = state.messages.find(m => m.id === messageId);
+        const message = messagesRef.current.find(m => m.id === messageId);
         if (!message) return;
     
         const updatedReactions = { ...(message.reactions || {}) };
@@ -504,11 +511,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             addToast(`Tepki eklenemedi: ${error.message}`, 'error');
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: message } });
         }
-    }, [state.currentUser, state.messages, addToast]);
+    }, [state.currentUser, addToast]);
     
     const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
         if (!state.currentUser) return;
-        const message = state.messages.find(m => m.id === messageId);
+        const message = messagesRef.current.find(m => m.id === messageId);
         if (!message || !message.poll) return;
     
         const updatedPoll = { ...message.poll };
@@ -529,7 +536,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             addToast(`Oy kullanılamadı: ${error.message}`, 'error');
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'messages', data: message } });
         }
-    }, [state.currentUser, state.messages, addToast]);
+    }, [state.currentUser, addToast]);
 
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string): Promise<string | undefined> => {
         if (!state.currentUser) return;
