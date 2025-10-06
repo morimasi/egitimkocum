@@ -12,7 +12,7 @@ import VideoCallModal from './components/VideoCallModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
-import CommandPalette from './components/CommandPalette';
+import GlobalSearchModal from './components/GlobalSearchModal';
 import TabBar from './components/TabBar';
 import AIChatbot from './components/AIChatbot';
 import SetupWizard from './components/SetupWizard';
@@ -78,7 +78,7 @@ const AppContent = () => {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
-    const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     
     useEffect(() => {
         if (currentUser && currentUser.role === UserRole.Student) {
@@ -178,7 +178,7 @@ const AppContent = () => {
         <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Header setSidebarOpen={setSidebarOpen} onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
+                <Header setSidebarOpen={setSidebarOpen} onOpenSearch={() => setIsSearchOpen(true)} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
                      <div className="max-w-7xl mx-auto pb-16 lg:pb-0">
                         <Suspense fallback={<PageSkeleton />}>
@@ -191,7 +191,7 @@ const AppContent = () => {
             <VideoCallModal />
             <AIChatbot />
             {showWeeklyReport && <WeeklyReportModal onClose={() => setShowWeeklyReport(false)}/>}
-            <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+            <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         </div>
     );
 };

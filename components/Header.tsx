@@ -98,7 +98,7 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
     );
 };
 
-const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (open: boolean) => void; onOpenCommandPalette: () => void; }) => {
+const Header = ({ setSidebarOpen, onOpenSearch }: { setSidebarOpen: (open: boolean) => void; onOpenSearch: () => void; }) => {
     const { activePage } = useUI();
     const { currentUser, notifications, markNotificationsAsRead } = useDataContext();
 
@@ -128,9 +128,9 @@ const Header = ({ setSidebarOpen, onOpenCommandPalette }: { setSidebarOpen: (ope
                     <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">{getPageTitle()}</h1>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                   <button onClick={onOpenCommandPalette} aria-label="Hızlı Erişim" className="flex items-center gap-2 p-2 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                   <button onClick={onOpenSearch} aria-label="Arama" className="flex items-center gap-2 p-2 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
                        <SearchIcon className="h-5 w-5" />
-                       <span className="hidden md:inline text-xs border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5">Ctrl+K</span>
+                       <span className="hidden md:inline text-xs border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5">Ara...</span>
                    </button>
                    {currentUser?.role !== 'superadmin' && <NotificationPopover unreadCount={unreadNotificationsCount} onOpen={() => currentUser && markNotificationsAsRead(currentUser.id)} />}
                     <div className="hidden sm:flex items-center">
