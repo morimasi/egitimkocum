@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, BadgeID } from '../types';
+import { User, AssignmentStatus, UserRole, AcademicTrack } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
