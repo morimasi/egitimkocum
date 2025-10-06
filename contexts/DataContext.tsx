@@ -99,7 +99,7 @@ const dataReducer = (state: AppState, action: Action): AppState => {
 
 // --- API Helper ---
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const response = await fetch(`/api${endpoint}`, {
+    const response = await fetch(`/backend${endpoint}`, {
         ...options,
         headers: { 'Content-Type': 'application/json', ...options.headers },
     });
@@ -507,7 +507,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const seedDatabase = useCallback(async () => {
         try {
-            const response = await fetch('/api/seed');
+            const response = await fetch('/backend/seed');
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Bilinmeyen bir kurulum hatası.'}));
                 throw new Error(errorData.message);

@@ -1,7 +1,7 @@
 import { Assignment, AssignmentStatus, User, Exam, Goal, Question, QuestionDifficulty } from "../types";
 
 const callGeminiApi = async (task: string, payload: any) => {
-    const response = await fetch('/api/gemini', {
+    const response = await fetch('/backend/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task, payload }),

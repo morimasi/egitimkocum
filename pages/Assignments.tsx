@@ -51,7 +51,7 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
                 parts: [{ text: msg.text }]
             }));
 
-            const response = await fetch('/api/gemini-chat', {
+            const response = await fetch('/backend/gemini-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

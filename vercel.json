@@ -3,6 +3,6 @@
     { "src": "functions/index.js", "use": "@vercel/node" }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/functions/index.js" }
+    { "source": "/backend/(.*)", "destination": "/functions/index.js" }
   ]
 }
