@@ -7,6 +7,20 @@ app.use(express.json());
 app.use(cors());
 
 const ensureTablesExist = async () => {
+    // Drop tables first to ensure a clean schema on each seed
+    await sql`DROP TABLE IF EXISTS questions CASCADE;`;
+    await sql`DROP TABLE IF EXISTS exams CASCADE;`;
+    await sql`DROP TABLE IF EXISTS calendarEvents CASCADE;`;
+    await sql`DROP TABLE IF EXISTS badges CASCADE;`;
+    await sql`DROP TABLE IF EXISTS goals CASCADE;`;
+    await sql`DROP TABLE IF EXISTS resources CASCADE;`;
+    await sql`DROP TABLE IF EXISTS templates CASCADE;`;
+    await sql`DROP TABLE IF EXISTS notifications CASCADE;`;
+    await sql`DROP TABLE IF EXISTS conversations CASCADE;`;
+    await sql`DROP TABLE IF EXISTS messages CASCADE;`;
+    await sql`DROP TABLE IF EXISTS assignments CASCADE;`;
+    await sql`DROP TABLE IF EXISTS users CASCADE;`;
+
     await sql`
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(255) PRIMARY KEY,
@@ -106,7 +120,7 @@ const ensureTablesExist = async () => {
 
 
 // Helper to run migrations/seeding
-app.get('/api/seed', async (req, res) => {
+app.get('/seed', async (req, res) => {
     try {
         await ensureTablesExist();
 
@@ -199,7 +213,7 @@ app.get('/api/seed', async (req, res) => {
 });
 
 
-app.get('/api/data', async (req, res) => {
+app.get('/data', async (req, res) => {
     try {
         await ensureTablesExist();
 
@@ -252,7 +266,7 @@ app.get('/api/data', async (req, res) => {
 });
 
 // LOGIN
-app.post('/api/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     const { email } = req.body;
     try {
         const { rows } = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()};`;
@@ -271,7 +285,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- CUSTOM ENDPOINTS ---
-app.post('/api/conversations/:id/mark-as-read', async (req, res) => {
+app.post('/conversations/:id/mark-as-read', async (req, res) => {
     const { id: conversationId } = req.params;
     const { userId } = req.body;
     try {
@@ -289,7 +303,7 @@ app.post('/api/conversations/:id/mark-as-read', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/api/notifications/mark-as-read', async (req, res) => {
+app.post('/notifications/mark-as-read', async (req, res) => {
     const { userId } = req.body;
     try {
         await sql`UPDATE notifications SET "isRead" = true WHERE "userId" = ${userId} AND "isRead" = false`;
@@ -297,7 +311,7 @@ app.post('/api/notifications/mark-as-read', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.post('/api/calendarEvents/batch', async (req, res) => {
+app.post('/calendarEvents/batch', async (req, res) => {
     const events = req.body;
     if (!Array.isArray(events) || events.length === 0) return res.status(400).json({ message: 'Invalid body.' });
     try {
@@ -319,7 +333,7 @@ app.post('/api/calendarEvents/batch', async (req, res) => {
 });
 
 // --- GENERIC ENDPOINTS ---
-app.post('/api/:collection', async (req, res) => {
+app.post('/:collection', async (req, res) => {
     const { collection } = req.params;
     const data = req.body;
     try {
@@ -334,7 +348,7 @@ app.post('/api/:collection', async (req, res) => {
     }
 });
 
-app.put('/api/:collection/:id', async (req, res) => {
+app.put('/:collection/:id', async (req, res) => {
     const { collection, id } = req.params;
     const data = req.body;
     try {
@@ -348,7 +362,7 @@ app.put('/api/:collection/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/:collection', async (req, res) => {
+app.delete('/:collection', async (req, res) => {
     const { collection } = req.params;
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid body, expected array of IDs.' });
