@@ -558,7 +558,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
 
     const { getRootProps, getInputProps, open, isDragActive } = useDropzone({ onDrop: handleFileDrop, noClick: true, noKeyboard: true });
 
-    const handleReact = (msg: Message, emoji: string) => { addReaction(msg.id, emoji); };
+    const handleReact = useCallback((msg: Message, emoji: string) => { addReaction(msg.id, emoji); }, [addReaction]);
     const otherUser = conversation.isGroup ? null : users.find(u => conversation.participantIds.includes(u.id) && u.id !== currentUser?.id);
     const isTyping = otherUser ? typingStatus[otherUser.id] : false;
     const isAnnouncement = conversation.id === 'conv-announcements';
