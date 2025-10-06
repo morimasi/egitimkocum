@@ -15,6 +15,7 @@ import PageSkeleton from './components/PageSkeleton';
 import CommandPalette from './components/CommandPalette';
 import TabBar from './components/TabBar';
 import AIChatbot from './components/AIChatbot';
+import SetupWizard from './components/SetupWizard';
 
 
 // Lazy load pages for better initial performance
@@ -73,7 +74,7 @@ const AppSkeleton = () => (
 
 const AppContent = () => {
     const { activePage, setActivePage, startTour } = useUI();
-    const { currentUser, isLoading } = useDataContext();
+    const { currentUser, isLoading, isDbInitialized } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
@@ -155,6 +156,10 @@ const AppContent = () => {
 
     if (isLoading) {
         return <AppSkeleton />;
+    }
+
+    if (!isDbInitialized) {
+        return <SetupWizard />;
     }
 
     if (!currentUser) {

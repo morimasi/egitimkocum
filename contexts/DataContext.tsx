@@ -30,6 +30,7 @@ const getInitialState = (): AppState => ({
     questions: [],
     currentUser: null,
     isLoading: true,
+    isDbInitialized: true,
     typingStatus: {},
 });
 
@@ -48,6 +49,7 @@ type AppState = {
     questions: Question[];
     currentUser: User | null;
     isLoading: boolean;
+    isDbInitialized: boolean;
     typingStatus: { [userId: string]: boolean };
 };
 
@@ -55,8 +57,9 @@ type Action =
     | { type: 'SET_ALL_DATA', payload: Partial<AppState> }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_CURRENT_USER'; payload: User | null }
-    | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, data: any } }
-    | { type: 'REMOVE_DOCS'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus'>, ids: string[] } };
+    | { type: 'ADD_OR_UPDATE_DOC'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus' | 'isDbInitialized'>, data: any } }
+    | { type: 'REMOVE_DOCS'; payload: { collection: keyof Omit<AppState, 'currentUser' | 'isLoading' | 'typingStatus' | 'isDbInitialized'>, ids: string[] } }
+    | { type: 'SET_DB_UNINITIALIZED' };
 
 const dataReducer = (state: AppState, action: Action): AppState => {
     switch (action.type) {
@@ -66,6 +69,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
             return { ...state, isLoading: action.payload };
         case 'SET_CURRENT_USER':
             return { ...state, currentUser: action.payload };
+        case 'SET_DB_UNINITIALIZED':
+            return { ...state, isDbInitialized: false, isLoading: false };
         case 'ADD_OR_UPDATE_DOC': {
             const collectionName = action.payload.collection;
             const docData = action.payload.data;
@@ -127,6 +132,7 @@ interface DataContextType {
     exams: Exam[];
     questions: Question[];
     isLoading: boolean;
+    isDbInitialized: boolean;
     typingStatus: { [userId: string]: boolean };
     login: (email: string) => Promise<User | null>;
     logout: () => Promise<void>;
@@ -200,10 +206,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             try {
                 const data = await apiRequest('/data');
                 dispatch({ type: 'SET_ALL_DATA', payload: data });
-            } catch (error) {
-                console.error("Failed to fetch initial data:", error);
-                addToast("Veriler yüklenemedi. Lütfen sayfayı yenileyin.", "error");
-                dispatch({ type: 'SET_LOADING', payload: false });
+            } catch (error: any) {
+                if (error.message && (error.message.includes('DB_NOT_INITIALIZED') || error.message.includes('DB_SCHEMA_OLD'))) {
+                    console.warn('Database not initialized or outdated. Showing setup wizard.');
+                    dispatch({ type: 'SET_DB_UNINITIALIZED' });
+                } else {
+                    console.error("Failed to fetch initial data:", error);
+                    addToast("Veriler yüklenemedi. Lütfen sayfayı yenileyin.", "error");
+                    dispatch({ type: 'SET_LOADING', payload: false });
+                }
             }
         };
         fetchData();
@@ -494,13 +505,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addToast(`+${amount} XP! ${reason}`, 'xp');
     }, [state.currentUser, updateUser, addToast]);
     
-    const seedDatabase = async () => {
-         try {
-            await fetch('/api/seed');
-            addToast("Veritabanı deneme verileriyle dolduruldu.", "success");
-            window.location.reload();
-        } catch (error: any) { addToast(`Veritabanı doldurulamadı: ${error.message}`, 'error'); }
-    };
+    const seedDatabase = useCallback(async () => {
+        try {
+            const response = await fetch('/api/seed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Bilinmeyen bir kurulum hatası.'}));
+                throw new Error(errorData.message);
+            }
+            addToast("Veritabanı deneme verileriyle dolduruldu. Sayfa yenileniyor...", "success");
+            setTimeout(() => window.location.reload(), 2000);
+        } catch (error: any) { 
+            addToast(`Veritabanı doldurulamadı: ${error.message}`, 'error');
+            throw error; // Re-throw for the caller to handle
+        }
+    }, [addToast]);
 
     const addResource = useCallback(async (newResource: Omit<Resource, 'id'>) => {
         const resourceWithId = { ...newResource, id: uuid() };

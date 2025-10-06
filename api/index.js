@@ -195,20 +195,8 @@ app.get('/seed', async (req, res) => {
 
 app.get('/data', async (req, res) => {
     try {
-        // Self-healing mechanism
-        try {
-            // Check if the problematic column exists. This is a lightweight query.
-            await sql`SELECT "readBy" FROM messages LIMIT 1;`;
-        } catch (error) {
-            // If the query fails with the specific error, the schema is wrong.
-            if (error.message.includes('column "readBy" of relation "messages" does not exist')) {
-                console.warn('Schema error detected ("readBy" column missing). Automatically resetting and seeding database.');
-                await resetAndSeedDatabase();
-            } else {
-                // If it's another error, re-throw it to be caught by the outer block.
-                throw error;
-            }
-        }
+        // A simple check to see if the main table exists and has the correct schema.
+        await sql`SELECT id, "readBy" FROM messages LIMIT 1`;
         
         // Fetch all data
         const { rows: users } = await sql`SELECT * FROM users;`;
@@ -254,6 +242,13 @@ app.get('/data', async (req, res) => {
         
         res.status(200).json({ users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions });
     } catch (error) {
+        // If the query fails, it means setup is needed.
+        if (error.message.includes('relation "messages" does not exist')) {
+             return res.status(503).json({ code: 'DB_NOT_INITIALIZED', message: 'Database tables do not exist. Please run the setup.' });
+        }
+        if (error.message.includes('column "readBy" of relation "messages" does not exist')) {
+             return res.status(503).json({ code: 'DB_SCHEMA_OLD', message: 'Database schema is outdated. Please run the setup.' });
+        }
         console.error("Error fetching data:", error);
         res.status(500).json({ error: error.message });
     }
