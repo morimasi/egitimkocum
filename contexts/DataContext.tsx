@@ -522,7 +522,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!resource) return;
         const updatedResource = { ...resource, assignedTo: Array.from(new Set([...(resource.assignedTo || []), ...studentIds])) };
         try {
-            await apiRequest(`/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify({ assignedto: JSON.stringify(updatedResource.assignedTo) }) });
+            await apiRequest(`/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify({ assignedTo: JSON.stringify(updatedResource.assignedTo) }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'resources', data: updatedResource } });
         } catch (error: any) { addToast(`Kaynak atanamadı: ${error.message}`, 'error'); }
     }, [state.resources, addToast]);
@@ -559,7 +559,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!conversation || conversation.participantIds.includes(userId)) return;
         const updatedConversation = { ...conversation, participantIds: [...conversation.participantIds, userId] };
         try {
-            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantids: updatedConversation.participantIds.join(',') }) });
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantIds: updatedConversation.participantIds.join(',') }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
         } catch(e: any) { addToast(`Kullanıcı eklenemedi: ${e.message}`, 'error'); }
     }, [state.conversations, addToast]);
@@ -569,7 +569,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!conversation) return;
         const updatedConversation = { ...conversation, participantIds: conversation.participantIds.filter(id => id !== userId) };
         try {
-            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantids: updatedConversation.participantIds.join(',') }) });
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ participantIds: updatedConversation.participantIds.join(',') }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
         } catch(e: any) { addToast(`Kullanıcı çıkarılamadı: ${e.message}`, 'error'); }
     }, [state.conversations, addToast]);
@@ -586,7 +586,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (!conversation) return;
         const updatedConversation = { ...conversation, isArchived };
         try {
-            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ isarchived: isArchived }) });
+            await apiRequest(`/conversations/${conversationId}`, { method: 'PUT', body: JSON.stringify({ isArchived: isArchived }) });
             dispatch({ type: 'ADD_OR_UPDATE_DOC', payload: { collection: 'conversations', data: updatedConversation }});
         } catch(e: any) { addToast(`Sohbet arşivlenemedi: ${e.message}`, 'error'); }
     }, [state.conversations, addToast]);
