@@ -12,6 +12,15 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import AudioRecorder from '../components/AudioRecorder';
 import VideoRecorder from '../components/VideoRecorder';
 
+const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+};
+
 const StudentView = () => {
     const { questions } = useDataContext();
     const [filterCategory, setFilterCategory] = useState<ResourceCategory | 'all'>('all');
@@ -63,7 +72,7 @@ const StudentView = () => {
 
     const handleStartQuizSetup = () => {
         if (displayedQuestions.length === 0) return;
-        setFilteredQuestions(displayedQuestions);
+        setFilteredQuestions(shuffleArray(displayedQuestions));
         setQuizState('start');
     };
 
