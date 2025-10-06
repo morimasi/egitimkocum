@@ -9,7 +9,6 @@ import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
 import { useDataContext } from './contexts/DataContext';
 import { SkeletonCard, SkeletonText } from './components/SkeletonLoader';
-import { UserRole } from './types';
 import VideoCallModal from './components/VideoCallModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -17,7 +16,6 @@ import PageSkeleton from './components/PageSkeleton';
 import GlobalSearchModal from './components/GlobalSearchModal';
 import TabBar from './components/TabBar';
 import AIChatbot from './components/AIChatbot';
-import { SparklesIcon } from './components/Icons';
 
 
 // Lazy load pages for better initial performance
@@ -83,7 +81,7 @@ const AppContent = () => {
     const [showLogin, setShowLogin] = useState(true);
     
     useEffect(() => {
-        if (currentUser && currentUser.role === UserRole.Student) {
+        if (currentUser) { // Check if currentUser exists
             const lastReportDate = localStorage.getItem(`weeklyReport_${currentUser.id}`);
             const now = new Date();
             const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
@@ -163,7 +161,6 @@ const AppContent = () => {
     if (!isDbInitialized) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
-                <SparklesIcon className="w-16 h-16 text-primary-500 animate-spin" />
                 <h1 className="text-2xl font-bold mt-4">Veritabanı hazırlanıyor...</h1>
                 <p className="text-slate-500 mt-2">Bu işlem ilk kurulumda biraz zaman alabilir.</p>
             </div>

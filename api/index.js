@@ -388,7 +388,6 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
     }
 });
 
-// FIX: Add a seed endpoint to reset and seed the database with test data.
 app.post('/api/seed', async (req, res) => {
     try {
         // Drop all tables

@@ -9,7 +9,6 @@ interface State {
   hasError: boolean;
 }
 
-// Fix: Explicitly extend React.Component to resolve potential type conflicts.
 class ErrorBoundary extends React.Component<Props, State> {
   state: State = {
     hasError: false,

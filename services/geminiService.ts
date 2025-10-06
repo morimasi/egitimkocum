@@ -52,7 +52,6 @@ export const generateSmartFeedback = async (assignmentToGrade: Assignment, allSt
 export const getVisualAssignmentHelp = async (assignment: Assignment, image: { base64Data: string; mimeType: string }): Promise<string> => {
      try {
         const textPart = { text: `Sen yardımsever bir öğretmen asistanısın. Bir öğrenci, "${assignment.title}" başlıklı ödevde zorlanıyor ve aşağıdaki resimle ilgili yardım istiyor. Ödevin açıklaması: "${assignment.description}". Lütfen görseli analiz ederek öğrenciye soruyu çözmesi için adım adım ipuçları ver. Cevabı doğrudan verme, düşünmesini sağla.` };
-        // FIX: Use the correct model for multimodal input. 'gemini-pro-vision' is not a valid model name in the guidelines. 'gemini-2.5-flash' should be used.
         return geminiFetch('generateWithImage', { textPart, imagePart: { inlineData: { mimeType: image.mimeType, data: image.base64Data } }});
     } catch (error) {
         console.error("Error in getVisualAssignmentHelp:", error);
