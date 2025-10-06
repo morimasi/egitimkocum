@@ -1,10 +1,19 @@
 import React, { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useReducer, useRef } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, AssignmentStatus, Badge, BadgeID, CalendarEvent, Poll, PollOption, AcademicTrack, Exam, Question, NotificationPriority, Page } from '../types';
 import { useUI } from './UIContext';
-import { seedData as initialSeedData } from '../services/seedData';
 
 // --- App State and Reducer ---
 const uuid = () => crypto.randomUUID();
+
+const initialBadges: Badge[] = [
+    { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
+    { id: BadgeID.HighAchiever, name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
+    { id: BadgeID.PerfectScore, name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
+    { id: BadgeID.GoalGetter, name: "Hedef Avcısı", description: "Haftalık hedeflerinin hepsine ulaştın!" },
+    { id: BadgeID.StreakStarter, name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
+    { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
+    { id: BadgeID.OnTimeSubmissions, name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
+];
 
 const getInitialState = (): AppState => ({
     users: [],
@@ -15,7 +24,7 @@ const getInitialState = (): AppState => ({
     templates: [],
     resources: [],
     goals: [],
-    badges: initialSeedData.badges, // Badges are mostly static
+    badges: initialBadges, // Badges are mostly static
     calendarEvents: [],
     exams: [],
     questions: [],
@@ -662,6 +671,29 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             addToast(`Rozet güncellenemedi: ${error.message}`, 'error');
         }
     }, [addToast]);
+
+    const { unreadCounts, lastMessagesMap } = useMemo(() => {
+        const counts = new Map<string, number>();
+        const lasts = new Map<string, Message>();
+        if (state.currentUser) {
+            const myId = state.currentUser.id;
+            state.conversations
+                .filter(c => c.participantIds.includes(myId))
+                .forEach(c => {
+                    const convMessages = state.messages
+                        .filter(m => m.conversationId === c.id)
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                    
+                    if (convMessages.length > 0) {
+                        lasts.set(c.id, convMessages[0]);
+                    }
+                    
+                    const unreadCount = convMessages.filter(m => !m.readBy.includes(myId) && m.senderId !== myId).length;
+                    counts.set(c.id, unreadCount);
+                });
+        }
+        return { unreadCounts: counts, lastMessagesMap: lasts };
+    }, [state.messages, state.conversations, state.currentUser]);
     
     const coach = useMemo(() => state.currentUser?.role === UserRole.Student ? state.users.find(u => u.id === state.currentUser.assignedCoachId) || null : (state.currentUser?.role === UserRole.Coach || state.currentUser?.role === UserRole.SuperAdmin ? state.currentUser : state.users.find(u => u.role === UserRole.Coach) || null), [state.users, state.currentUser]);
     const students = useMemo(() => state.currentUser?.role === UserRole.Coach ? state.users.filter(u => u.role === UserRole.Student && u.assignedCoachId === state.currentUser.id) : (state.currentUser?.role === UserRole.SuperAdmin ? state.users.filter(u => u.role === UserRole.Student) : []), [state.users, state.currentUser]);
@@ -680,7 +712,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         markNotificationsAsRead, updateTypingStatus: async () => {}, awardXp, addUserToConversation, removeUserFromConversation, endConversation, setConversationArchived,
         updateBadge, addCalendarEvent, deleteCalendarEvent, addMultipleCalendarEvents, toggleTemplateFavorite, addResource, deleteResource,
         assignResourceToStudents, addTemplate, updateTemplate, deleteTemplate, addExam, updateExam, deleteExam, addQuestion, updateQuestion, deleteQuestion,
-        unreadCounts: new Map(), lastMessagesMap: new Map(),
+        unreadCounts, lastMessagesMap,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
