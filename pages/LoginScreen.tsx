@@ -21,7 +21,7 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
             await login(email);
             // On successful login, AppContent will automatically switch views
         } catch (err: any) {
-             setError('Kullanıcı bulunamadı veya şifre yanlış.');
+             setError(err.message || 'Giriş sırasında bir hata oluştu.');
              setIsLoading(false);
         }
     };
@@ -92,7 +92,7 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
                 </form>
                 <div className="mt-6 p-4 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50 dark:bg-slate-800/50">
                     <h3 className="font-semibold text-center text-slate-700 dark:text-slate-300 mb-2">Test Bilgileri</h3>
-                    <p className="text-slate-500 dark:text-slate-400">Şifre: Herhangi bir şey girebilirsiniz (örn: 123456)</p>
+                    <p className="text-slate-500 dark:text-slate-400">Örnek kullanıcılar için şifre: `123456`</p>
                     <ul className="mt-2 space-y-1 list-disc list-inside text-slate-600 dark:text-slate-400">
                         <li><span className="font-semibold text-slate-700 dark:text-slate-300">Mahmut Hoca (Süper Admin):</span> admin@egitim.com</li>
                         <li><span className="font-semibold text-slate-700 dark:text-slate-300">Koç:</span> ahmet.yilmaz@egitim.com</li>

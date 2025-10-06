@@ -24,6 +24,12 @@ export enum BadgeID {
   OnTimeSubmissions = 'on-time-submissions',
 }
 
+export enum QuestionDifficulty {
+  Easy = 'easy',
+  Medium = 'medium',
+  Hard = 'hard',
+}
+
 export interface Badge {
   id: BadgeID;
   name: string;
@@ -117,6 +123,13 @@ export interface Conversation {
   isArchived?: boolean;
 }
 
+export enum NotificationPriority {
+  Critical = 'critical',
+  High = 'high',
+  Medium = 'medium',
+  Low = 'low',
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -134,10 +147,11 @@ export interface Message {
   reactions?: Reaction;
   replyTo?: string; // ID of the message being replied to
   poll?: Poll;
+  priority?: NotificationPriority;
 }
 
 
-export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi' | 'goals' | 'exams';
+export type Page = 'dashboard' | 'assignments' | 'students' | 'messages' | 'analytics' | 'settings' | 'library' | 'superadmin' | 'calendar' | 'parent' | 'templates' | 'motivation' | 'odak' | 'akilli-planlayici' | 'sinav-performansi' | 'goals' | 'exams' | 'soru-bankasi';
 
 export type ToastType = 'success' | 'error' | 'info' | 'xp';
 
@@ -158,6 +172,7 @@ export interface AppNotification {
   message: string;
   timestamp: string;
   isRead: boolean;
+  priority: NotificationPriority;
   link?: {
     page: Page;
     filter?: { [key:string]: any };
@@ -194,6 +209,23 @@ export interface Resource {
   uploaderId: string;
   assignedTo?: string[]; // Array of student IDs
   category: ResourceCategory;
+}
+
+export interface Question {
+  id: string;
+  creatorId: string; // Coach ID
+  category: ResourceCategory;
+  topic: string;
+  questionText: string;
+  options: string[];
+  correctOptionIndex: number;
+  difficulty: QuestionDifficulty;
+  explanation?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  documentUrl?: string;
+  documentName?: string;
 }
 
 export interface Goal {

@@ -37,6 +37,7 @@ const AkilliPlanlayici = React.lazy(() => import('./pages/AkilliPlanlayici'));
 const SinavPerformansi = React.lazy(() => import('./pages/SinavPerformansi'));
 const Goals = React.lazy(() => import('./pages/Goals'));
 const Exams = React.lazy(() => import('./pages/Exams'));
+const SoruBankasi = React.lazy(() => import('./pages/SoruBankasi'));
 
 
 const AppSkeleton = () => (
@@ -121,6 +122,7 @@ const AppContent = () => {
                 case 'sinav-performansi': return 'Sınav Performansı';
                 case 'goals': return 'Hedefler';
                 case 'exams': return 'Sınavlar';
+                case 'soru-bankasi': return 'Soru Bankası';
                 default: return 'Anasayfa';
             }
         };
@@ -146,6 +148,7 @@ const AppContent = () => {
             case 'sinav-performansi': return <SinavPerformansi />;
             case 'goals': return <Goals />;
             case 'exams': return <Exams />;
+            case 'soru-bankasi': return <SoruBankasi />;
             default: return <Dashboard />;
         }
     };

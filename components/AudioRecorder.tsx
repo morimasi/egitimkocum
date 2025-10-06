@@ -127,7 +127,7 @@ const AudioRecorder = ({ onSave, initialAudio, readOnly = false, uploadPath }: A
 
             {!isUploading && audioURL && (
                 <>
-                    <audio ref={audioRef} src={audioURL} preload="auto" />
+                    <audio ref={audioRef} src={audioURL || undefined} preload="auto" />
                     <button type="button" onClick={togglePlay} className="p-2 rounded-full bg-gray-200 dark:bg-gray-600">
                         {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
                     </button>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { useDataContext } from '../contexts/DataContext';
 import { MenuIcon, BellIcon, CheckCircleIcon, SearchIcon } from './Icons';
-import { AppNotification } from '../types';
+import { AppNotification, NotificationPriority } from '../types';
 
 const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onOpen: () => void }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -10,9 +10,19 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
     const { setActivePage } = useUI();
     const popoverRef = useRef<HTMLDivElement>(null);
 
+    const priorityOrder = [NotificationPriority.Critical, NotificationPriority.High, NotificationPriority.Medium, NotificationPriority.Low];
+
     const userNotifications = notifications
         .filter(n => n.userId === currentUser?.id)
-        .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        .sort((a, b) => {
+            const priorityA = priorityOrder.indexOf(a.priority);
+            const priorityB = priorityOrder.indexOf(b.priority);
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        });
+
 
     const handleToggle = () => {
         if (!isOpen) {
@@ -38,6 +48,18 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const getPriorityStyles = (priority: NotificationPriority) => {
+        switch (priority) {
+            case NotificationPriority.Critical:
+                return 'bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500';
+            case NotificationPriority.High:
+                return 'bg-amber-50 dark:bg-amber-900/50';
+            default:
+                return '';
+        }
+    };
+
+
     return (
         <div className="relative" ref={popoverRef}>
             <button
@@ -57,10 +79,10 @@ const NotificationPopover = ({ unreadCount, onOpen }: { unreadCount: number, onO
                     <div className="p-3 border-b dark:border-slate-700">
                         <h4 className="font-semibold text-slate-800 dark:text-white">Bildirimler</h4>
                     </div>
-                    <ul className="py-2 max-h-80 overflow-y-auto">
+                    <ul className="py-1 max-h-80 overflow-y-auto">
                         {userNotifications.length > 0 ? userNotifications.map(n => (
-                            <li key={n.id} onClick={() => handleNotificationClick(n)} className={`px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer ${!n.isRead ? 'font-semibold' : ''}`}>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{n.message}</p>
+                            <li key={n.id} onClick={() => handleNotificationClick(n)} className={`px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b dark:border-slate-700/50 last:border-b-0 ${getPriorityStyles(n.priority)}`}>
+                                <p className={`text-sm text-slate-700 dark:text-slate-300 ${!n.isRead ? 'font-semibold' : ''}`}>{n.message}</p>
                                 <p className="text-xs text-slate-400 mt-1">{new Date(n.timestamp).toLocaleString('tr-TR')}</p>
                             </li>
                         )) : (

@@ -1,3 +1,7 @@
+
+
+import { ResourceCategory } from '../types';
+
 export const examCategories = [
   {
     name: "Genel Deneme Sınavları",
@@ -178,3 +182,16 @@ export const examCategories = [
     ]
   }
 ];
+
+export const ResourceCategoryLabels: Record<ResourceCategory, string> = {
+    [ResourceCategory.Matematik]: 'Matematik',
+    [ResourceCategory.Fizik]: 'Fizik',
+    [ResourceCategory.Kimya]: 'Kimya',
+    [ResourceCategory.Biyoloji]: 'Biyoloji',
+    [ResourceCategory.Turkce]: 'Türkçe',
+    [ResourceCategory.Tarih]: 'Tarih',
+    [ResourceCategory.Cografya]: 'Coğrafya',
+    [ResourceCategory.Felsefe]: 'Felsefe',
+    [ResourceCategory.Ingilizce]: 'İngilizce',
+    [ResourceCategory.Genel]: 'Genel Kaynaklar',
+};

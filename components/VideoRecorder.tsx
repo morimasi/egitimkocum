@@ -150,7 +150,7 @@ const VideoRecorder = ({ onSave, initialVideo = null, readOnly = false, uploadPa
     return (
         <div className="space-y-2">
             <div {...getRootProps()} className={`relative bg-black rounded-lg w-full aspect-video flex items-center justify-center text-gray-400 overflow-hidden ${isDragActive ? 'border-2 border-dashed border-primary-500' : ''}`}>
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted={status === 'recording' || isMuted} loop={status === 'preview'} src={status === 'recording' ? undefined : videoSrc || ''}></video>
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted={status === 'recording' || isMuted} loop={status === 'preview'} src={status === 'recording' ? undefined : (videoSrc || undefined)}></video>
                 {status === 'idle' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
                          <p>Video Açıklama Kaydedin veya Yükleyin</p>

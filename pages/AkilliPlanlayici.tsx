@@ -173,7 +173,6 @@ const AkilliPlanlayici = () => {
             {plan && Array.isArray(plan) && (
                 <Card title="Oluşturulan Akıllı Planın">
                     <div className="space-y-4">
-                        {/* Fix: Add Array.isArray check to prevent crash if 'plan' is not an array */}
                         {plan.map((item, index) => (
                             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                 <div className="flex justify-between items-center">

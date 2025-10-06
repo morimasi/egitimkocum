@@ -24,21 +24,23 @@ const PollCreationModal = ({
     isOpen,
     onClose,
     onSend,
-    addToast,
-    question,
-    setQuestion,
-    options,
-    setOptions
+    addToast
 }: {
     isOpen: boolean;
     onClose: () => void;
     onSend: (poll: Poll) => void;
     addToast: (message: string, type: ToastType) => void;
-    question: string;
-    setQuestion: (q: string) => void;
-    options: string[];
-    setOptions: (o: string[]) => void;
 }) => {
+    const [question, setQuestion] = useState('');
+    const [options, setOptions] = useState(['', '']);
+
+    useEffect(() => {
+        if (isOpen) {
+            setQuestion('');
+            setOptions(['', '']);
+        }
+    }, [isOpen]);
+
     const handleSend = () => {
         if (question.trim() && options.length >= 2 && options.every(o => o.trim())) {
             onSend({ question, options: options.map(o => ({ text: o, votes: [] })) });
@@ -405,11 +407,7 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
     const { addToast } = useUI();
     const { currentUser } = useDataContext();
     const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-
-    // Poll State
     const [isPollModalOpen, setIsPollModalOpen] = useState(false);
-    const [pollQuestion, setPollQuestion] = useState('');
-    const [pollOptions, setPollOptions] = useState(['', '']);
 
     const handleSend = () => {
         if (text.trim()) {
@@ -431,15 +429,7 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
     
     const handleSendPoll = (poll: Poll) => {
         onSendMessage('poll', { poll, text: poll.question });
-        setPollQuestion('');
-        setPollOptions(['', '']);
         setIsPollModalOpen(false);
-    };
-
-    const handleClosePollModal = () => {
-        setIsPollModalOpen(false);
-        setPollQuestion('');
-        setPollOptions(['', '']);
     };
     
     return (
@@ -483,14 +473,151 @@ const MessageInput = ({ onSendMessage, conversationId, replyTo, onClearReply, di
             )}
             <PollCreationModal 
                 isOpen={isPollModalOpen} 
-                onClose={handleClosePollModal} 
+                onClose={() => setIsPollModalOpen(false)} 
                 onSend={handleSendPoll} 
                 addToast={addToast}
-                question={pollQuestion}
-                setQuestion={setPollQuestion}
-                options={pollOptions}
-                setOptions={setPollOptions}
             />
+        </div>
+    );
+};
+
+const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBack: () => void; }) => {
+    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation, uploadFile } = useDataContext();
+    const { startCall, addToast } = useUI();
+    const [replyTo, setReplyTo] = useState<Message | null>(null);
+    const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+    const [isAddToGroupOpen, setIsAddToGroupOpen] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const [page, setPage] = useState(1);
+    const allMessages = useMemo(() => getMessagesForConversation(conversation.id), [conversation.id, getMessagesForConversation]);
+    const displayedMessages = useMemo(() => allMessages.slice(-(page * MESSAGE_PAGE_SIZE)), [allMessages, page]);
+    const canLoadMore = displayedMessages.length < allMessages.length;
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const prevScrollHeightRef = useRef<number | null>(null);
+
+    useLayoutEffect(() => {
+        const container = chatContainerRef.current;
+        if (container) {
+            // Adjust scroll for infinite loading
+            if (prevScrollHeightRef.current !== null) {
+                container.scrollTop = container.scrollHeight - prevScrollHeightRef.current;
+                prevScrollHeightRef.current = null;
+                return;
+            }
+    
+            // Determine if auto-scroll is needed
+            const lastMessage = displayedMessages[displayedMessages.length - 1];
+            const isOwnMessage = lastMessage?.senderId === currentUser?.id;
+            const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 150;
+    
+            if (isOwnMessage || isNearBottom) {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    }, [displayedMessages, currentUser]);
+
+    const handleLoadMore = () => {
+        if (chatContainerRef.current) {
+            prevScrollHeightRef.current = chatContainerRef.current.scrollHeight;
+        }
+        setPage(prev => prev + 1);
+    };
+
+    const handleSendMessage = useCallback((type: Message['type'], content: any) => {
+        if (!currentUser) return;
+        const messageData: Partial<Message> = { senderId: currentUser.id, conversationId: conversation.id, type, replyTo: replyTo?.id };
+        switch (type) {
+            case 'text': messageData.text = content; break;
+            case 'poll': 
+                messageData.poll = content.poll; 
+                messageData.text = content.poll.question;
+                break;
+            case 'audio': messageData.audioUrl = content.audioUrl; messageData.text = "Sesli mesaj"; break;
+            case 'video': messageData.videoUrl = content.videoUrl; messageData.text = "Video mesaj"; break;
+            case 'file': 
+                messageData.fileUrl = content.fileUrl; messageData.fileName = content.fileName; messageData.fileType = content.fileType;
+                messageData.imageUrl = content.imageUrl; 
+                messageData.text = content.fileName || "Ekli dosya";
+                break;
+        }
+        sendMessage(messageData as Omit<Message, 'id'|'timestamp'|'readBy'>);
+        setReplyTo(null);
+    }, [currentUser, sendMessage, replyTo, conversation.id]);
+
+    const handleFileDrop = async (files: File[]) => {
+        if (!files || files.length === 0 || !currentUser) return;
+        for (const file of files) {
+            try {
+                const url = await uploadFile(file, `chat_files/${currentUser.id}/${file.name}`);
+                const messageType = file.type.startsWith('image/') ? 'file' : 'file'; 
+                handleSendMessage(messageType, { fileUrl: url, fileName: file.name, fileType: file.type, imageUrl: file.type.startsWith('image/') ? url : undefined });
+            } catch (error) { addToast("Dosya yüklenirken hata oluştu.", "error"); }
+        }
+    };
+
+    const { getRootProps, getInputProps, open, isDragActive } = useDropzone({ onDrop: handleFileDrop, noClick: true, noKeyboard: true });
+
+    const handleReact = (msg: Message, emoji: string) => { addReaction(msg.id, emoji); };
+    const otherUser = conversation.isGroup ? null : users.find(u => conversation.participantIds.includes(u.id) && u.id !== currentUser?.id);
+    const isTyping = otherUser ? typingStatus[otherUser.id] : false;
+    const isAnnouncement = conversation.id === 'conv-announcements';
+    const canSend = !isAnnouncement || (currentUser && currentUser.role !== UserRole.Student);
+    const isAdmin = conversation.isGroup && conversation.adminId === currentUser?.id;
+
+    return (
+        <div {...getRootProps({ className: "h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative" })}>
+            <input {...getInputProps()} />
+            <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+                <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
+                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
+                <div className="ml-3">
+                    <h2 className="font-semibold">{conversation.isGroup ? conversation.groupName : otherUser?.name}</h2>
+                    {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                    {conversation.isGroup && isAdmin && (
+                        <>
+                        <button onClick={() => setIsAddToGroupOpen(true)} title="Gruba Ekle" className="p-2 text-gray-500 hover:text-primary-500"><UserPlusIcon className="w-5 h-5" /></button>
+                        <button onClick={() => setIsGroupInfoOpen(true)} title="Grup Bilgisi" className="p-2 text-gray-500 hover:text-primary-500"><UserGroupIcon className="w-5 h-5" /></button>
+                        </>
+                    )}
+                    <button onClick={() => startCall(otherUser || conversation, 'voice')} className="p-2 text-gray-500 hover:text-primary-500"><PhoneIcon className="w-5 h-5"/></button>
+                    <button onClick={() => startCall(otherUser || conversation, 'video')} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
+                </div>
+            </header>
+            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
+                 {canLoadMore && (
+                    <div className="text-center mb-4">
+                        <button onClick={handleLoadMore} className="text-sm font-semibold text-primary-600 hover:underline">
+                            Daha Fazla Yükle
+                        </button>
+                    </div>
+                )}
+                <div className="space-y-1">
+                    {displayedMessages.map(msg => (
+                        <MemoizedMessageBubble 
+                            key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser?.id}
+                            onReply={setReplyTo} onReact={handleReact} conversation={conversation} />
+                    ))}
+                    <div ref={messagesEndRef} />
+                </div>
+            </main>
+            {canSend ? (
+                <MessageInput onSendMessage={handleSendMessage} conversationId={conversation.id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
+            ) : (
+                <div className="bg-gray-100 dark:bg-gray-900 p-4 text-center text-sm text-gray-500 border-t dark:border-gray-700">
+                    Duyuru kanalına sadece koçlar mesaj gönderebilir.
+                </div>
+            )}
+
+            {isGroupInfoOpen && <GroupInfoModal conversation={conversation} onClose={() => setIsGroupInfoOpen(false)} />}
+            {isAddToGroupOpen && <AddToGroupModal conversation={conversation} onClose={() => setIsAddToGroupOpen(false)} onAddUsers={(ids) => ids.forEach(id => addUserToConversation(conversation.id, id))} />}
+             {isDragActive && (
+                <div className="absolute inset-0 bg-primary-500/20 backdrop-blur-sm border-4 border-dashed border-primary-500 rounded-lg flex items-center justify-center pointer-events-none z-10">
+                    <p className="text-primary-800 dark:text-primary-100 font-bold text-xl">Dosyaları buraya bırakın</p>
+                </div>
+            )}
         </div>
     );
 };
@@ -607,135 +734,6 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
                     )
                 })}
             </ul>
-        </div>
-    );
-};
-
-const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBack: () => void; }) => {
-    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation, uploadFile } = useDataContext();
-    const { startCall, addToast } = useUI();
-    const [replyTo, setReplyTo] = useState<Message | null>(null);
-    const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
-    const [isAddToGroupOpen, setIsAddToGroupOpen] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const [page, setPage] = useState(1);
-    const allMessages = useMemo(() => getMessagesForConversation(conversation.id), [conversation.id, getMessagesForConversation]);
-    const displayedMessages = useMemo(() => allMessages.slice(-(page * MESSAGE_PAGE_SIZE)), [allMessages, page]);
-    const canLoadMore = displayedMessages.length < allMessages.length;
-    const chatContainerRef = useRef<HTMLDivElement>(null);
-    const prevScrollHeightRef = useRef<number | null>(null);
-
-    useLayoutEffect(() => {
-        if (prevScrollHeightRef.current !== null && chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeightRef.current;
-            prevScrollHeightRef.current = null;
-        } else {
-             messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-        }
-    }, [displayedMessages]);
-
-    const handleLoadMore = () => {
-        if (chatContainerRef.current) {
-            prevScrollHeightRef.current = chatContainerRef.current.scrollHeight;
-        }
-        setPage(prev => prev + 1);
-    };
-
-    const handleSendMessage = useCallback((type: Message['type'], content: any) => {
-        if (!currentUser) return;
-        const messageData: Partial<Message> = { senderId: currentUser.id, conversationId: conversation.id, type, replyTo: replyTo?.id };
-        switch (type) {
-            case 'text': messageData.text = content; break;
-            case 'poll': 
-                messageData.poll = content.poll; 
-                messageData.text = content.poll.question;
-                break;
-            case 'audio': messageData.audioUrl = content.audioUrl; messageData.text = "Sesli mesaj"; break;
-            case 'video': messageData.videoUrl = content.videoUrl; messageData.text = "Video mesaj"; break;
-            case 'file': 
-                messageData.fileUrl = content.fileUrl; messageData.fileName = content.fileName; messageData.fileType = content.fileType;
-                messageData.imageUrl = content.imageUrl; 
-                messageData.text = content.fileName || "Ekli dosya";
-                break;
-        }
-        sendMessage(messageData as Omit<Message, 'id'|'timestamp'|'readBy'>);
-        setReplyTo(null);
-    }, [currentUser, sendMessage, replyTo, conversation.id]);
-
-    const handleFileDrop = async (files: File[]) => {
-        if (!files || files.length === 0 || !currentUser) return;
-        for (const file of files) {
-            try {
-                const url = await uploadFile(file, `chat_files/${currentUser.id}/${file.name}`);
-                const messageType = file.type.startsWith('image/') ? 'file' : 'file'; 
-                handleSendMessage(messageType, { fileUrl: url, fileName: file.name, fileType: file.type, imageUrl: file.type.startsWith('image/') ? url : undefined });
-            } catch (error) { addToast("Dosya yüklenirken hata oluştu.", "error"); }
-        }
-    };
-
-    const { getRootProps, getInputProps, open, isDragActive } = useDropzone({ onDrop: handleFileDrop, noClick: true, noKeyboard: true });
-
-    const handleReact = (msg: Message, emoji: string) => { addReaction(msg.id, emoji); };
-    const otherUser = conversation.isGroup ? null : users.find(u => conversation.participantIds.includes(u.id) && u.id !== currentUser?.id);
-    const isTyping = otherUser ? typingStatus[otherUser.id] : false;
-    const isAnnouncement = conversation.id === 'conv-announcements';
-    const canSend = !isAnnouncement || (currentUser && currentUser.role !== UserRole.Student);
-    const isAdmin = conversation.isGroup && conversation.adminId === currentUser?.id;
-
-    return (
-        <div {...getRootProps({ className: "h-full flex flex-col bg-gray-50 dark:bg-gray-900 relative" })}>
-            <input {...getInputProps()} />
-            <header className="flex items-center p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
-                <button onClick={onBack} className="lg:hidden mr-2 p-2 text-gray-500"><ArrowLeftIcon className="w-6 h-6" /></button>
-                <img src={conversation.isGroup ? conversation.groupImage : otherUser?.profilePicture} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
-                <div className="ml-3">
-                    <h2 className="font-semibold">{conversation.isGroup ? conversation.groupName : otherUser?.name}</h2>
-                    {isTyping && <p className="text-xs text-green-500">yazıyor...</p>}
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                    {conversation.isGroup && isAdmin && (
-                        <>
-                        <button onClick={() => setIsAddToGroupOpen(true)} title="Gruba Ekle" className="p-2 text-gray-500 hover:text-primary-500"><UserPlusIcon className="w-5 h-5" /></button>
-                        <button onClick={() => setIsGroupInfoOpen(true)} title="Grup Bilgisi" className="p-2 text-gray-500 hover:text-primary-500"><UserGroupIcon className="w-5 h-5" /></button>
-                        </>
-                    )}
-                    <button onClick={() => startCall(otherUser || conversation, 'voice')} className="p-2 text-gray-500 hover:text-primary-500"><PhoneIcon className="w-5 h-5"/></button>
-                    <button onClick={() => startCall(otherUser || conversation, 'video')} className="p-2 text-gray-500 hover:text-primary-500"><VideoIcon className="w-5 h-5"/></button>
-                </div>
-            </header>
-            <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
-                 {canLoadMore && (
-                    <div className="text-center mb-4">
-                        <button onClick={handleLoadMore} className="text-sm font-semibold text-primary-600 hover:underline">
-                            Daha Fazla Yükle
-                        </button>
-                    </div>
-                )}
-                <div className="space-y-1">
-                    {displayedMessages.map(msg => (
-                        <MemoizedMessageBubble 
-                            key={msg.id} msg={msg} isOwnMessage={msg.senderId === currentUser?.id}
-                            onReply={setReplyTo} onReact={handleReact} conversation={conversation} />
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
-            </main>
-            {canSend ? (
-                <MessageInput onSendMessage={handleSendMessage} conversationId={conversation.id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
-            ) : (
-                <div className="bg-gray-100 dark:bg-gray-900 p-4 text-center text-sm text-gray-500 border-t dark:border-gray-700">
-                    Duyuru kanalına sadece koçlar mesaj gönderebilir.
-                </div>
-            )}
-
-            {isGroupInfoOpen && <GroupInfoModal conversation={conversation} onClose={() => setIsGroupInfoOpen(false)} />}
-            {isAddToGroupOpen && <AddToGroupModal conversation={conversation} onClose={() => setIsAddToGroupOpen(false)} onAddUsers={(ids) => ids.forEach(id => addUserToConversation(conversation.id, id))} />}
-             {isDragActive && (
-                <div className="absolute inset-0 bg-primary-500/20 backdrop-blur-sm border-4 border-dashed border-primary-500 rounded-lg flex items-center justify-center pointer-events-none z-10">
-                    <p className="text-primary-800 dark:text-primary-100 font-bold text-xl">Dosyaları buraya bırakın</p>
-                </div>
-            )}
         </div>
     );
 };

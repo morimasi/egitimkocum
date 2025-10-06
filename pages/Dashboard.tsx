@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, AssignmentStatus, User, Assignment } from '../types';
@@ -13,6 +11,45 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import GoalsCard from '../components/GoalsCard';
 import OnboardingWizard from '../components/OnboardingWizard';
 
+
+const OverdueWarningCard = ({ title, message, onNavigate }: { title: string; message: string; onNavigate: () => void }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    if (!isVisible) return null;
+
+    return (
+        <Card className="mb-6 bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 animate-fade-in">
+            <div className="flex items-start">
+                <div className="flex-shrink-0">
+                    <AlertTriangleIcon className="h-6 w-6 text-red-500" />
+                </div>
+                <div className="ml-3 flex-1">
+                    <h3 className="text-lg font-bold text-red-800 dark:text-red-200">{title}</h3>
+                    <div className="mt-2 text-sm text-red-700 dark:text-red-200">
+                        <p>{message}</p>
+                    </div>
+                    <div className="mt-4">
+                        <button
+                            onClick={onNavigate}
+                            className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                            Göz At
+                        </button>
+                    </div>
+                </div>
+                <div className="ml-4 flex-shrink-0">
+                    <button
+                        onClick={() => setIsVisible(false)}
+                        className="inline-flex rounded-md p-1.5 text-red-400 hover:bg-red-100 dark:hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                    >
+                        <span className="sr-only">Kapat</span>
+                        <XIcon className="h-5 w-5" />
+                    </button>
+                </div>
+            </div>
+        </Card>
+    );
+};
 
 const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void }) => {
     let title = `Hoş geldin, ${user.name}!`;
@@ -129,7 +166,7 @@ const StudentWelcomeHeader = React.memo(() => {
     );
 });
 
-const StudentStatCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
+const StudentStatCard = React.memo(({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) => (
     <Card className={`relative overflow-hidden`}>
          <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
@@ -137,7 +174,7 @@ const StudentStatCard = ({ title, value, icon, color }: { title: string, value: 
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
         <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
     </Card>
-);
+));
 
 const FocusAreasCard = React.memo(() => {
     const { currentUser, getAssignmentsForStudent } = useDataContext();
@@ -197,6 +234,9 @@ const StudentDashboard = () => {
     if (!currentUser) return null;
     
     const assignments = getAssignmentsForStudent(currentUser.id);
+    const overdueAssignments = useMemo(() => assignments
+        .filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()), 
+        [assignments]);
 
     const pendingCount = assignments.filter(a => a.status === AssignmentStatus.Pending).length;
     const gradedAssignments = assignments.filter(a => a.grade !== null);
@@ -210,6 +250,13 @@ const StudentDashboard = () => {
 
     return (
         <div className="space-y-6">
+            {overdueAssignments.length > 0 && (
+                <OverdueWarningCard
+                    title="Önemli Uyarı!"
+                    message={`Teslim tarihi geçmiş ${overdueAssignments.length} ödevin var! Gecikmiş ödevlerini görmek için göz at.`}
+                    onNavigate={() => setActivePage('assignments', { filterOverdue: true })}
+                />
+            )}
             {showOnboarding && <OnboardingWizard onCompleteOrDismiss={() => setShowOnboarding(false)} />}
             <StudentWelcomeHeader />
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
@@ -290,7 +337,7 @@ const CoachWelcomeHeader = React.memo(() => {
     );
 });
 
-const CoachStatCard = ({ title, value, icon, color, onClick }: { title: string, value: string | number, icon: React.ReactNode, color:string, onClick?: () => void}) => (
+const CoachStatCard = React.memo(({ title, value, icon, color, onClick }: { title: string, value: string | number, icon: React.ReactNode, color:string, onClick?: () => void}) => (
     <Card className="relative overflow-hidden" onClick={onClick}>
         <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
@@ -298,7 +345,7 @@ const CoachStatCard = ({ title, value, icon, color, onClick }: { title: string, 
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
         <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
     </Card>
-);
+));
 
 const StudentsAtRiskCard = () => {
     const { students, assignments } = useDataContext();
@@ -373,12 +420,36 @@ const QuickActions = () => {
     );
 };
 
+interface BarClickPayload {
+    id: string;
+}
+
 const CoachDashboard = () => {
     const { students, assignments } = useDataContext();
     const { setActivePage } = useUI();
 
     const toGradeCount = assignments.filter(a => a.status === AssignmentStatus.Submitted).length;
-    const overdueCount = assignments.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date()).length;
+    
+    const overdueStats = useMemo(() => {
+        const studentsWithOverdue = new Set<string>();
+        let totalOverdueCount = 0;
+
+        students.forEach(student => {
+            const overdueAssignments = assignments.filter(a => 
+                a.studentId === student.id &&
+                a.status === AssignmentStatus.Pending && 
+                new Date(a.dueDate) < new Date()
+            );
+            if (overdueAssignments.length > 0) {
+                studentsWithOverdue.add(student.id);
+                totalOverdueCount += overdueAssignments.length;
+            }
+        });
+        return {
+            studentCount: studentsWithOverdue.size,
+            totalCount: totalOverdueCount,
+        };
+    }, [students, assignments]);
     
     const recentActivity = useMemo(() => assignments
         .filter(a => a.status === AssignmentStatus.Submitted)
@@ -409,11 +480,9 @@ const CoachDashboard = () => {
         ];
     }, [assignments]);
     
-     const handleBarClick = (data: any) => {
-        if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
-            // Fix: Add type assertion to resolve 'unknown' type error on payload.
-            const payload = data.activePayload[0].payload as { id: string };
-            const studentId = payload.id;
+     const handleBarClick = (data: { activePayload?: { payload: BarClickPayload }[] }) => {
+        const studentId = data?.activePayload?.[0]?.payload?.id;
+        if (studentId) {
             setActivePage('students', { studentId });
         }
     };
@@ -421,11 +490,18 @@ const CoachDashboard = () => {
 
     return (
         <div className="space-y-6">
+            {overdueStats.totalCount > 0 && (
+                <OverdueWarningCard
+                    title="Önemli Uyarı!"
+                    message={`${overdueStats.studentCount} öğrencinin toplam ${overdueStats.totalCount} gecikmiş ödevi bulunuyor. Detayları görmek için göz at.`}
+                    onNavigate={() => setActivePage('assignments', { filterOverdue: true })}
+                />
+            )}
             <CoachWelcomeHeader />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="tour-step-3">
                 <CoachStatCard title="Toplam Öğrenci" value={students.length} icon={<StudentsIcon />} color="text-green-500" onClick={() => setActivePage('students')} />
                 <CoachStatCard title="Değerlendirilecek" value={toGradeCount} icon={<AssignmentsIcon />} color="text-blue-500" onClick={() => setActivePage('assignments', {status: AssignmentStatus.Submitted})} />
-                <CoachStatCard title="Gecikmiş Ödev" value={overdueCount} icon={<AlertTriangleIcon />} color="text-red-500" onClick={() => setActivePage('assignments', { status: AssignmentStatus.Pending })} />
+                <CoachStatCard title="Gecikmiş Ödev" value={overdueStats.totalCount} icon={<AlertTriangleIcon />} color="text-red-500" onClick={() => setActivePage('assignments', { filterOverdue: true })} />
             </div>
 
             <QuickActions />

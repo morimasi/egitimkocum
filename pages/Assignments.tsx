@@ -1,11 +1,9 @@
-
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, CheckIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -159,14 +157,14 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
                 if (target.closest('input[type="checkbox"]')) return;
                 onSelect(assignment);
             }}
-            className={`bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-primary hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 p-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+            className={`bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-primary hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden border-l-4 p-4 ${isOverdue ? 'border-red-500' : 'border-transparent'} ${isSelected ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-slate-700/50' : ''}`}
         >
              {isCoach && (
                 <input 
                     type="checkbox"
                     className="absolute top-3 left-3 h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 dark:border-slate-600 z-10"
                     checked={isSelected}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         e.stopPropagation();
                         onToggleSelect(assignment.id);
                     }}
@@ -294,7 +292,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        // Fix: Explicitly type parameter 't' to resolve 'unknown' type error.
         const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
@@ -331,7 +328,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
             videoFeedbackUrl: null,
         };
         await addAssignment(newAssignmentBase, selectedStudents);
-        addToast("Ödev başarıyla oluşturuldu.", "success");
         onClose();
         // Reset form
         setTitle('');
@@ -399,8 +395,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                 </div>
                  <div>
                     <label className="block text-sm font-medium mb-1">Teslimat Tipi</label>
-                    {/* Fix: Add explicit type to event handler */}
-                    <select value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <select value={submissionType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSubmissionType(e.target.value as SubmissionType)} className="w-full p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                         <option value="file">Dosya Yükleme</option>
                         <option value="text">Metin Cevabı</option>
                         <option value="completed">Sadece Tamamlandı İşareti</option>
@@ -919,28 +914,18 @@ export default function Assignments() {
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isBatchGradeModalOpen, setIsBatchGradeModalOpen] = useState(false);
     const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
+    const [isShowingOverdue, setIsShowingOverdue] = useState(false);
 
     const isCoach = currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin;
     const studentMap = useMemo(() => new Map(students.map((s: User) => [s.id, s.name])), [students]);
     
-    const displayedAssignments = useMemo(() => {
-        let filtered = assignments;
-        if (currentUser?.role === UserRole.Student) {
-            filtered = assignments.filter(a => a.studentId === currentUser.id);
+    useEffect(() => {
+        if (initialFilters.filterOverdue) {
+            setIsShowingOverdue(true);
+            setFilterStatus('all');
+            setFilterStudent('all');
+            setSearchTerm('');
         }
-        if (filterStatus !== 'all') {
-            filtered = filtered.filter(a => a.status === filterStatus);
-        }
-        if (isCoach && filterStudent !== 'all') {
-            filtered = filtered.filter(a => a.studentId === filterStudent);
-        }
-        if (searchTerm) {
-            filtered = filtered.filter(a => a.title.toLowerCase().includes(searchTerm.toLowerCase()));
-        }
-        return filtered.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
-    }, [assignments, currentUser, filterStatus, isCoach, filterStudent, searchTerm]);
-
-     useEffect(() => {
         if (initialFilters.assignmentId) {
             const index = displayedAssignments.findIndex(a => a.id === initialFilters.assignmentId);
             if (index !== -1) {
@@ -951,15 +936,37 @@ export default function Assignments() {
             setIsNewAssignmentModalOpen(true);
         }
         if (Object.keys(initialFilters).length > 0) {
-            // Clear filters after applying them
-            if (initialFilters.preselectedStudentIds) {
-                 const { preselectedStudentIds, ...rest } = initialFilters;
+            if (initialFilters.preselectedStudentIds || initialFilters.filterOverdue) {
+                 const { preselectedStudentIds, filterOverdue, ...rest } = initialFilters;
                  setInitialFilters(rest);
             } else {
                  setInitialFilters({});
             }
         }
-    }, [initialFilters, setInitialFilters, displayedAssignments]);
+    }, [initialFilters]);
+
+    const displayedAssignments = useMemo(() => {
+        let filtered = assignments;
+        if (currentUser?.role === UserRole.Student) {
+            filtered = assignments.filter(a => a.studentId === currentUser.id);
+        }
+
+        if (isShowingOverdue) {
+             filtered = filtered.filter(a => a.status === AssignmentStatus.Pending && new Date(a.dueDate) < new Date());
+        } else {
+             if (filterStatus !== 'all') {
+                filtered = filtered.filter(a => a.status === filterStatus);
+            }
+        }
+       
+        if (isCoach && filterStudent !== 'all') {
+            filtered = filtered.filter(a => a.studentId === filterStudent);
+        }
+        if (searchTerm) {
+            filtered = filtered.filter(a => a.title.toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+        return filtered.sort((a,b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+    }, [assignments, currentUser, filterStatus, isCoach, filterStudent, searchTerm, isShowingOverdue]);
 
     const selectedAssignment = selectedAssignmentIndex !== null ? displayedAssignments[selectedAssignmentIndex] : null;
 
@@ -982,11 +989,11 @@ export default function Assignments() {
     }), [selectedAssignmentIndex, displayedAssignments.length]);
 
 
-    const handleToggleSelect = (id: string) => {
+    const handleToggleSelect = useCallback((id: string) => {
         setSelectedAssignmentIds(prev => 
             prev.includes(id) ? prev.filter(prevId => prevId !== id) : [...prev, id]
         );
-    };
+    }, []);
     
     const handleSelectAll = () => {
         if (selectedAssignmentIds.length === displayedAssignments.length) {
@@ -1038,17 +1045,34 @@ export default function Assignments() {
 
     return (
         <div className="space-y-6">
+            {isShowingOverdue && (
+                <Card className="bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-500 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <AlertTriangleIcon className="h-5 w-5 text-yellow-500 mr-3" />
+                            <p className="font-semibold text-yellow-800 dark:text-yellow-200">Sadece teslim tarihi geçmiş ve bekleyen ödevler gösteriliyor.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsShowingOverdue(false)}
+                            className="inline-flex rounded-md p-1.5 text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50"
+                        >
+                            <span className="sr-only">Filtreyi Temizle</span>
+                            <XIcon className="h-5 w-5" />
+                        </button>
+                    </div>
+                </Card>
+            )}
             <Card>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-wrap">
-                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as AssignmentStatus | 'all')} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <select value={filterStatus} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setFilterStatus(e.target.value as AssignmentStatus | 'all'); setIsShowingOverdue(false); }} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                             <option value="all">Tüm Durumlar</option>
                             <option value={AssignmentStatus.Pending}>Bekleyen</option>
                             <option value={AssignmentStatus.Submitted}>Teslim Edilen</option>
                             <option value={AssignmentStatus.Graded}>Notlandırılan</option>
                         </select>
                         {isCoach && (
-                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStudent(e.target.value)} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                            <select value={filterStudent} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setFilterStudent(e.target.value); setIsShowingOverdue(false); }} className="p-2 border rounded-md bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
                                 <option value="all">Tüm Öğrenciler</option>
                                 {students.map((s: User) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
@@ -1105,6 +1129,9 @@ export default function Assignments() {
                         </button>
                         <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                             <TrashIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setSelectedAssignmentIds([])} className="p-2 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500" title="Seçimi Temizle">
+                            <XIcon className="w-4 h-4" />
                         </button>
                     </div>
                 </div>

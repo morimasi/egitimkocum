@@ -4,7 +4,7 @@ import { User, Assignment, AssignmentStatus, UserRole, AcademicTrack, Badge, Bad
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
-import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon, ArrowLeftIcon, XIcon } from '../components/Icons';
+import { AssignmentsIcon, MessagesIcon, SparklesIcon, StudentsIcon as NoStudentsIcon, LibraryIcon, FlameIcon, TrophyIcon, TrashIcon, GridIcon, ListIcon, ArrowLeftIcon, XIcon, BrainCircuitIcon } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 import ConfirmationModal from '../components/ConfirmationModal';
 import OverviewTab from '../components/studentDetail/OverviewTab';
@@ -13,6 +13,7 @@ import MotivationTab from '../components/studentDetail/MotivationTab';
 import NotesTab from '../components/studentDetail/NotesTab';
 import { suggestStudentGoal } from '../services/geminiService';
 import InviteStudentModal from '../components/InviteStudentModal';
+import AIReportModal from '../components/AIReportModal';
 
 // Helper function to get display name for academic track
 const getAcademicTrackLabel = (track: AcademicTrack): string => {
@@ -33,6 +34,7 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
 }) => {
     const { users } = useDataContext();
     const [activeTab, setActiveTab] = useState('overview');
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     useEffect(() => {
         if (student) {
@@ -46,7 +48,7 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
     
     return (
         <Modal isOpen={!!student} onClose={onClose} title="" size="lg">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b dark:border-slate-700">
+            <div className="flex items-start sm:items-center justify-between mb-4 pb-4 border-b dark:border-slate-700 flex-col sm:flex-row gap-4">
                 <div className="flex items-start space-x-4">
                     <img src={student.profilePicture} alt={student.name} className="w-20 h-20 rounded-full" loading="lazy" />
                     <div>
@@ -71,12 +73,22 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
                         </div>
                     </div>
                 </div>
-                 {onNavigate && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5"/></button>
-                        <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
-                    </div>
-                )}
+                 <div className="flex items-center gap-2 self-end sm:self-center">
+                    <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="px-3 py-2 text-sm font-semibold bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900 flex items-center gap-2"
+                        title="AI Raporu Oluştur"
+                    >
+                        <BrainCircuitIcon className="w-5 h-5" />
+                        <span className="hidden sm:inline">AI Raporu</span>
+                    </button>
+                    {onNavigate && (
+                        <div className="flex items-center gap-1 border-l pl-2 ml-1 dark:border-slate-600">
+                            <button onClick={() => onNavigate('prev')} disabled={!canNavigate?.prev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5"/></button>
+                            <button onClick={() => onNavigate('next')} disabled={!canNavigate?.next} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30"><ArrowLeftIcon className="w-5 h-5 transform rotate-180"/></button>
+                        </div>
+                    )}
+                </div>
             </div>
             <div className="border-b border-slate-200 dark:border-slate-700">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
@@ -93,6 +105,7 @@ const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: {
                 {activeTab === 'motivation' && <MotivationTab student={student} />}
                 {activeTab === 'notes' && <NotesTab student={student} />}
             </div>
+            {isReportModalOpen && <AIReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} student={student} />}
         </Modal>
     );
 };
@@ -139,7 +152,7 @@ const StudentCard = ({ student, onSelect, onToggleSelect, isSelected }: {
                 onChange={() => onToggleSelect(student.id)}
                 aria-label={`Select student ${student.name}`}
             />
-            <Card className={`flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full ${isSelected ? 'ring-2 ring-primary-500' : ''}`} onClick={() => onSelect(student)}>
+            <Card className={`flex flex-col p-0 cursor-pointer transition-shadow duration-300 h-full ${isSelected ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-slate-700/50' : ''}`} onClick={() => onSelect(student)}>
                 <div className="flex flex-col items-center flex-grow p-3 text-center pt-6">
                     <div className="relative flex-shrink-0 mb-2">
                         <img src={student.profilePicture} alt={student.name} className="w-14 h-14 rounded-full" loading="lazy" />
@@ -576,20 +589,21 @@ export default function Students() {
         </div>
 
         {selectedStudentIds.length > 0 && (
-            <div className="fixed bottom-16 left-0 right-0 z-40 animate-fade-in lg:left-auto lg:w-auto lg:right-10 lg:bottom-10">
-                <div className="bg-white dark:bg-slate-800 p-4 flex items-center justify-between gap-4 border-t dark:border-slate-700 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] lg:rounded-lg lg:border lg:shadow-2xl">
+            <div className="fixed bottom-24 lg:bottom-10 right-10 z-40 animate-fade-in-right">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl p-4 flex items-center gap-4 border dark:border-slate-700">
                     <span className="text-sm font-semibold whitespace-nowrap">{selectedStudentIds.length} öğrenci seçildi</span>
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleBatchAssignTask} className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 flex items-center gap-1.5">
+                     <div className="flex items-center gap-2">
+                        <button onClick={handleBatchAssignTask} className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 flex items-center gap-1.5" title="Toplu Ödev Ata">
                             <AssignmentsIcon className="w-4 h-4" />
-                            <span className="hidden sm:inline">Toplu Ödev Ata</span>
                         </button>
-                        <button onClick={() => setIsAssignResourceModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-1.5">
+                        <button onClick={() => setIsAssignResourceModalOpen(true)} className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center gap-1.5" title="Kaynak Ata">
                            <LibraryIcon className="w-4 h-4"/>
-                           <span className="hidden sm:inline">Kaynak Ata</span>
                         </button>
-                        <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                        <button onClick={() => setIsConfirmDeleteOpen(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600" title="Seçilenleri Sil">
                             <TrashIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setSelectedStudentIds([])} className="p-2 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500" title="Seçimi Temizle">
+                           <XIcon className="w-4 h-4" />
                         </button>
                     </div>
                 </div>

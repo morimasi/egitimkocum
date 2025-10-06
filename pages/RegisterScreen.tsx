@@ -48,15 +48,12 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
         setIsLoading(true);
 
         try {
+            // Fix: The `register` function expects 3 arguments, but was called with 4.
             await register(name, email, profilePicture);
             // On successful registration, user is automatically logged in.
         } catch (err: any) {
              setIsLoading(false);
-             if (err.message && err.message.includes('zaten kullanılıyor')) {
-                setError('Bu e-posta adresi zaten kullanılıyor. Lütfen giriş yapın.');
-            } else {
-                 setError('Kayıt sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edin.');
-            }
+             setError(err.message || 'Kayıt sırasında bir hata oluştu.');
         }
     };
 

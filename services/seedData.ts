@@ -1,4 +1,4 @@
-import { UserRole, AssignmentStatus, BadgeID, AcademicTrack, ResourceCategory } from '../types';
+import { UserRole, AssignmentStatus, BadgeID, AcademicTrack, ResourceCategory, QuestionDifficulty } from '../types';
 
 export const seedData = {
   assignments: [
@@ -204,12 +204,69 @@ export const seedData = {
     { studentId: "STUDENT_4_ID", title: "Günde 10 yeni İngilizce kelime öğren.", description: "Kelime dağarcığını genişletmek için günlük çalışma yap.", isCompleted: false, milestones: [] },
   ],
   resources: [
-    { name: "Türev Konu Anlatımı PDF", type: 'pdf', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
-    { name: "Paragraf Çözme Taktikleri Videosu", type: 'video', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
-    { name: "Limit ve Süreklilik Ders Notları", type: 'document', url: "#", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
-    { name: "Organik Kimya Özel Notları", type: 'document', url: "#", isPublic: false, uploaderId: "COACH_ID", assignedTo: ["STUDENT_2_ID", "STUDENT_3_ID"], category: ResourceCategory.Kimya },
-    { name: "AYT Fizik Denemeleri", type: 'pdf', url: "#", isPublic: false, uploaderId: "COACH_2_ID", assignedTo: ["STUDENT_4_ID"], category: ResourceCategory.Fizik },
-    { name: "Coğrafya Harita Çalışması", type: 'image', url: "#", isPublic: true, uploaderId: "COACH_2_ID", category: ResourceCategory.Cografya },
+    // Matematik
+    { name: "Türev Konu Anlatımı (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/math/differential-calculus", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "İntegral Video Serisi (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/math/integral-calculus", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Limit ve Süreklilik Ders Notları (ODTÜ)", type: 'link', url: "https://ocw.metu.edu.tr/course/view.php?id=25", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Problemler Soru Çözümü (Rehber Matematik)", type: 'video', url: "https://www.youtube.com/playlist?list=PLVo92i6E5h-m_G-5k63Y-3n73n4a-cvX8", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Trigonometri Formülleri (PDF)", type: 'link', url: "https://www.matematikkolay.net/wp-content/uploads/2019/01/trigonometri_formulleri.pdf", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Polinomlar Video Serisi (Bıyıklı Matematik)", type: 'video', url: "https://www.youtube.com/playlist?list=PL_XPE7Sj-wYF3L3g1_uFIEjLJQ2f-bO3z", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    { name: "Geometri Temel Kavramlar (Kenan Kara)", type: 'video', url: "https://www.youtube.com/playlist?list=PL_prevY-34qEFp_2M_P_w5-qgOCgS-yI-", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Matematik },
+    
+    // Fizik
+    { name: "Elektrik ve Manyetizma Serisi (Umut Öncül)", type: 'video', url: "https://www.youtube.com/playlist?list=PL2-f2gXQo-2D8mCj_o-0-z6_TzU-m3oUa", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Fizik },
+    { name: "Optik Detaylı Anlatım (Fizikle Barış)", type: 'video', url: "https://www.youtube.com/playlist?list=PL-kC-zVde_h9a5Wj-YxlO_X_J8Z1d-D3T", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Fizik },
+    { name: "Dinamik ve Newton'un Yasaları (Fizikle Barış)", type: 'video', url: "https://www.youtube.com/watch?v=Zt_3m7y-3fI", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Fizik },
+    { name: "Modern Fizik Konu Anlatımı (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/science/physics/quantum-physics", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Fizik },
+    { name: "Fizik Formülleri Özeti (PDF)", type: 'link', url: "http://www.formulsayfasi.com/uploads/1/2/4/3/12439160/fizik_formlleri.pdf", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Fizik },
+
+    // Kimya
+    { name: "Periyodik Cetvel (TÜBİTAK)", type: 'link', url: "https://bilimgenc.tubitak.gov.tr/periyodik-tablo", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Kimya },
+    { name: "Kimyasal Hesaplamalar (Kimya Adası)", type: 'video', url: "https://www.youtube.com/playlist?list=PL10GgL6g3lM2gP6dZQ5mC5_tH9qB9zN-t", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Kimya },
+    { name: "Asitler, Bazlar ve Tuzlar (Benim Hocam)", type: 'video', url: "https://www.youtube.com/watch?v=U2StC8-kh-s", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Kimya },
+    { name: "Elektrokimya Konu Anlatımı (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/science/chemistry/oxidation-reduction", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Kimya },
+    { name: "Organik Kimya Notları (Ankara Üni.)", type: 'link', url: "https://acikders.ankara.edu.tr/course/view.php?id=3888", isPublic: false, uploaderId: "COACH_ID", assignedTo: ["STUDENT_2_ID", "STUDENT_3_ID"], category: ResourceCategory.Kimya },
+
+    // Biyoloji
+    { name: "Kalıtım Konu Anlatımı (Selin Hoca)", type: 'video', url: "https://www.youtube.com/watch?v=O-JJv-1KO-s", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Biyoloji },
+    { name: "Hücre ve Organelleri (Dr. Biyoloji)", type: 'video', url: "https://www.youtube.com/watch?v=L2vK8J-a-9Y", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Biyoloji },
+    { name: "Ekosistem Ekolojisi Video Serisi (Selin Hoca)", type: 'video', url: "https://www.youtube.com/playlist?list=PL35s0f5_fhXf0fXyA8dK_S7eE2gY263Gz", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Biyoloji },
+    { name: "Genden Proteine (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/science/biology/gene-expression-central-dogma", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Biyoloji },
+
+    // Türkçe & Edebiyat
+    { name: "Paragraf Çözme Taktikleri (Rüştü Hoca)", type: 'video', url: "https://www.youtube.com/watch?v=i9yY_i_b-yQ", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    { name: "Yazım Kuralları (TDK)", type: 'link', url: "https://www.tdk.gov.tr/kategori/yazim-kurallari/", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    { name: "Divan Edebiyatı (Benim Hocam)", type: 'video', url: "https://www.youtube.com/playlist?list=PL2f-3TV2y22_yv-CI-Zt_b0z9L3x4cW-z", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    { name: "Cümlenin Öğeleri (Türkçenin Matematiği)", type: 'video', url: "https://www.youtube.com/watch?v=7M-X-P_H-vI", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    { name: "Edebi Sanatlar Anlatımı (Rüştü Hoca)", type: 'video', url: "https://www.youtube.com/watch?v=7uD1DviwUTk", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Turkce },
+    
+    // Tarih
+    { name: "Kurtuluş Savaşı Belgeseli (TRT Arşiv)", type: 'video', url: "https://www.youtube.com/watch?v=JgfGz-zN-sY", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Tarih },
+    { name: "Osmanlı Tarihi Kronolojisi (TTK)", type: 'link', url: "https://www.ttk.gov.tr/tarih/osmanli-tarihi-kronolojisi/", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Tarih },
+    { name: "İnkılap Tarihi Ders Notları (PDF)", type: 'link', url: "https://www.sadikuygun.com.tr/Assets/uploads/22022021-174151.pdf", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Tarih },
+    { name: "Çağdaş Türk ve Dünya Tarihi (Benim Hocam)", type: 'video', url: "https://www.youtube.com/playlist?list=PLDB083FD2DBC0458C", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Tarih },
+
+    // Coğrafya
+    { name: "Türkiye Fiziki Haritası (Harita Genel Md.)", type: 'link', url: "https://www.harita.gov.tr/turkiye-fiziki-haritasi", isPublic: true, uploaderId: "COACH_2_ID", category: ResourceCategory.Cografya },
+    { name: "Nüfus ve Yerleşme (Coğrafyanın Kodları)", type: 'video', url: "https://www.youtube.com/playlist?list=PLXyA-5N3cT9A3H-nSkIB-I6oK-a7j7YtD", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Cografya },
+    { name: "Türkiye'nin Gölleri (Coğrafyanın Kodları)", type: 'video', url: "https://www.youtube.com/watch?v=h_5g3LgX8c0", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Cografya },
+
+    // Felsefe
+    { name: "Bilgi Felsefesi (Felsefece)", type: 'video', url: "https://www.youtube.com/watch?v=T_s-Xk-s-Yc", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Felsefe },
+    { name: "20. Yüzyıl Felsefesi (Khan Academy)", type: 'link', url: "https://tr.khanacademy.org/humanities/philosophy-in-english/philosophy-in-the-20th-century-english", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Felsefe },
+    
+    // İngilizce
+    { name: "İngilizce Gramer Alıştırmaları (British Council)", type: 'link', url: "https://learnenglish.britishcouncil.org/grammar", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Ingilizce },
+    { name: "Kelime Öğrenme Platformu (Quizlet)", type: 'link', url: "https://quizlet.com/", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Ingilizce },
+    { name: "İngilizce Okuma Parçaları (BBC Learning English)", type: 'link', url: "https://www.bbc.co.uk/learningenglish/english/features/6-minute-english", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Ingilizce },
+
+    // Genel
+    { name: "Verimli Ders Çalışma Teknikleri (Gri Koç)", type: 'video', url: "https://www.youtube.com/watch?v=i_w9-sN6y-w", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel },
+    { name: "YÖK Atlas Tercih Robotu", type: 'link', url: "https://yokatlas.yok.gov.tr/", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel },
+    { name: "MEB Örnek Sorular", type: 'link', url: "https://odsgm.meb.gov.tr/www/ornek-soru-ve-cozumleri/kategori/19", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel },
+    { name: "Pomodoro Zamanlayıcı (Online)", type: 'link', url: "https://pomofocus.io/", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel },
+    { name: "Zihin Haritası Oluşturma Aracı (MindMeister)", type: 'link', url: "https://www.mindmeister.com/tr", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel },
+    { name: "Bilim ve Teknik Dergisi Arşivi (TÜBİTAK)", type: 'link', url: "https://bilimteknik.tubitak.gov.tr/arsiv", isPublic: true, uploaderId: "COACH_ID", category: ResourceCategory.Genel }
   ],
   templates: [
     { title: "Matematik: Haftalık Tekrar Testi", description: "Bu haftanın konularını içeren tekrar testini çöz.", checklist: [{ text: "Konu tekrarı yapıldı." }, { text: "20 soru çözüldü." }, { text: "Yanlışlar kontrol edildi." }] },
@@ -305,6 +362,63 @@ export const seedData = {
         subjects: [
             { name: "Türev", totalQuestions: 25, correct: 20, incorrect: 3, empty: 2, netScore: 19.25 }
         ]
+    }
+  ],
+  questions: [
+    {
+      creatorId: "COACH_ID",
+      category: ResourceCategory.Matematik,
+      topic: "Türev",
+      questionText: "f(x) = 3x² + 5x - 2 fonksiyonunun x=1 noktasındaki türevi nedir?",
+      options: ["8", "11", "9", "13"],
+      correctOptionIndex: 1,
+      difficulty: QuestionDifficulty.Easy,
+      explanation: "f'(x) = 6x + 5. f'(1) = 6(1) + 5 = 11."
+    },
+    {
+      creatorId: "COACH_ID",
+      category: ResourceCategory.Fizik,
+      topic: "Vektörler",
+      questionText: "Aşağıdakilerden hangisi vektörel bir büyüklük değildir?",
+      options: ["Hız", "Kuvvet", "Sürat", "İvme"],
+      correctOptionIndex: 2,
+      difficulty: QuestionDifficulty.Easy,
+      explanation: "Sürat, skaler bir büyüklüktür. Yönü yoktur, sadece büyüklüğü vardır. Diğer seçenekler (hız, kuvvet, ivme) ise yönlü yani vektörel büyüklüklerdir."
+    },
+    {
+      creatorId: "COACH_ID",
+      category: ResourceCategory.Matematik,
+      topic: "Logaritma",
+      questionText: "log₂(16) + log₃(27) işleminin sonucu kaçtır?",
+      options: ["5", "6", "7", "8"],
+      correctOptionIndex: 2,
+      difficulty: QuestionDifficulty.Medium,
+      explanation: "log₂(16) = 4 çünkü 2⁴ = 16. log₃(27) = 3 çünkü 3³ = 27. Toplamları 4 + 3 = 7'dir."
+    },
+    {
+      creatorId: "COACH_2_ID",
+      category: ResourceCategory.Turkce,
+      topic: "Yazım Kuralları",
+      questionText: "Aşağıdaki cümlelerin hangisinde bir yazım yanlışı yapılmıştır?",
+      options: [
+        "Herşey yolunda gibiydi.",
+        "TBMM'nin açılışı coşkuyla kutlandı.",
+        "Sen de mi bizimle geleceksin?",
+        "Ankara Kalesi'ni ziyaret ettik."
+      ],
+      correctOptionIndex: 0,
+      difficulty: QuestionDifficulty.Medium,
+      explanation: "'Her şey' kelimesi her zaman ayrı yazılır. Bu nedenle 'Herşey' kullanımı yanlıştır."
+    },
+     {
+      creatorId: "COACH_2_ID",
+      category: ResourceCategory.Biyoloji,
+      topic: "Hücre",
+      questionText: "Aşağıdaki organellerden hangisi hem bitki hem de hayvan hücrelerinde ortak olarak bulunur?",
+      options: ["Kloroplast", "Sentrozom", "Hücre Duvarı", "Ribozom"],
+      correctOptionIndex: 3,
+      difficulty: QuestionDifficulty.Easy,
+      explanation: "Ribozom, protein sentezinden sorumlu zarsız bir organeldir ve tüm canlı hücrelerde (prokaryot ve ökaryot, bitki ve hayvan) bulunur."
     }
   ]
 };

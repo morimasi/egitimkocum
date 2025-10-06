@@ -1,6 +1,4 @@
-
-
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
 interface Props {
@@ -11,7 +9,8 @@ interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+// Fix: Explicitly extend React.Component to resolve potential type conflicts.
+class ErrorBoundary extends React.Component<Props, State> {
   state: State = {
     hasError: false,
   };
@@ -44,7 +43,6 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Explicitly returning children || null is safer and can prevent some render issues.
     return this.props.children || null;
   }
 }

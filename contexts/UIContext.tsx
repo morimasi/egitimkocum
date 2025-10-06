@@ -11,6 +11,7 @@ interface InitialFilters {
     status?: AssignmentStatus;
     openNewAssignmentModal?: boolean;
     assignmentId?: string;
+    filterOverdue?: boolean;
     preselectedStudentIds?: string[];
 }
 
@@ -150,7 +151,7 @@ export const UIProvider = ({ children }: { children?: ReactNode }) => {
         answerCall,
         endCall,
     }), [
-        theme, toggleTheme, activePage, setActivePage, toasts, addToast, removeToast, initialFilters, setInitialFilters,
+        theme, toggleTheme, activePage, setActivePage, toasts, addToast, removeToast, initialFilters,
         isTourActive, tourStep, startTour, nextTourStep, endTour,
         callState, callContact, callConversation, callType, startCall, answerCall, endCall
     ]);

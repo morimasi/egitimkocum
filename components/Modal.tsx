@@ -10,7 +10,7 @@ interface ModalProps {
     size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) => {
+const Modal = React.memo(({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<Element | null>(null);
 
@@ -104,6 +104,6 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }: ModalP
             </div>
         </div>
     );
-};
+});
 
 export default Modal;

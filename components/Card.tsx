@@ -11,7 +11,7 @@ interface CardProps {
     [key: string]: any;
 }
 
-const Card = ({ children, className = '', title, action, onClick, variant = 'default', icon, ...props }: CardProps) => {
+const Card = React.memo(({ children, className = '', title, action, onClick, variant = 'default', icon, ...props }: CardProps) => {
     const clickableClasses = onClick ? 'cursor-pointer hover:shadow-primary hover:-translate-y-1' : '';
     const variantClasses = {
         default: 'bg-white dark:bg-slate-800',
@@ -38,6 +38,6 @@ const Card = ({ children, className = '', title, action, onClick, variant = 'def
             </div>
         </div>
     );
-};
+});
 
 export default Card;

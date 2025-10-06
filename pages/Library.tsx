@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -10,6 +11,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
 import VideoRecorder from '../components/VideoRecorder';
 import AudioRecorder from '../components/AudioRecorder';
+import { ResourceCategoryLabels } from '../services/examCategories';
 
 const getAcademicTrackLabel = (track: AcademicTrack): string => {
     switch (track) {
@@ -19,19 +21,6 @@ const getAcademicTrackLabel = (track: AcademicTrack): string => {
         case AcademicTrack.Dil: return 'Dil';
         default: return '';
     }
-};
-
-const ResourceCategoryLabels: Record<ResourceCategory, string> = {
-    [ResourceCategory.Matematik]: 'Matematik',
-    [ResourceCategory.Fizik]: 'Fizik',
-    [ResourceCategory.Kimya]: 'Kimya',
-    [ResourceCategory.Biyoloji]: 'Biyoloji',
-    [ResourceCategory.Turkce]: 'Türkçe',
-    [ResourceCategory.Tarih]: 'Tarih',
-    [ResourceCategory.Cografya]: 'Coğrafya',
-    [ResourceCategory.Felsefe]: 'Felsefe',
-    [ResourceCategory.Ingilizce]: 'İngilizce',
-    [ResourceCategory.Genel]: 'Genel Kaynaklar',
 };
 
 const AddResourceModal = ({ onClose }: { onClose: () => void }) => {

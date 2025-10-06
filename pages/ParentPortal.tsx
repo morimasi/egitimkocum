@@ -6,13 +6,13 @@ import { User, Assignment, AssignmentStatus } from '../types';
 import Card from '../components/Card';
 import { MegaphoneIcon, TrendingUpIcon, TargetIcon, TrophyIcon } from '../components/Icons';
 
-const StatCard = ({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) => (
+const StatCard = React.memo(({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) => (
     <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-center">
         <div className="text-primary-500 w-8 h-8 mx-auto mb-2">{icon}</div>
         <p className="text-2xl font-bold">{value}</p>
         <p className="text-xs text-gray-500">{title}</p>
     </div>
-);
+));
 
 const AnnouncementsCard = () => {
     const { messages, coach } = useDataContext();

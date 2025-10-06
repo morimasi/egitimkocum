@@ -4,7 +4,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { Page, UserRole } from '../types';
 import {
     DashboardIcon, AssignmentsIcon, StudentsIcon, MessagesIcon,
-    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon, TrophyIcon,
+    AnalyticsIcon, SettingsIcon, SunIcon, MoonIcon, LogoutIcon, XIcon, LibraryIcon, AdminIcon, CalendarIcon, ParentIcon, ClipboardListIcon, FlameIcon, TargetIcon, BrainCircuitIcon, ClipboardCheckIcon, TrophyIcon, HelpCircleIcon,
 } from './Icons';
 
 interface NavItemProps {
@@ -71,6 +71,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'sinav-performansi', label: 'Sınav Performansı', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
             { page: 'akilli-planlayici', label: 'AI Planlayıcı', icon: <BrainCircuitIcon className="w-5 h-5" /> },
+            { page: 'soru-bankasi', label: 'Soru Bankası', icon: <HelpCircleIcon className="w-5 h-5" /> },
             { page: 'odak', label: 'Odak Modu', icon: <FlameIcon className="w-5 h-5" /> },
             { page: 'motivation', label: 'Motivasyon', icon: <TrophyIcon className="w-5 h-5" /> },
             { page: 'calendar', label: 'Takvim', icon: <CalendarIcon className="w-5 h-5" /> },
@@ -84,6 +85,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             { page: 'exams', label: 'Sınavlar', icon: <ClipboardCheckIcon className="w-5 h-5" /> },
             { page: 'goals', label: 'Hedefler', icon: <TargetIcon className="w-5 h-5" /> },
             { page: 'library', label: 'Kütüphane', icon: <LibraryIcon className="w-5 h-5" /> },
+            { page: 'soru-bankasi', label: 'Soru Bankası', icon: <HelpCircleIcon className="w-5 h-5" /> },
             { page: 'templates', label: 'Şablonlar', icon: <ClipboardListIcon className="w-5 h-5" /> },
             { page: 'messages', label: 'Mesajlar', icon: <MessagesIcon className="w-5 h-5" />, badge: totalUnreadMessages },
             { page: 'analytics', label: 'Analitik', icon: <AnalyticsIcon className="w-5 h-5" /> },
