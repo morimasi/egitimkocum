@@ -730,7 +730,7 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
 };
 
 export default function Messages() {
-    const { conversations, currentUser, markMessagesAsRead } = useDataContext();
+    const { conversations, markMessagesAsRead } = useDataContext();
     const { initialFilters, setInitialFilters } = useUI();
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialFilters.conversationId || null);
     const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
