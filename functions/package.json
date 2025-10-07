@@ -1,5 +1,7 @@
 {
   "name": "mahmut-hoca-functions",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "main": "index.js",
+  "type": "module"
 }
