@@ -1,4 +1,5 @@
 
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -250,7 +251,9 @@ app.post('/api/register', async (req, res) => {
         `;
         
         const { rows: [newUser] } = await sql`SELECT * FROM users WHERE id = ${id}`;
-        res.status(201).json(newUser);
+        // FIX: Do not send password to the client.
+        const { password: _, ...userToReturn } = newUser;
+        res.status(201).json(userToReturn);
     } catch (error) {
         res.status(500).json({ error: 'Registration failed.', details: error.message });
     }
@@ -266,7 +269,9 @@ app.post('/api/login', async (req, res) => {
         if (user.password !== password) {
             return res.status(401).json({ error: 'Invalid password.' });
         }
-        res.status(200).json(user);
+        // FIX: Do not send password to the client.
+        const { password: _, ...userToReturn } = user;
+        res.status(200).json(userToReturn);
     } catch (error) {
         res.status(500).json({ error: 'Login failed.', details: error.message });
     }
@@ -278,7 +283,8 @@ app.get('/api/data', async (req, res) => {
             users, assignments, messages, conversations, notifications, 
             templates, resources, goals, badges, calendarEvents, exams, questions
         ] = await Promise.all([
-            sql`SELECT * FROM users`,
+            // FIX: Select all columns except password to avoid sending it to the client.
+            sql`SELECT id, name, email, role, profilePicture, isOnline, notes, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, lastSubmissionDate, earnedBadgeIds FROM users`,
             sql`SELECT * FROM assignments`,
             sql`SELECT * FROM messages`,
             sql`SELECT * FROM conversations`,
