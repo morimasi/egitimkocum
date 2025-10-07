@@ -1,128 +1,88 @@
-# Mahmut Hoca - AI-Powered Educational Coaching Platform
+# Mahmut Hoca: AI-Powered Educational Coaching Platform
 
-**Mahmut Hoca, öğrenciler ve eğitim koçları için tasarlanmış, yapay zeka destekli modern bir web uygulamasıdır. Öğrenme sürecini merkezileştirir, kişiselleştirir ve oyunlaştırır.**
+_Yapay zeka ile güçlendirilmiş, yeni nesil eğitim koçluğu platformu._
 
----
+[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://reactjs.org/)
+[![Vercel](https://img.shields.io/badge/Vercel-black?logo=vercel)](https://vercel.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue?logo=postgresql)](https://www.postgresql.org/)
+[![Gemini API](https://img.shields.io/badge/Gemini%20API-blueviolet?logo=google&logoColor=white)](https://ai.google.dev/)
 
-## 📜 Proje Açıklaması
+**Mahmut Hoca**, öğrenciler ve eğitim koçları için tasarlanmış, Google Gemini API'nin gücünü kullanarak öğrenme sürecini merkezileştiren, kişiselleştiren ve oyunlaştıran modern bir web uygulamasıdır. Ödev atama, takip, değerlendirme ve iletişim gibi temel işlevleri tek bir çatı altında toplarken, yapay zeka entegrasyonları ile hem öğrencilere hem de koçlara benzersiz araçlar sunar.
 
-Mahmut Hoca, eğitim koçluğu ve öğrenci yönetimi süreçlerini dijitalleştiren, Google Gemini API'nin gücünü kullanarak akıllı özellikler sunan yenilikçi bir platformdur. Ödev atama, takip, değerlendirme ve iletişim gibi temel işlevleri tek bir çatı altında toplarken, yapay zeka entegrasyonları ile hem öğrencilere hem de koçlara benzersiz araçlar sunar.
+Vercel üzerinde kolayca dağıtılabilen, sunucusuz (serverless) mimari ve Vercel Postgres veritabanı ile geliştirilmiştir. Bu sayede ölçeklenebilir, güvenli ve bakımı kolay bir yapıya sahiptir.
 
-Bu proje, Vercel üzerinde kolayca dağıtılabilen, sunucusuz (serverless) bir mimari ve Vercel Postgres veritabanı ile geliştirilmiştir. Bu sayede ölçeklenebilir, güvenli ve bakımı kolay bir yapıya sahiptir.
+## ✨ Ana Özellikler
 
-## ✨ Temel Özellikler
+Platform, her kullanıcı rolü için özenle tasarlanmış zengin bir deneyim sunar.
 
-Uygulama, farklı kullanıcı rollerine göre özelleştirilmiş zengin bir özellik seti sunar:
+### 👨‍🏫 Koçlar & Adminler için
 
-### 👨‍🏫 Koçlar ve Süper Adminler için
-
--   **Öğrenci Yönetimi:** Öğrencileri davet etme, profillerini görüntüleme, özel notlar tutma.
--   **AI Destekli Ödev Oluşturma:** Tek bir başlıkla ödev açıklamaları ve kontrol listeleri oluşturma.
--   **Akıllı Değerlendirme:** Öğrenci teslimatlarına göre AI'dan not ve geri bildirim önerileri alma.
--   **Kapsamlı Analitik:** Sınıfın ve bireysel öğrencilerin performansını görsel grafiklerle ve AI özetleriyle izleme.
--   **Kaynak Kütüphanesi:** PDF, video, link gibi ders materyallerini yönetme ve öğrencilere atama.
--   **Şablon Yöneticisi:** Tekrar eden ödevler için şablonlar oluşturma ve kullanma.
--   **İletişim Araçları:** Birebir/grup mesajlaşması, anketler ve tüm öğrencilere yönelik duyurular yapma.
--   **Süper Admin Paneli:** Tüm kullanıcıları yönetme, rozetleri düzenleme ve veritabanını test verileriyle doldurma.
+-   **🤖 AI Destekli İçerik:** Tek başlıkla ödev açıklamaları, sınavlar ve kontrol listeleri oluşturun.
+-   **✍️ Akıllı Değerlendirme:** Öğrenci teslimatlarına göre AI'dan not ve geri bildirim önerileri alın.
+-   **📊 Kapsamlı Analitik:** Sınıf ve öğrenci performansını görsel grafikler ve AI özetleriyle izleyin.
+-   **📚 Zengin Kaynaklar:** Kütüphane, Soru Bankası ve Şablon Yöneticisi ile kaynaklarınızı yönetin.
+-   **💬 Etkili İletişim:** Birebir/grup mesajlaşması, anketler ve duyurular yapın.
+-   **🛡️ Süper Admin Paneli:** Tüm kullanıcıları yönetin ve tek tıkla platformu zengin test verileriyle doldurun.
 
 ### 🎓 Öğrenciler için
 
--   **Kişiselleştirilmiş Anasayfa:** Bekleyen ödevler, not ortalaması ve AI'dan günlük tavsiyeler.
--   **Kolay Ödev Teslimi:** Metin, dosya, ses veya video kaydı ile ödev teslim etme.
--   **AI Çalışma Arkadaşı:** Takıldığı konularda 7/24 soru sorabileceği yapay zeka sohbet botu.
--   **Motivasyon ve Oyunlaştırma:** Görevleri tamamlayarak XP, seviye ve başarı rozetleri kazanma.
--   **Hedef Belirleme:** AI önerileriyle kişisel ve akademik hedefler oluşturma ve takip etme.
--   **Performans Takibi:** Ders bazında başarı grafikleri ve AI destekli performans analizleri.
--   **Odak Modu:** Pomodoro tekniği ile verimli ders çalışma seansları düzenleme.
--   **Akıllı Planlayıcı:** Hedeflere ve boş zamanlara göre kişiselleştirilmiş haftalık ders programı oluşturma.
+-   **🚀 Kişiselleştirilmiş Panel:** Ödevler, notlar ve AI'dan günlük motivasyon tavsiyeleri.
+-   **💡 AI Çalışma Arkadaşı:** 7/24 soru sorabileceğiniz, takıldığınız konularda size yol gösteren yapay zeka asistanı.
+-   **🎮 Oyunlaştırma & Motivasyon:** Görevleri tamamlayarak XP, seviyeler ve başarı rozetleri kazanın.
+-   **🎯 Hedef Belirleme:** AI önerileriyle kişisel ve akademik hedefler oluşturun ve takip edin.
+-   **📈 Performans Takibi:** Ders bazında başarı grafikleri ve AI destekli performans analizleri.
+-   **⏳ Odak Modu:** Pomodoro tekniği ile verimli ders çalışma seansları düzenleyin.
+-   **📅 Akıllı Planlayıcı:** Hedeflerinize göre kişiselleştirilmiş haftalık ders programı oluşturun.
 
-## 🤖 Gemini API Entegrasyonları
+## 🤖 Gemini API'nin Gücü
 
-Platformun kalbinde yer alan Google Gemini API, aşağıdaki akıllı özellikleri mümkün kılar:
+Platformumuzun zekası, Google Gemini API'nin gelişmiş yeteneklerinden gelir:
 
--   **İçerik Üretimi:** Ödev açıklamaları, kontrol listeleri, sınav detayları ve haftalık özetler.
--   **Akıllı Geri Bildirim:** Öğrencinin notuna ve geçmiş performansına göre kişiselleştirilmiş, yapıcı geri bildirimler.
--   **Veri Analizi ve Yorumlama:** Öğrenci ve sınıf performans verilerini analiz ederek eyleme geçirilebilir içgörüler ve raporlar sunma.
--   **JSON Modu ve Fonksiyon Çağırma:** Yapılandırılmış veriler (örn. kontrol listesi, not önerisi) üretme.
--   **Multimodal Yetenekler:** Öğrencilerin yüklediği görselleri (örn. çözemedikleri bir soru) analiz edip ipuçları verme.
--   **Sohbet Yeteneği:** "Çalışma Arkadaşım" botu ile akıcı ve bağlama duyarlı sohbetler gerçekleştirme.
+-   **İçerik Üretimi:** Ödev açıklamaları, sınav detayları ve haftalık özetler gibi metin tabanlı içerikleri saniyeler içinde oluşturur.
+-   **Akıllı Geri Bildirim:** Öğrencinin notunu ve geçmiş performansını analiz ederek kişiselleştirilmiş, yapıcı geri bildirimler sunar.
+-   **Veri Analizi:** Karmaşık performans verilerini yorumlayarak hem öğrenci hem de koç için eyleme geçirilebilir, anlaşılır içgörüler sağlar.
+-   **Multimodal Yetenekler:** Öğrencilerin yüklediği görselleri (örn. çözemedikleri bir soru) analiz edip adım adım çözüm ipuçları verir.
+-   **Doğal Sohbet:** "Çalışma Arkadaşım" botu ile akıcı ve bağlama duyarlı, öğretici sohbetler gerçekleştirir.
 
-## 📸 Ekran Görüntüleri
+## 🛠️ Teknoloji Mimarisi
 
-*Bu bölüme uygulamanın arayüzünden görseller eklenebilir.*
+-   **Frontend:** React, TypeScript, Vite, Tailwind CSS, Recharts
+-   **Backend:** Vercel Functions (Node.js & Express.js)
+-   **Veritabanı:** Vercel Postgres
+-   **Yapay Zeka:** Google Gemini API (`@google/genai`)
 
-`[Anasayfa (Dashboard) Ekran Görüntüsü]`
-`[Ödev Detayı ve AI Geri Bildirim Ekran Görüntüsü]`
-`[Öğrenci Detay Sayfası Ekran Görüntüsü]`
-`[Mesajlaşma Arayüzü Ekran Görüntüsü]`
+## 🚀 Hızlı Başlangıç: Vercel'de Dağıtma
 
-## 🛠️ Kullanılan Teknolojiler
+Bu projeyi Vercel üzerinde dakikalar içinde canlıya alabilirsiniz.
 
--   **Frontend:**
-    -   **React & TypeScript:** Modern, tip güvenli bir kullanıcı arayüzü için.
-    -   **Vite:** Hızlı ve verimli geliştirme ortamı.
-    -   **Tailwind CSS:** Hızlı ve özelleştirilebilir stilizasyon.
-    -   **Recharts:** Etkileşimli veri görselleştirme ve grafikler.
--   **Backend (Sunucusuz):**
-    -   **Vercel Functions (Node.js & Express.js):** Ölçeklenebilir ve yönetimi kolay API endpoint'leri.
--   **Veritabanı:**
-    -   **Vercel Postgres:** Güvenilir ve tam entegre bir SQL veritabanı.
--   **Yapay Zeka:**
-    -   **Google Gemini API (`@google/genai`):** Platformun tüm akıllı özellikleri için.
+1.  **Projeyi Fork'layın:** Bu repoyu kendi GitHub hesabınıza fork'layın.
+2.  **Vercel Projesi Oluşturun:**
+    -   Vercel'e gidin ve `Add New... -> Project` seçeneğiyle GitHub reponuzu içeri aktarın.
+    -   Framework olarak "Vite" seçildiğinden emin olun.
+3.  **Veritabanı Oluşturun:**
+    -   Proje ayarlarında `Storage` sekmesine gidin ve bir **Postgres** veritabanı oluşturun.
+    -   Veritabanını projenize bağlayın. Vercel, gerekli `POSTGRES_*` ortam değişkenlerini otomatik olarak ekleyecektir.
+4.  **API Anahtarını Ekleyin:**
+    -   Proje ayarlarında `Settings -> Environment Variables` bölümüne gidin.
+    -   `API_KEY` adında yeni bir değişken oluşturun ve değer olarak kendi Google Gemini API anahtarınızı yapıştırın.
+5.  **Dağıtın (Deploy):**
+    -   Vercel, bu ayarlardan sonra projenizi otomatik olarak dağıtacaktır. `Deploy` butonuna basarak işlemi manuel de başlatabilirsiniz.
+    -   Dağıtım tamamlandıktan sonra Vercel'in size verdiği domain adresine gidin.
 
-## 🏗️ Proje Mimarisi
+### Kurulum Sonrası
 
-Proje, modern bir web uygulaması mimarisi üzerine kurulmuştur:
+-   **İlk Kullanıcı Süper Admin'dir:** Platforma ilk kayıt olan kullanıcı, otomatik olarak **Süper Admin** yetkilerine sahip olur.
+-   **Test Verileri:** Süper Admin olarak giriş yapın, "Süper Admin Paneli"ne gidin ve **"Veri Ekle"** butonuna tıklayarak uygulamayı zengin ve çeşitli test verileriyle (kullanıcılar, ödevler, sınavlar, sorular vb.) doldurun. Bu, tüm özellikleri anında denemenizi sağlar!
 
-1.  **Frontend (React):** Kullanıcının tarayıcısında çalışan ve arayüzü oluşturan kısımdır.
-2.  **Backend API (Vercel Functions):** `api/` dizini altındaki sunucusuz fonksiyonlar, veritabanı işlemleri ve güvenli Gemini API çağrıları gibi mantıksal işlemleri yürütür. Bu yapı, ön uçtan hassas bilgileri (API anahtarı gibi) soyutlar.
-3.  **Veritabanı (Vercel Postgres):** Tüm uygulama verileri (kullanıcılar, ödevler, mesajlar vb.) bu veritabanında kalıcı olarak saklanır.
-
-**Veri Akışı:** Kullanıcı arayüzünden yapılan bir istek (örn. yeni ödev oluşturma) React bileşeninden Vercel Function'a gönderilir. Fonksiyon, isteği işler, Vercel Postgres veritabanında gerekli değişiklikleri yapar ve sonucu tekrar arayüze döndürür.
-
-## 🚀 Vercel Üzerinde Kurulum ve Çalıştırma
-
-Bu projeyi Vercel'de canlıya almak oldukça basittir:
-
-### Adım 1: Projeyi Vercel'e Aktarma
-
-1.  Bu projeyi kendi GitHub hesabınıza **fork**'layın.
-2.  Vercel hesabınıza giriş yapın ve `Add New... -> Project` seçeneğini seçin.
-3.  GitHub reponuzu Vercel'e bağlayın. Vercel, projeyi otomatik olarak bir "Vite" projesi olarak tanıyacaktır.
-
-### Adım 2: Veritabanı Kurulumu
-
-1.  Vercel proje ayarları sayfasında `Storage` sekmesine gidin.
-2.  `Postgres` seçeneğini seçin ve projeniz için yeni bir veritabanı oluşturun.
-3.  Oluşturduktan sonra `.env.local` sekmesine tıklayın. Vercel'in veritabanı için gerekli ortam değişkenlerini (`POSTGRES_*` ile başlayanlar) projenize otomatik olarak eklediğini göreceksiniz. Bu değişkenler dağıtım sırasında projenize enjekte edilecektir.
-
-### Adım 3: Gemini API Anahtarını Ekleme
-
-1.  Proje ayarlarında `Settings -> Environment Variables` bölümüne gidin.
-2.  `API_KEY` adında yeni bir ortam değişkeni oluşturun.
-3.  Değer olarak kendi Google Gemini API anahtarınızı yapıştırın.
-4.  Kaydedin.
-
-### Adım 4: Dağıtma ve Başlatma
-
-1.  Yaptığınız değişikliklerin ardından Vercel, projenizi otomatik olarak yeniden dağıtacaktır. Dilerseniz `Deployments` sekmesinden manuel olarak da tetikleyebilirsiniz.
-2.  Dağıtım tamamlandıktan sonra Vercel tarafından sağlanan domain adresine gidin.
-3.  Uygulama ilk açıldığında veritabanı tablolarını otomatik olarak oluşturacaktır.
-4.  **Önemli:** Platforma **ilk kayıt olan kullanıcı**, otomatik olarak **Süper Admin** yetkilerine sahip olacaktır. Sonraki kayıtlar varsayılan olarak "Öğrenci" rolüyle oluşturulur.
-5.  Süper Admin olarak giriş yaptıktan sonra `Süper Admin Paneli` üzerinden yeni koçlar ve öğrenciler oluşturabilirsiniz.
-
-## 📂 Dosya Yapısı
+## 📂 Proje Yapısı
 
 ```
 .
-├── api/                  # Vercel sunucusuz fonksiyonları (Backend)
-│   └── index.js          # Express.js ile API yönlendirmesi
-├── components/           # Tekrar kullanılabilir React bileşenleri
-├── contexts/             # Global state yönetimi (DataContext, UIContext)
-├── pages/                # Ana sayfa bileşenleri (Dashboard, Assignments vb.)
-├── services/             # Harici servislerle iletişim (geminiService, seedData)
-├── App.tsx               # Ana uygulama bileşeni ve sayfa yönlendirmesi
-├── index.tsx             # React uygulamasının başlangıç noktası
-├── index.html            # Ana HTML dosyası
-└── README.md             # Bu dosya
+├── api/          # Vercel sunucusuz fonksiyonları (Backend)
+├── components/   # Tekrar kullanılabilir React bileşenleri
+├── contexts/     # Global state yönetimi (DataContext, UIContext)
+├── pages/        # Ana sayfa bileşenleri
+├── services/     # Harici servislerle iletişim (Gemini, seedData)
+├── App.tsx       # Ana uygulama bileşeni ve yönlendirme
+└── ...
 ```

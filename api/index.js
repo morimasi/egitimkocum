@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { sql } from '@vercel/postgres';
+import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData } from '../services/seedData.js';
 
@@ -14,8 +14,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // --- DATABASE SCHEMA AND INIT ---
 
-const createTables = async () => {
-    await sql`
+const createTables = async (dbClient = sql) => {
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -35,7 +35,7 @@ const createTables = async () => {
             lastSubmissionDate TIMESTAMP,
             earnedBadgeIds TEXT[]
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS assignments (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -65,7 +65,7 @@ const createTables = async () => {
             startTime TIMESTAMP,
             endTime TIMESTAMP
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             participantIds TEXT[] NOT NULL,
@@ -75,7 +75,7 @@ const createTables = async () => {
             adminId TEXT,
             isArchived BOOLEAN DEFAULT false
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
             senderId TEXT NOT NULL,
@@ -95,7 +95,7 @@ const createTables = async () => {
             poll JSONB,
             priority VARCHAR(50)
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -105,7 +105,7 @@ const createTables = async () => {
             priority VARCHAR(50) NOT NULL,
             link JSONB
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS templates (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -113,7 +113,7 @@ const createTables = async () => {
             checklist JSONB,
             isFavorite BOOLEAN DEFAULT false
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS resources (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -124,7 +124,7 @@ const createTables = async () => {
             assignedTo TEXT[],
             category VARCHAR(50)
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS goals (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -133,7 +133,7 @@ const createTables = async () => {
             isCompleted BOOLEAN DEFAULT false,
             milestones JSONB
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS calendarEvents (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -144,7 +144,7 @@ const createTables = async () => {
             startTime TIME,
             endTime TIME
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS exams (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -162,7 +162,7 @@ const createTables = async () => {
             topic VARCHAR(100),
             type VARCHAR(50)
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
             creatorId TEXT NOT NULL,
@@ -179,7 +179,7 @@ const createTables = async () => {
             documentUrl TEXT,
             documentName VARCHAR(255)
         );`;
-    await sql`
+    await dbClient.sql`
         CREATE TABLE IF NOT EXISTS badges (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -383,15 +383,17 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
 });
 
 app.post('/api/seed', async (req, res) => {
+    const client = await db.connect();
     try {
+        await client.sql`BEGIN`;
         console.log("Seeding process started...");
 
         // Drop all tables
-        await sql`DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;`;
+        await client.sql`DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;`;
         console.log("Old tables dropped.");
 
         // Re-create tables
-        await createTables();
+        await createTables(client);
         console.log("Tables re-created.");
 
         // Insert Data from seedData.ts
@@ -408,70 +410,73 @@ app.post('/api/seed', async (req, res) => {
             { id: 'on-time-submissions', name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
         ];
         for (const badge of badges) {
-            await sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
+            await client.sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
         }
         console.log("Badges seeded.");
 
         // Users
         for (const user of users) {
-            await sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${user.childIds}, ${user.parentIds}, ${user.xp}, ${user.streak}, ${user.earnedBadgeIds});`;
+            await client.sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${`{${user.childIds?.join(',') || ''}}`}, ${`{${user.parentIds?.join(',') || ''}}`}, ${user.xp || 0}, ${user.streak || 0}, ${`{${user.earnedBadgeIds?.join(',') || ''}}`});`;
         }
         console.log(`${users.length} users seeded.`);
         
         // Conversations
         for (const conv of conversations) {
-             await sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${`{${conv.participantIds.join(',')}}`}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
         // Assignments
         for (const assignment of assignments) {
-            await sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
+            await client.sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt?.toISOString()}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
         }
         console.log(`${assignments.length} assignments seeded.`);
 
         // Exams
         for (const exam of exams) {
-            await sql`INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date}, ${exam.totalQuestions}, ${exam.correct}, ${exam.incorrect}, ${exam.empty}, ${exam.netScore}, ${JSON.stringify(exam.subjects)}, ${exam.category}, ${exam.topic}, ${exam.type});`;
+            await client.sql`INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date.toISOString()}, ${exam.totalQuestions}, ${exam.correct}, ${exam.incorrect}, ${exam.empty}, ${exam.netScore}, ${JSON.stringify(exam.subjects)}, ${exam.category}, ${exam.topic}, ${exam.type});`;
         }
         console.log(`${exams.length} exams seeded.`);
 
         // Goals
         for (const goal of goals) {
-            await sql`INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description}, ${goal.isCompleted}, ${JSON.stringify(goal.milestones)});`;
+            await client.sql`INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description}, ${goal.isCompleted}, ${JSON.stringify(goal.milestones)});`;
         }
         console.log(`${goals.length} goals seeded.`);
         
         // Resources
         for (const resource of resources) {
-             await sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});`;
+             await client.sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${`{${resource.assignedTo?.join(',') || ''}}`}, ${resource.category});`;
         }
         console.log(`${resources.length} resources seeded.`);
 
         // Templates
         for (const template of templates) {
-             await sql`INSERT INTO templates (id, title, description, checklist) VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist)});`;
+             await client.sql`INSERT INTO templates (id, title, description, checklist) VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist)});`;
         }
         console.log(`${templates.length} templates seeded.`);
 
         // Questions
         for (const q of questions) {
-             await sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl}, ${q.videoUrl}, ${q.audioUrl}, ${q.documentUrl}, ${q.documentName});`;
+             await client.sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${`{${q.options.join('","')}}`}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl}, ${q.videoUrl}, ${q.audioUrl}, ${q.documentUrl}, ${q.documentName});`;
         }
         console.log(`${questions.length} questions seeded.`);
         
         // Messages
         for (const msg of messages) {
-             await sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp}, ${msg.type}, ${msg.readBy});`;
+             await client.sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${`{${msg.readBy.join(',')}}`});`;
         }
         console.log(`${messages.length} messages seeded.`);
 
-
+        await client.sql`COMMIT`;
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
 
     } catch (error) {
+        await client.sql`ROLLBACK`;
         console.error('Database seed error:', error);
         res.status(500).json({ error: 'Failed to seed database.', details: error.message });
+    } finally {
+        client.release();
     }
 });
 
