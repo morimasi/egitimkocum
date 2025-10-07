@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
-import { Resource, AcademicTrack, ResourceCategory } from '../types';
+import { Resource, ResourceCategory } from '../types';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
 import { DocumentIcon, LibraryIcon, LinkIcon, TrashIcon, VideoIcon, ImageIcon, AudioFileIcon, SpreadsheetIcon } from '../components/Icons';

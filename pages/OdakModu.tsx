@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { Goal, AssignmentStatus } from '../types';
 import Card from '../components/Card';
-import { TargetIcon, PlayIcon, PauseIcon, CheckIcon, SettingsIcon } from '../components/Icons';
+import { CheckIcon, SettingsIcon } from '../components/Icons';
 import Modal from '../components/Modal';
 
 type TimerMode = 'work' | 'shortBreak' | 'longBreak';

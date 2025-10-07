@@ -137,12 +137,11 @@ const StudentView = () => {
 
 
     if (quizState === 'start') {
-        const mediaSummaryItems = [
-            mediaCounts.image > 0 && `${mediaCounts.image} görsel`,
-            mediaCounts.video > 0 && `${mediaCounts.video} video`,
-            mediaCounts.audio > 0 && `${mediaCounts.audio} ses`,
-            mediaCounts.document > 0 && `${mediaCounts.document} belge`,
-        ].filter(Boolean);
+        const mediaSummaryItems: string[] = [];
+        if (mediaCounts.image > 0) mediaSummaryItems.push(`${mediaCounts.image} görsel`);
+        if (mediaCounts.video > 0) mediaSummaryItems.push(`${mediaCounts.video} video`);
+        if (mediaCounts.audio > 0) mediaSummaryItems.push(`${mediaCounts.audio} ses`);
+        if (mediaCounts.document > 0) mediaSummaryItems.push(`${mediaCounts.document} belge`);
 
         return (
             <div className="flex items-center justify-center h-full">
