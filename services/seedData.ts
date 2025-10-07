@@ -1,5 +1,3 @@
-
-
 import {
   UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation
 } from '../types';
