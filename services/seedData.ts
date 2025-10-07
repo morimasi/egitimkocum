@@ -1,5 +1,4 @@
-
-import { UserRole, AssignmentStatus, AcademicTrack, ResourceCategory, QuestionDifficulty, Question } from '../types';
+import { UserRole } from '../types';
 import { examCategories } from './examCategories.js';
 
 const uuid = () => crypto.randomUUID();
