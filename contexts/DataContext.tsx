@@ -518,11 +518,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const lasts = new Map<string, Message>();
         if (currentUser) {
             const myId = currentUser.id;
-            conversations.filter(c => c.participantIds.includes(myId)).forEach(c => {
+            conversations.filter(c => c && c.participantIds && c.participantIds.includes(myId)).forEach(c => {
                 const convMessages = messages.filter(m => m.conversationId === c.id)
                     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 if (convMessages.length > 0) lasts.set(c.id, convMessages[0]);
-                const unreadCount = convMessages.filter(m => !m.readBy.includes(myId) && m.senderId !== myId).length;
+                const unreadCount = convMessages.filter(m => m && m.readBy && !m.readBy.includes(myId) && m.senderId !== myId).length;
                 counts.set(c.id, unreadCount);
             });
         }

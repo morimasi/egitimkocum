@@ -626,7 +626,7 @@ const ContactList = ({ onSelectConversation, selectedConversationId, onNewChat }
 
     const sortedConversations = useMemo(() => {
         return [...conversations]
-            .filter(c => c.participantIds.includes(currentUser!.id) && (c.isArchived ?? false) === showArchived)
+            .filter(c => c && c.participantIds && c.participantIds.includes(currentUser!.id) && (c.isArchived ?? false) === showArchived)
             .sort((a, b) => {
                 if (a.id === 'conv-announcements') return -1;
                 if (b.id === 'conv-announcements') return 1;
