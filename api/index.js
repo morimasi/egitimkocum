@@ -5,7 +5,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
-import { seedData } from '../services/seedData.js';
+import { seedData } from '../services/seedData';
 
 const app = express();
 app.use(cors());
@@ -251,7 +251,6 @@ app.post('/api/register', async (req, res) => {
         `;
         
         const { rows: [newUser] } = await sql`SELECT * FROM users WHERE id = ${id}`;
-        // FIX: Do not send password to the client.
         const { password: _, ...userToReturn } = newUser;
         res.status(201).json(userToReturn);
     } catch (error) {
@@ -269,7 +268,6 @@ app.post('/api/login', async (req, res) => {
         if (user.password !== password) {
             return res.status(401).json({ error: 'Invalid password.' });
         }
-        // FIX: Do not send password to the client.
         const { password: _, ...userToReturn } = user;
         res.status(200).json(userToReturn);
     } catch (error) {
@@ -283,7 +281,6 @@ app.get('/api/data', async (req, res) => {
             users, assignments, messages, conversations, notifications, 
             templates, resources, goals, badges, calendarEvents, exams, questions
         ] = await Promise.all([
-            // FIX: Select all columns except password to avoid sending it to the client.
             sql`SELECT id, name, email, role, profilePicture, isOnline, notes, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, lastSubmissionDate, earnedBadgeIds FROM users`,
             sql`SELECT * FROM assignments`,
             sql`SELECT * FROM messages`,
