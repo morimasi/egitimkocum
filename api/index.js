@@ -14,7 +14,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // --- DATABASE SCHEMA AND INIT ---
 
 const createTables = async () => {
-    return sql`
+    await sql`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -33,8 +33,8 @@ const createTables = async () => {
             streak INT DEFAULT 0,
             lastSubmissionDate TIMESTAMP,
             earnedBadgeIds TEXT[]
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS assignments (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -63,8 +63,8 @@ const createTables = async () => {
             studentTextFeedbackResponse TEXT,
             startTime TIMESTAMP,
             endTime TIMESTAMP
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             participantIds TEXT[] NOT NULL,
@@ -73,8 +73,8 @@ const createTables = async () => {
             groupImage TEXT,
             adminId TEXT,
             isArchived BOOLEAN DEFAULT false
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
             senderId TEXT NOT NULL,
@@ -93,8 +93,8 @@ const createTables = async () => {
             replyTo TEXT,
             poll JSONB,
             priority VARCHAR(50)
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -103,16 +103,16 @@ const createTables = async () => {
             isRead BOOLEAN DEFAULT false,
             priority VARCHAR(50) NOT NULL,
             link JSONB
-        );
-        
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS templates (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
             description TEXT,
             checklist JSONB,
             isFavorite BOOLEAN DEFAULT false
-        );
-        
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS resources (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -122,8 +122,8 @@ const createTables = async () => {
             uploaderId TEXT NOT NULL,
             assignedTo TEXT[],
             category VARCHAR(50)
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS goals (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -131,8 +131,8 @@ const createTables = async () => {
             description TEXT,
             isCompleted BOOLEAN DEFAULT false,
             milestones JSONB
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS calendarEvents (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -142,8 +142,8 @@ const createTables = async () => {
             color VARCHAR(50),
             startTime TIME,
             endTime TIME
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS exams (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -160,8 +160,8 @@ const createTables = async () => {
             category VARCHAR(100),
             topic VARCHAR(100),
             type VARCHAR(50)
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
             creatorId TEXT NOT NULL,
@@ -177,8 +177,8 @@ const createTables = async () => {
             audioUrl TEXT,
             documentUrl TEXT,
             documentName VARCHAR(255)
-        );
-
+        );`;
+    await sql`
         CREATE TABLE IF NOT EXISTS badges (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
