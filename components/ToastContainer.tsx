@@ -27,25 +27,25 @@ const Toast = ({ toast, onDismiss, ...props }: ToastProps) => {
     };
 
     const BG_COLORS = {
-        success: 'bg-green-50 dark:bg-green-900/50 border-green-400',
-        error: 'bg-red-50 dark:bg-red-900/50 border-red-400',
-        info: 'bg-blue-50 dark:bg-blue-900/50 border-blue-400',
-        xp: 'bg-yellow-50 dark:bg-yellow-900/50 border-yellow-400',
+        success: 'bg-green-500/10 border-green-500',
+        error: 'bg-destructive/10 border-destructive',
+        info: 'bg-blue-500/10 border-blue-500',
+        xp: 'bg-yellow-500/10 border-yellow-500',
     };
 
     return (
         <div
             {...props}
-            className={`flex items-start p-4 mb-4 rounded-lg shadow-lg border-l-4 ${BG_COLORS[type]} w-full max-w-sm animate-fade-in-right`}
+            className={`flex items-start p-4 mb-4 rounded-md shadow-lg border-l-4 bg-card ${BG_COLORS[type]} w-full max-w-sm animate-fade-in-right`}
         >
             <div className="flex-shrink-0">{ICONS[type]}</div>
             <div className="ml-3 w-0 flex-1 pt-0.5">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{message}</p>
+                <p className="text-sm font-medium text-foreground">{message}</p>
             </div>
             <div className="ml-4 flex-shrink-0 flex">
                 <button
                     onClick={() => onDismiss(id)}
-                    className="inline-flex rounded-md text-slate-400 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex rounded-md text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
                 >
                     <span className="sr-only">Close</span>
                     <XIcon className="h-5 w-5" />

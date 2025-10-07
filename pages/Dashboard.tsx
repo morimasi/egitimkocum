@@ -18,20 +18,20 @@ const OverdueWarningCard = ({ title, message, onNavigate }: { title: string; mes
     if (!isVisible) return null;
 
     return (
-        <Card className="mb-6 bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 animate-fade-in">
+        <Card className="mb-6 bg-destructive/10 border-l-4 border-destructive animate-fade-in">
             <div className="flex items-start">
                 <div className="flex-shrink-0">
-                    <AlertTriangleIcon className="h-6 w-6 text-red-500" />
+                    <AlertTriangleIcon className="h-6 w-6 text-destructive" />
                 </div>
                 <div className="ml-3 flex-1">
-                    <h3 className="text-lg font-bold text-red-800 dark:text-red-200">{title}</h3>
-                    <div className="mt-2 text-sm text-red-700 dark:text-red-200">
+                    <h3 className="text-lg font-bold text-destructive-foreground">{title}</h3>
+                    <div className="mt-2 text-sm text-destructive-foreground/90">
                         <p>{message}</p>
                     </div>
                     <div className="mt-4">
                         <button
                             onClick={onNavigate}
-                            className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            className="px-4 py-2 bg-destructive text-destructive-foreground text-sm font-semibold rounded-md hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-destructive"
                         >
                             Göz At
                         </button>
@@ -40,7 +40,7 @@ const OverdueWarningCard = ({ title, message, onNavigate }: { title: string; mes
                 <div className="ml-4 flex-shrink-0">
                     <button
                         onClick={() => setIsVisible(false)}
-                        className="inline-flex rounded-md p-1.5 text-red-400 hover:bg-red-100 dark:hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                        className="inline-flex rounded-md p-1.5 text-destructive/80 hover:bg-destructive/20 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 focus:ring-offset-destructive/10"
                     >
                         <span className="sr-only">Kapat</span>
                         <XIcon className="h-5 w-5" />
@@ -64,15 +64,15 @@ const WelcomeCard = ({ user, onDismiss }: { user: User, onDismiss: () => void })
     }
 
     return (
-        <Card className="bg-gradient-to-r from-primary-500 to-fuchsia-500 text-white mb-6 relative animate-fade-in shadow-lg">
-            <button onClick={onDismiss} className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+        <Card variant="gradient" className="mb-6 relative animate-fade-in shadow-lg">
+            <button onClick={onDismiss} className="absolute top-3 right-3 p-1 rounded-full bg-primary-foreground/20 hover:bg-primary-foreground/30 transition-colors">
                 <XIcon className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
-                 <img src={user.profilePicture} alt={user.name} className="w-16 h-16 rounded-full border-4 border-white/50" loading="lazy" />
+                 <img src={user.profilePicture} alt={user.name} className="w-16 h-16 rounded-full border-4 border-primary-foreground/50" loading="lazy" />
                 <div>
                     <h2 className="text-2xl font-bold">{title}</h2>
-                    <p className="mt-1 text-white/90 max-w-2xl">{message}</p>
+                    <p className="mt-1 text-primary-foreground/90 max-w-2xl">{message}</p>
                 </div>
             </div>
         </Card>
@@ -98,19 +98,19 @@ const AnnouncementsCard = React.memo(({className = ''}: {className?: string}) =>
                 {announcements.map(msg => {
                     const sender = users.find(u => u.id === msg.senderId);
                      return (
-                         <li key={msg.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900" onClick={() => setActivePage('messages', {conversationId: 'conv-announcements'})}>
+                         <li key={msg.id} className="p-3 bg-yellow-500/10 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-yellow-500/20" onClick={() => setActivePage('messages', {conversationId: 'conv-announcements'})}>
                             <div className="flex-shrink-0">
                                 {sender && sender.profilePicture ? (
                                     <img src={sender.profilePicture} alt={sender.name} className="w-6 h-6 rounded-full object-cover" loading="lazy" />
                                 ) : (
-                                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                                        <StudentsIcon className="w-4 h-4 text-slate-500" />
+                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                        <StudentsIcon className="w-4 h-4 text-muted-foreground" />
                                     </div>
                                 )}
                             </div>
                             <div>
-                                <p className="text-sm text-slate-700 dark:text-slate-300">{msg.text}</p>
-                                <p className="text-xs text-slate-400 mt-1">
+                                <p className="text-sm text-foreground">{msg.text}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
                                     {sender?.name} - {new Date(msg.timestamp).toLocaleString('tr-TR')}
                                 </p>
                             </div>
@@ -145,17 +145,17 @@ const StudentWelcomeHeader = React.memo(() => {
         <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
             <div className="flex justify-between items-start">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Hoş geldin, {currentUser?.name}!</h1>
-                    <p className="text-sm text-white/80">Seviye: {currentLevel} | XP: {currentUser?.xp || 0}</p>
+                    <h1 className="text-2xl font-bold text-primary-foreground">Hoş geldin, {currentUser?.name}!</h1>
+                    <p className="text-sm text-primary-foreground/80">Seviye: {currentLevel} | XP: {currentUser?.xp || 0}</p>
                 </div>
-                 <button onClick={handleGenerateSuggestion} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
+                 <button onClick={handleGenerateSuggestion} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-primary-foreground/20 hover:bg-primary-foreground/30 active:bg-primary-foreground/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
                     {isLoading ? <SparklesIcon className="w-4 h-4 animate-spin" /> : '✨'}
-                    <span>{isLoading ? 'Oluşturuluyor...' : 'Günlük Tavsiyeni Al'}</span>
+                    <span>{isLoading ? 'Oluşturuluyor...' : 'Günün Tavsiyesi'}</span>
                 </button>
             </div>
-             <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] flex items-center text-sm">
+             <div className="mt-3 text-primary-foreground/90 bg-primary-foreground/10 p-3 rounded-md min-h-[40px] flex items-center text-sm">
                  {isLoading ? (
-                    <SkeletonText className="h-5 w-3/4 bg-white/30" />
+                    <SkeletonText className="h-5 w-3/4 bg-primary-foreground/30" />
                 ) : suggestion ? (
                     <p>{suggestion}</p>
                 ) : (
@@ -171,8 +171,8 @@ const StudentStatCard = React.memo(({ title, value, icon, color }: { title: stri
          <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
-        <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
+        <p className="text-sm text-muted-foreground font-medium">{title}</p>
+        <p className="text-3xl font-bold text-foreground mt-1">{value}</p>
     </Card>
 ));
 
@@ -209,7 +209,7 @@ const FocusAreasCard = React.memo(() => {
                     <SkeletonText className="h-4 w-3/4" />
                 </div>
             ) : (
-                <p className="text-sm text-slate-700 dark:text-slate-300">{focusSuggestion}</p>
+                <p className="text-sm text-card-foreground/90">{focusSuggestion}</p>
             )}
         </Card>
     );
@@ -269,10 +269,10 @@ const StudentDashboard = () => {
                      {upcomingAssignments.length > 0 ? (
                         <ul className="space-y-3">
                             {upcomingAssignments.map(a => (
-                                <li key={a.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                <li key={a.id} className="p-3 bg-muted/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-accent" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
                                     <div>
                                         <p className="font-semibold">{a.title}</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                        <p className="text-sm text-muted-foreground">
                                             {new Date(a.dueDate).toLocaleDateString('tr-TR')}
                                         </p>
                                     </div>
@@ -284,7 +284,7 @@ const StudentDashboard = () => {
                         <div className="text-center py-8">
                             <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
                             <p className="mt-2 font-semibold">Tebrikler!</p>
-                            <p className="text-sm text-slate-500">Bekleyen ödevin bulunmuyor.</p>
+                            <p className="text-sm text-muted-foreground">Bekleyen ödevin bulunmuyor.</p>
                         </div>
                     )}
                 </Card>
@@ -316,17 +316,17 @@ const CoachWelcomeHeader = React.memo(() => {
          <Card variant="gradient" className="animate-fade-in" icon={<SparklesIcon />}>
             <div className="flex justify-between items-start">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Merhaba Koç {currentUser?.name}!</h1>
-                    <p className="text-sm text-white/80">İşte haftalık genel durumun.</p>
+                    <h1 className="text-2xl font-bold text-primary-foreground">Merhaba Koç {currentUser?.name}!</h1>
+                    <p className="text-sm text-primary-foreground/80">İşte haftalık genel durumun.</p>
                 </div>
-                 <button onClick={handleGenerateSummary} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
+                 <button onClick={handleGenerateSummary} disabled={isLoading} className="px-3 py-1.5 text-sm font-semibold bg-primary-foreground/20 hover:bg-primary-foreground/30 active:bg-primary-foreground/40 rounded-full transition-colors flex-shrink-0 flex items-center gap-1.5 disabled:opacity-75 disabled:cursor-wait">
                     {isLoading ? <SparklesIcon className="w-4 h-4 animate-spin" /> : '✨'}
                     <span>{isLoading ? 'Özetleniyor...' : 'Haftalık Özeti Al'}</span>
                 </button>
             </div>
-             <div className="mt-3 text-white/90 bg-white/10 p-3 rounded-md min-h-[40px] text-sm whitespace-pre-wrap">
+             <div className="mt-3 text-primary-foreground/90 bg-primary-foreground/10 p-3 rounded-md min-h-[40px] text-sm whitespace-pre-wrap">
                  {isLoading ? (
-                    <SkeletonText className="h-16 w-full bg-white/30" />
+                    <SkeletonText className="h-16 w-full bg-primary-foreground/30" />
                 ) : summary ? (
                     <p>{summary}</p>
                 ) : (
@@ -342,8 +342,8 @@ const CoachStatCard = React.memo(({ title, value, icon, color, onClick }: { titl
         <div className={`absolute -top-2 -right-2 text-6xl opacity-10 ${color}`}>
             {icon}
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
-        <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{value}</p>
+        <p className="text-sm text-muted-foreground font-medium">{title}</p>
+        <p className="text-3xl font-bold text-foreground mt-1">{value}</p>
     </Card>
 ));
 
@@ -376,15 +376,15 @@ const StudentsAtRiskCard = () => {
         <Card title="İlgi Gerektiren Öğrenciler">
             <ul className="space-y-3">
                 {studentsAtRisk.map(student => (
-                    <li key={student.id} onClick={() => setActivePage('students', {studentId: student.id})} className="p-3 bg-red-50 dark:bg-red-900/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900">
+                    <li key={student.id} onClick={() => setActivePage('students', {studentId: student.id})} className="p-3 bg-destructive/10 rounded-lg flex justify-between items-center cursor-pointer hover:bg-destructive/20">
                         <div className="flex items-center gap-3">
                              <img src={student.profilePicture} alt={student.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" />
                             <div>
                                 <p className="font-semibold">{student.name}</p>
-                                <p className="text-xs text-red-700 dark:text-red-300">{student.riskFactors.join(', ')}</p>
+                                <p className="text-xs text-destructive-foreground/80">{student.riskFactors.join(', ')}</p>
                             </div>
                         </div>
-                         <button className="text-xs font-semibold text-red-600 dark:text-red-200 hover:underline">Detay</button>
+                         <button className="text-xs font-semibold text-destructive hover:underline">Detay</button>
                     </li>
                 ))}
             </ul>
@@ -397,7 +397,7 @@ const QuickActions = () => {
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
 
     const actions = [
-        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6 text-primary-500"/>, action: () => setActivePage('assignments', {openNewAssignmentModal: true})},
+        { label: "Yeni Ödev", icon: <PlusCircleIcon className="w-6 h-6 text-primary"/>, action: () => setActivePage('assignments', {openNewAssignmentModal: true})},
         { label: "Mesajlar", icon: <MessagesIcon className="w-6 h-6 text-green-500"/>, action: () => setActivePage('messages')},
         { label: "Duyuru Yap", icon: <MegaphoneIcon className="w-6 h-6 text-yellow-500"/>, action: () => setAnnouncementModalOpen(true)},
         { label: "Kütüphane", icon: <LibraryIcon className="w-6 h-6 text-purple-500"/>, action: () => setActivePage('library')},
@@ -408,7 +408,7 @@ const QuickActions = () => {
             <Card title="Hızlı Eylemler">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {actions.map(({ label, icon, action }) => (
-                        <button key={label} onClick={action} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-slate-200 dark:active:bg-slate-600">
+                        <button key={label} onClick={action} className="p-4 rounded-md bg-secondary hover:bg-accent border border-transparent hover:border-border flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 active:bg-muted">
                             {icon}
                             <span className="text-sm font-semibold text-center">{label}</span>
                         </button>
@@ -510,7 +510,7 @@ const CoachDashboard = () => {
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" domain={[0, 100]}/>
                                 <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 12}} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))', borderRadius: 'var(--radius-sm)' }} />
                                 <Bar dataKey="avgGrade" name="Not Ort." barSize={20} onClick={handleBarClick} cursor="pointer">
                                     {studentPerformanceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.avgGrade >= 85 ? '#22c55e' : entry.avgGrade >= 60 ? '#8b5cf6' : '#ef4444'}/>
@@ -526,7 +526,7 @@ const CoachDashboard = () => {
                              <ResponsiveContainer>
                                 <PieChart>
                                     <Pie data={assignmentStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} />
-                                    <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', border: 'none', color: '#fff', borderRadius: '0.5rem' }} />
+                                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))', borderRadius: 'var(--radius-sm)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -535,10 +535,10 @@ const CoachDashboard = () => {
                          {recentActivity.length > 0 ? (
                             <ul className="space-y-3">
                                 {recentActivity.map(a => (
-                                    <li key={a.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
+                                    <li key={a.id} className="p-3 bg-muted/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-accent" onClick={() => setActivePage('assignments', {assignmentId: a.id})}>
                                         <div>
                                             <p className="font-semibold text-sm">{students.find(s=>s.id === a.studentId)?.name}</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[150px]">{a.title}</p>
+                                            <p className="text-xs text-muted-foreground truncate max-w-[150px]">{a.title}</p>
                                         </div>
                                         <span className="text-xs font-bold text-blue-600 dark:text-blue-300 flex-shrink-0">Teslim Edildi</span>
                                     </li>
@@ -548,7 +548,7 @@ const CoachDashboard = () => {
                             <div className="text-center py-8">
                                 <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto" />
                                 <p className="mt-2 font-semibold">Her şey güncel!</p>
-                                <p className="text-sm text-slate-500">Değerlendirilecek yeni ödev yok.</p>
+                                <p className="text-sm text-muted-foreground">Değerlendirilecek yeni ödev yok.</p>
                             </div>
                         )}
                      </Card>

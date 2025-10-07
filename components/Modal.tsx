@@ -81,14 +81,14 @@ const Modal = React.memo(({ isOpen, onClose, title, children, footer, size = 'md
             <div 
                 ref={modalRef} 
                 onClick={(e) => e.stopPropagation()}
-                className={`bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-primary-500/10 w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-transform duration-300 animate-fade-in sm:animate-bounce-in`}
+                className={`bg-card text-card-foreground rounded-t-lg sm:rounded-lg shadow-2xl shadow-primary/10 w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] transform transition-transform duration-300 animate-fade-in sm:animate-bounce-in border border-border`}
             >
-                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-                    <h3 id={modalId} className="text-xl font-semibold text-slate-900 dark:text-white">{title}</h3>
+                <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+                    <h3 id={modalId} className="text-xl font-semibold text-foreground">{title}</h3>
                     <button
                         onClick={onClose}
                         aria-label="Kapat"
-                        className="p-1 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        className="p-1 rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                     >
                         <XIcon className="w-6 h-6" />
                     </button>
@@ -97,7 +97,7 @@ const Modal = React.memo(({ isOpen, onClose, title, children, footer, size = 'md
                     {children}
                 </div>
                 {footer && (
-                    <div className="flex items-center justify-end p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
+                    <div className="flex items-center justify-end p-4 border-t border-border flex-shrink-0">
                         {footer}
                     </div>
                 )}

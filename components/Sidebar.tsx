@@ -26,10 +26,10 @@ const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
                 setActivePage(page);
             }}
             id={`nav-${page}`}
-            className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
+            className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-md transition-all duration-200 group ${
                 isActive
-                    ? 'bg-gradient-to-r from-primary-600 to-fuchsia-500 text-white shadow-lg shadow-primary-500/30'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600'
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
         >
             <div className="flex items-center">
@@ -37,7 +37,7 @@ const NavItem = React.memo(({ page, label, icon, badge }: NavItemProps) => {
                 <span className="ml-3">{label}</span>
             </div>
             {badge && badge > 0 && (
-                <span className={`ml-2 text-xs font-bold rounded-full px-2 py-0.5 ${isActive ? 'bg-white text-primary-600' : 'bg-primary-100 text-primary-600 dark:bg-primary-700 dark:text-primary-100'}`}>
+                <span className={`ml-2 text-xs font-bold rounded-full px-2 py-0.5 ${isActive ? 'bg-primary-foreground text-primary' : 'bg-primary/20 text-primary'}`}>
                     {badge}
                 </span>
             )}
@@ -117,10 +117,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     
 
     const sidebarContent = (
-        <div className="flex flex-col h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-xl">
-            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-700" id="tour-step-0">
+        <div className="flex flex-col h-full bg-card border-r border-border shadow-xl">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-border" id="tour-step-0">
                 <div className="flex items-center">
-                     <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-slate-800 dark:text-white">
+                     <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-foreground">
                         <g className="animate-float-subtle">
                             <path d="M 20 50 C 20 25, 60 25, 60 50 C 60 75, 20 75, 20 50 Z" fill="#f2d5b1" stroke="currentColor" strokeWidth="2"/>
                             <rect x="22" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
@@ -137,9 +137,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                             <path d="M 40 70 L 45 80 L 35 80 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1"/>
                         </g>
                     </svg>
-                    <span className="ml-2 text-xl font-bold text-slate-800 dark:text-white">Mahmut Hoca</span>
+                    <span className="ml-2 text-xl font-bold text-foreground">Mahmut Hoca</span>
                 </div>
-                 <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                 <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground hover:text-foreground">
                     <XIcon className="w-6 h-6"/>
                 </button>
             </div>
@@ -150,24 +150,24 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 </nav>
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="p-4 border-t border-border">
                 <div className="flex items-center justify-between mb-4">
                      <button
                         onClick={toggleTheme}
-                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600"
+                        className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-muted-foreground rounded-md hover:bg-accent"
                         >
                         {theme === 'light' ? <MoonIcon className="w-5 h-5 mr-3" /> : <SunIcon className="w-5 h-5 mr-3" />}
                         {theme === 'light' ? 'Koyu Mod' : 'Açık Mod'}
                     </button>
                 </div>
 
-                <div className="flex items-center p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50">
+                <div className="flex items-center p-2 rounded-md bg-secondary">
                     <img className="w-10 h-10 rounded-full" src={currentUser?.profilePicture} alt="User" loading="lazy" />
                     <div className="ml-3">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-white">{currentUser?.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
+                        <p className="text-sm font-semibold text-foreground">{currentUser?.name}</p>
+                        <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
                     </div>
-                     <button onClick={() => logout()} className="ml-auto p-2 text-slate-500 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 active:bg-red-200 dark:active:bg-red-900" aria-label="Çıkış Yap">
+                     <button onClick={() => logout()} className="ml-auto p-2 text-muted-foreground hover:text-destructive rounded-full hover:bg-destructive/10" aria-label="Çıkış Yap">
                         <LogoutIcon className="w-5 h-5" />
                     </button>
                 </div>
@@ -186,7 +186,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             {/* Mobile sidebar */}
             <div className={`fixed inset-0 z-40 flex lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                  <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)}></div>
-                 <div className={`relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-slate-800 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                 <div className={`relative flex-1 flex flex-col max-w-xs w-full bg-card transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     {sidebarContent}
                 </div>
             </div>

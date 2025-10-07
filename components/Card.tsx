@@ -14,14 +14,14 @@ interface CardProps {
 const Card = React.memo(({ children, className = '', title, action, onClick, variant = 'default', icon, ...props }: CardProps) => {
     const clickableClasses = onClick ? 'cursor-pointer hover:shadow-primary hover:-translate-y-1' : '';
     const variantClasses = {
-        default: 'bg-white dark:bg-slate-800',
-        gradient: 'bg-gradient-to-br from-primary-500 to-fuchsia-500 text-white dark:from-primary-600 dark:to-fuchsia-600'
+        default: 'bg-card text-card-foreground',
+        gradient: 'bg-primary text-primary-foreground'
     };
-    const titleColor = variant === 'gradient' ? 'text-white/90' : 'text-slate-900 dark:text-white';
-    const borderColor = variant === 'gradient' ? 'border-white/20' : 'border-slate-200 dark:border-slate-700';
+    const titleColor = variant === 'gradient' ? 'text-primary-foreground' : 'text-foreground';
+    const borderColor = variant === 'gradient' ? 'border-primary-foreground/20' : 'border-border';
 
     return (
-        <div {...props} onClick={onClick} className={`relative rounded-2xl shadow-lg dark:shadow-md shadow-black/5 dark:shadow-none overflow-hidden transition-all duration-300 ${variantClasses[variant]} ${clickableClasses} ${className}`}>
+        <div {...props} onClick={onClick} className={`relative rounded-lg shadow-md shadow-black/5 dark:shadow-none overflow-hidden transition-all duration-300 border border-border ${variantClasses[variant]} ${clickableClasses} ${className}`}>
             {icon && (
                 <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-20 text-white text-6xl pointer-events-none">
                     {icon}

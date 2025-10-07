@@ -25,15 +25,15 @@ class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
+        <div className="flex items-center justify-center min-h-screen bg-background">
             <Card className="text-center max-w-lg">
-                <h1 className="text-2xl font-bold text-red-500">Bir şeyler ters gitti.</h1>
-                <p className="mt-4 text-slate-600 dark:text-slate-300">
+                <h1 className="text-2xl font-bold text-destructive">Bir şeyler ters gitti.</h1>
+                <p className="mt-4 text-muted-foreground">
                     Uygulamada beklenmedik bir hata oluştu. Lütfen sayfayı yenileyerek tekrar deneyin. Sorun devam ederse, destek ekibiyle iletişime geçin.
                 </p>
                 <button
                     onClick={() => window.location.reload()}
-                    className="mt-6 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                    className="mt-6 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                 >
                     Sayfayı Yenile
                 </button>
