@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
-import { seedData } from '../services/seedData';
+import { seedData, generateDynamicSeedData } from '../services/seedData';
 
 const app = express();
 app.use(cors());
@@ -398,8 +398,14 @@ app.post('/api/seed', async (_req: any, res: any) => {
         // Re-create tables
         await createTables(client);
         console.log("Tables re-created.");
+        
+        // Destructure static data
+        const { users, conversations } = seedData;
+        // Generate dynamic data *inside* the handler
+        const { templates, resources } = generateDynamicSeedData();
+        // The rest of the data is empty as per seedData export, which is fine
+        const { assignments, exams, goals, questions, messages } = seedData;
 
-        const { users, assignments, exams, goals, resources, templates, questions, conversations, messages } = seedData;
 
         const badgesData = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
@@ -471,7 +477,7 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const q of questions) {
              await client.sql`
                 INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
-                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${Array.isArray(q.options) ? `{${q.options.join('","')}}` : '{}'}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
+                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${Array.isArray(q.options) ? `{${q.options.map(o => `"${o.replace(/"/g, '""')}"`).join(',')}}` : '{}'}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
              `;
         }
         console.log(`${questions.length} questions seeded.`);
