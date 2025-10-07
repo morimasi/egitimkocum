@@ -1,13 +1,59 @@
 import {
-  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation
+  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID
 } from '../types';
 import { examCategories } from './examCategories';
 
 const uuid = () => crypto.randomUUID();
 
-const user1 = { id: 'user-superadmin', name: 'Süper Admin', email: 'admin@mahmuthoca.com', password: 'password', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=admin' };
-const user2 = { id: 'user-coach-1', name: 'Ayşe Yılmaz', email: 'ayse@mahmuthoca.com', password: 'password', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=ayse' };
-const user3 = { id: 'user-coach-2', name: 'Mehmet Öztürk', email: 'mehmet@mahmuthoca.com', password: 'password', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=mehmet' };
+// FIX: Added missing optional properties to user objects to align with the User type and database schema.
+const user1 = {
+    id: 'user-superadmin',
+    name: 'Süper Admin',
+    email: 'admin@mahmuthoca.com',
+    password: 'password',
+    role: UserRole.SuperAdmin,
+    profilePicture: 'https://i.pravatar.cc/150?u=admin',
+    assignedCoachId: null,
+    gradeLevel: undefined,
+    academicTrack: undefined,
+    childIds: [],
+    parentIds: [],
+    xp: 0,
+    streak: 0,
+    earnedBadgeIds: [] as BadgeID[]
+};
+const user2 = {
+    id: 'user-coach-1',
+    name: 'Ayşe Yılmaz',
+    email: 'ayse@mahmuthoca.com',
+    password: 'password',
+    role: UserRole.Coach,
+    profilePicture: 'https://i.pravatar.cc/150?u=ayse',
+    assignedCoachId: null,
+    gradeLevel: undefined,
+    academicTrack: undefined,
+    childIds: [],
+    parentIds: [],
+    xp: 1500,
+    streak: 5,
+    earnedBadgeIds: [] as BadgeID[]
+};
+const user3 = {
+    id: 'user-coach-2',
+    name: 'Mehmet Öztürk',
+    email: 'mehmet@mahmuthoca.com',
+    password: 'password',
+    role: UserRole.Coach,
+    profilePicture: 'https://i.pravatar.cc/150?u=mehmet',
+    assignedCoachId: null,
+    gradeLevel: undefined,
+    academicTrack: undefined,
+    childIds: [],
+    parentIds: [],
+    xp: 800,
+    streak: 2,
+    earnedBadgeIds: [] as BadgeID[]
+};
 
 const users = [user1, user2, user3];
 
