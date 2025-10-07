@@ -416,19 +416,20 @@ app.post('/api/seed', async (req, res) => {
 
         // Users
         for (const user of users) {
-            await client.sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${`{${user.childIds?.join(',') || ''}}`}, ${`{${user.parentIds?.join(',') || ''}}`}, ${user.xp || 0}, ${user.streak || 0}, ${`{${user.earnedBadgeIds?.join(',') || ''}}`});`;
+            await client.sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${user.childIds}, ${user.parentIds}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds});`;
         }
         console.log(`${users.length} users seeded.`);
         
         // Conversations
         for (const conv of conversations) {
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${`{${conv.participantIds.join(',')}}`}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
         // Assignments
         for (const assignment of assignments) {
-            await client.sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt?.toISOString()}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
+            const submittedAtValue = assignment.submittedAt ? assignment.submittedAt.toISOString() : null;
+            await client.sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${submittedAtValue}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
         }
         console.log(`${assignments.length} assignments seeded.`);
 
@@ -446,7 +447,7 @@ app.post('/api/seed', async (req, res) => {
         
         // Resources
         for (const resource of resources) {
-             await client.sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${`{${resource.assignedTo?.join(',') || ''}}`}, ${resource.category});`;
+             await client.sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});`;
         }
         console.log(`${resources.length} resources seeded.`);
 
@@ -458,13 +459,13 @@ app.post('/api/seed', async (req, res) => {
 
         // Questions
         for (const q of questions) {
-             await client.sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${`{${q.options.join('","')}}`}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl}, ${q.videoUrl}, ${q.audioUrl}, ${q.documentUrl}, ${q.documentName});`;
+             await client.sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl}, ${q.videoUrl}, ${q.audioUrl}, ${q.documentUrl}, ${q.documentName});`;
         }
         console.log(`${questions.length} questions seeded.`);
         
         // Messages
         for (const msg of messages) {
-             await client.sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${`{${msg.readBy.join(',')}}`});`;
+             await client.sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy});`;
         }
         console.log(`${messages.length} messages seeded.`);
 

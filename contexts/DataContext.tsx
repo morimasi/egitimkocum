@@ -513,28 +513,47 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [addToast]);
 
     // Memoized derived state
+    const messagesByConversation = useMemo(() => {
+        const map = new Map<string, Message[]>();
+        messages.forEach(msg => {
+            if (!map.has(msg.conversationId)) {
+                map.set(msg.conversationId, []);
+            }
+            map.get(msg.conversationId)!.push(msg);
+        });
+        map.forEach(convMessages => {
+            convMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        });
+        return map;
+    }, [messages]);
+
     const { unreadCounts, lastMessagesMap } = useMemo(() => {
         const counts = new Map<string, number>();
         const lasts = new Map<string, Message>();
         if (currentUser) {
             const myId = currentUser.id;
-            conversations.filter(c => c && c.participantIds && c.participantIds.includes(myId)).forEach(c => {
-                const convMessages = messages.filter(m => m.conversationId === c.id)
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                if (convMessages.length > 0) lasts.set(c.id, convMessages[0]);
+            conversations.forEach(c => {
+                if (!c || !c.participantIds || !c.participantIds.includes(myId)) return;
+
+                const convMessages = messagesByConversation.get(c.id) || [];
+                
+                if (convMessages.length > 0) {
+                    lasts.set(c.id, convMessages[convMessages.length - 1]);
+                }
+                
                 const unreadCount = convMessages.filter(m => m && m.readBy && !m.readBy.includes(myId) && m.senderId !== myId).length;
                 counts.set(c.id, unreadCount);
             });
         }
         return { unreadCounts: counts, lastMessagesMap: lasts };
-    }, [messages, conversations, currentUser]);
+    }, [messagesByConversation, conversations, currentUser]);
 
     const coach = useMemo(() => currentUser?.role === UserRole.Student ? users.find(u => u.id === currentUser.assignedCoachId) || null : (currentUser?.role === UserRole.Coach || currentUser?.role === UserRole.SuperAdmin ? currentUser : users.find(u => u.role === UserRole.Coach) || null), [users, currentUser]);
     const students = useMemo(() => currentUser?.role === UserRole.Coach ? users.filter(u => u.role === UserRole.Student && u.assignedCoachId === currentUser.id) : (currentUser?.role === UserRole.SuperAdmin ? users.filter(u => u.role === UserRole.Student) : []), [users, currentUser]);
     const getAssignmentsForStudent = useCallback((studentId: string) => assignments.filter(a => a.studentId === studentId), [assignments]);
     const getGoalsForStudent = useCallback((studentId: string) => goals.filter(g => g.studentId === studentId), [goals]);
     const findMessageById = useCallback((messageId: string) => messages.find(m => m.id === messageId), [messages]);
-    const getMessagesForConversation = useCallback((conversationId: string) => messages.filter(m => m.conversationId === conversationId).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()), [messages]);
+    const getMessagesForConversation = useCallback((conversationId: string) => messagesByConversation.get(conversationId) || [], [messagesByConversation]);
 
     const contextValue: DataContextType = {
         currentUser, users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions, isLoading, isDbInitialized,

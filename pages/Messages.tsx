@@ -146,7 +146,10 @@ const MessageBubble = ({ msg, isOwnMessage, onReply, onReact, conversation }: { 
         setShowReactionPicker(false);
     };
     
-    const senderName = users.find(u => u.id === repliedToMessage?.senderId)?.name || '...';
+    const senderName = useMemo(() => {
+        if (!repliedToMessage) return '...';
+        return users.find(u => u.id === repliedToMessage.senderId)?.name || '...';
+    }, [users, repliedToMessage]);
     
     const renderMessageContent = () => {
         switch (msg.type) {
