@@ -4,6 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { sql } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
+import { seedData } from '../services/seedData.js';
 
 const app = express();
 app.use(cors());
@@ -192,14 +193,11 @@ app.post('/api/init', async (req, res) => {
     try {
         await createTables();
         
-        // Check if DB is already seeded
         const { rows } = await sql`SELECT COUNT(*) FROM users;`;
         if (rows[0].count > 0) {
             return res.status(200).json({ message: 'Database already initialized.' });
         }
         
-        // Seed initial data
-        // For simplicity, we'll only seed the badges. Users should register.
         const badges = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
             { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
@@ -229,8 +227,6 @@ app.post('/api/init', async (req, res) => {
 });
 
 
-// --- AUTH ENDPOINTS ---
-
 app.post('/api/register', async (req, res) => {
     const { id, name, email, password, role, profilePicture } = req.body;
     try {
@@ -243,11 +239,10 @@ app.post('/api/register', async (req, res) => {
         const finalRole = allUsers[0].count === '0' ? 'superadmin' : role;
 
         await sql`
-            INSERT INTO users (id, name, email, password, role, profilePicture)
-            VALUES (${id}, ${name}, ${email}, ${password}, ${finalRole}, ${profilePicture});
+            INSERT INTO users (id, name, email, password, role, profilePicture, childIds, parentIds, earnedBadgeIds)
+            VALUES (${id}, ${name}, ${email}, ${password}, ${finalRole}, ${profilePicture}, '{}', '{}', '{}');
         `;
         
-        // Also add user to announcements conversation
         await sql`
             UPDATE conversations
             SET participantIds = array_append(participantIds, ${id})
@@ -277,7 +272,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- DATA FETCHING ---
 app.get('/api/data', async (req, res) => {
     try {
         const [
@@ -317,14 +311,13 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// --- GENERIC CRUD ENDPOINTS ---
 const createCrudEndpoints = (tableName, idField = 'id') => {
     app.post(`/api/${tableName}`, async (req, res) => {
         try {
             const columns = Object.keys(req.body);
-            const values = Object.values(req.body);
+            const values = Object.values(req.body).map(v => (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v);
             const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-            const query = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+            const query = `INSERT INTO ${tableName} (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`;
             const { rows: [newItem] } = await sql.query(query, values);
             res.status(201).json(newItem);
         } catch (error) {
@@ -337,7 +330,10 @@ const createCrudEndpoints = (tableName, idField = 'id') => {
             const { id } = req.params;
             const fields = Object.keys(req.body).filter(key => key !== idField);
             const setClause = fields.map((field, i) => `"${field}" = $${i + 2}`).join(', ');
-            const values = [id, ...fields.map(field => req.body[field])];
+            const values = [id, ...fields.map(field => {
+                const value = req.body[field];
+                return (typeof value === 'object' && value !== null) ? JSON.stringify(value) : value;
+            })];
             const query = `UPDATE ${tableName} SET ${setClause} WHERE ${idField} = $1 RETURNING *`;
             const { rows: [updatedItem] } = await sql.query(query, values);
             res.status(200).json(updatedItem);
@@ -348,7 +344,7 @@ const createCrudEndpoints = (tableName, idField = 'id') => {
 
     app.delete(`/api/${tableName}`, async (req, res) => {
         try {
-            const { ids } = req.body; // Expecting an array of IDs
+            const { ids } = req.body; 
             if (!ids || !Array.isArray(ids) || ids.length === 0) {
                  return res.status(400).json({ error: "IDs array is required." });
             }
@@ -362,8 +358,6 @@ const createCrudEndpoints = (tableName, idField = 'id') => {
 
 ['users', 'assignments', 'messages', 'conversations', 'notifications', 'templates', 'resources', 'goals', 'badges', 'calendarEvents', 'exams', 'questions'].forEach(table => createCrudEndpoints(table));
 
-
-// --- SPECIALIZED ENDPOINTS ---
 
 app.post('/api/conversations/findOrCreate', async (req, res) => {
     const { userId1, userId2 } = req.body;
@@ -390,13 +384,20 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
 
 app.post('/api/seed', async (req, res) => {
     try {
+        console.log("Seeding process started...");
+
         // Drop all tables
         await sql`DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;`;
-        
+        console.log("Old tables dropped.");
+
         // Re-create tables
         await createTables();
-        
-        // Re-seed initial data (same as /api/init)
+        console.log("Tables re-created.");
+
+        // Insert Data from seedData.ts
+        const { users, assignments, exams, goals, resources, templates, questions, conversations, messages } = seedData;
+
+        // Badges and Announcements Conversation (base data)
         const badges = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
             { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
@@ -406,18 +407,68 @@ app.post('/api/seed', async (req, res) => {
             { id: 'streak-master', name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
             { id: 'on-time-submissions', name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
         ];
-
         for (const badge of badges) {
             await sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
         }
+        console.log("Badges seeded.");
 
-        await sql`
-            INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) 
-            VALUES ('conv-announcements', '{}', true, '📢 Duyurular', 'https://i.pravatar.cc/150?u=announcements', null)
-            ON CONFLICT (id) DO NOTHING;
-        `;
+        // Users
+        for (const user of users) {
+            await sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${user.childIds}, ${user.parentIds}, ${user.xp}, ${user.streak}, ${user.earnedBadgeIds});`;
+        }
+        console.log(`${users.length} users seeded.`);
         
+        // Conversations
+        for (const conv of conversations) {
+             await sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
+        }
+        console.log(`${conversations.length} conversations seeded.`);
+
+        // Assignments
+        for (const assignment of assignments) {
+            await sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
+        }
+        console.log(`${assignments.length} assignments seeded.`);
+
+        // Exams
+        for (const exam of exams) {
+            await sql`INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date}, ${exam.totalQuestions}, ${exam.correct}, ${exam.incorrect}, ${exam.empty}, ${exam.netScore}, ${JSON.stringify(exam.subjects)}, ${exam.category}, ${exam.topic}, ${exam.type});`;
+        }
+        console.log(`${exams.length} exams seeded.`);
+
+        // Goals
+        for (const goal of goals) {
+            await sql`INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description}, ${goal.isCompleted}, ${JSON.stringify(goal.milestones)});`;
+        }
+        console.log(`${goals.length} goals seeded.`);
+        
+        // Resources
+        for (const resource of resources) {
+             await sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});`;
+        }
+        console.log(`${resources.length} resources seeded.`);
+
+        // Templates
+        for (const template of templates) {
+             await sql`INSERT INTO templates (id, title, description, checklist) VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist)});`;
+        }
+        console.log(`${templates.length} templates seeded.`);
+
+        // Questions
+        for (const q of questions) {
+             await sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl});`;
+        }
+        console.log(`${questions.length} questions seeded.`);
+        
+        // Messages
+        for (const msg of messages) {
+             await sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp}, ${msg.type}, ${msg.readBy});`;
+        }
+        console.log(`${messages.length} messages seeded.`);
+
+
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
+
     } catch (error) {
         console.error('Database seed error:', error);
         res.status(500).json({ error: 'Failed to seed database.', details: error.message });
@@ -494,5 +545,4 @@ app.post('/api/gemini/chat', async (req, res) => {
 });
 
 
-// Export the app
 export default app;
