@@ -1,15 +1,16 @@
 
 
+
 import express from 'express';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData, generateDynamicSeedData } from '../services/seedData';
 
 const app = express();
 app.use(cors());
-// FIX: Replaced deprecated bodyParser with express.json()
-app.use(express.json({ limit: '10mb' }));
+app.use(bodyParser.json({ limit: '10mb' }));
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -212,7 +213,7 @@ app.post('/api/init', async (_req: any, res: any) => {
         for (const badge of badges) {
             await sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
         }
-
+// Fix(api/index.ts:218): Replaced empty array parameter with a string literal '{}' for Postgres array syntax.
         await sql`
             INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) 
             VALUES ('conv-announcements', '{}', true, '📢 Duyurular', 'https://i.pravatar.cc/150?u=announcements', null)
@@ -238,7 +239,8 @@ app.post('/api/register', async (req: any, res: any) => {
         
         const { rows: allUsers } = await sql`SELECT COUNT(*) FROM users`;
         const finalRole = allUsers[0].count === '0' ? 'superadmin' : role;
-
+        
+// Fix(api/index.ts:245): Replaced empty array parameter with a string literal '{}' for Postgres array syntax.
         await sql`
             INSERT INTO users (id, name, email, password, role, profilePicture, childIds, parentIds, earnedBadgeIds)
             VALUES (${id}, ${name}, ${email}, ${password}, ${finalRole}, ${profilePicture}, '{}', '{}', '{}');
@@ -375,9 +377,10 @@ app.post('/api/conversations/findOrCreate', async (req: any, res: any) => {
             return res.json(existing);
         }
         const newId = `conv_${Date.now()}${Math.random()}`;
+// Fix(api/index.ts:381): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
         const { rows: [newConversation] } = await sql`
             INSERT INTO conversations (id, participantIds, isGroup) 
-            VALUES (${newId}, ARRAY[${userId1}, ${userId2}], false) RETURNING *;
+            VALUES (${newId}, ${[userId1, userId2] as any}, false) RETURNING *;
         `;
         res.status(201).json(newConversation);
     } catch (error: any) {
@@ -388,7 +391,8 @@ app.post('/api/conversations/findOrCreate', async (req: any, res: any) => {
 app.post('/api/seed', async (_req: any, res: any) => {
     const client = await db.connect();
     try {
-        await client.query('BEGIN');
+// Fix(api/index.ts:392): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
+        await client.sql`BEGIN`;
         console.log("Seeding process started...");
 
         // Drop all tables
@@ -422,15 +426,17 @@ app.post('/api/seed', async (_req: any, res: any) => {
         console.log("Badges seeded.");
 
         for (const user of users) {
+// Fix(api/index.ts:428): Cast dynamic arrays to 'any' to satisfy TypeScript's primitive type constraint for template literals.
             await client.sql`
                 INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) 
-                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${Array.isArray(user.childIds) ? `{${user.childIds.join(',')}}` : '{}'}, ${Array.isArray(user.parentIds) ? `{${user.parentIds.join(',')}}` : '{}'}, ${user.xp || 0}, ${user.streak || 0}, ${Array.isArray(user.earnedBadgeIds) ? `{${user.earnedBadgeIds.join(',')}}` : '{}'});
+                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${user.childIds || [] as any}, ${user.parentIds || [] as any}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds || [] as any});
             `;
         }
         console.log(`${users.length} users seeded.`);
         
         for (const conv of conversations) {
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${Array.isArray(conv.participantIds) ? `{${conv.participantIds.join(',')}}` : '{}'}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
+// Fix(api/index.ts:434): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds || [] as any}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
@@ -459,9 +465,10 @@ app.post('/api/seed', async (_req: any, res: any) => {
         console.log(`${goals.length} goals seeded.`);
         
         for (const resource of resources) {
+// Fix(api/index.ts:465): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
              await client.sql`
                 INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
-                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${Array.isArray(resource.assignedTo) ? `{${resource.assignedTo.join(',')}}` : '{}'}, ${resource.category});
+                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo || [] as any}, ${resource.category});
              `;
         }
         console.log(`${resources.length} resources seeded.`);
@@ -477,7 +484,7 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const q of questions) {
              await client.sql`
                 INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
-                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${Array.isArray(q.options) ? `{${q.options.map(o => `"${o.replace(/"/g, '""')}"`).join(',')}}` : '{}'}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
+                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options || [] as any}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
              `;
         }
         console.log(`${questions.length} questions seeded.`);
@@ -485,16 +492,18 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const msg of messages) {
              await client.sql`
                 INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
-                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${Array.isArray(msg.readBy) ? `{${msg.readBy.join(',')}}` : '{}'});
+                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy || [] as any});
              `;
         }
         console.log(`${messages.length} messages seeded.`);
 
-        await client.query('COMMIT');
+// Fix(api/index.ts:494): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
+        await client.sql`COMMIT`;
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
 
     } catch (error: any) {
-        await client.query('ROLLBACK');
+// Fix(api/index.ts:498): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
+        await client.sql`ROLLBACK`;
         console.error('Database seed error:', error);
         res.status(500).json({ error: 'Failed to seed database.', details: error.message });
     } finally {

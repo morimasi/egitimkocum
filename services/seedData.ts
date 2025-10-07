@@ -15,8 +15,8 @@ const user1 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [],
-    parentIds: [],
+    childIds: [] as string[],
+    parentIds: [] as string[],
     xp: 0,
     streak: 0,
     earnedBadgeIds: [] as BadgeID[]
@@ -31,8 +31,8 @@ const user2 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [],
-    parentIds: [],
+    childIds: [] as string[],
+    parentIds: [] as string[],
     xp: 1500,
     streak: 5,
     earnedBadgeIds: [] as BadgeID[]
@@ -47,8 +47,8 @@ const user3 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [],
-    parentIds: [],
+    childIds: [] as string[],
+    parentIds: [] as string[],
     xp: 800,
     streak: 2,
     earnedBadgeIds: [] as BadgeID[]
@@ -141,7 +141,7 @@ export function generateDynamicSeedData() {
                     isPublic: true,
                     uploaderId: user1.id, // Super Admin
                     category: resourceCategory,
-                    assignedTo: []
+                    assignedTo: [] as string[]
                 });
             }
         });
