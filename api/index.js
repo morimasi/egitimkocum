@@ -396,11 +396,9 @@ app.post('/api/seed', async (req, res) => {
         await createTables(client);
         console.log("Tables re-created.");
 
-        // Insert Data from seedData.ts
         const { users, assignments, exams, goals, resources, templates, questions, conversations, messages } = seedData;
 
-        // Badges and Announcements Conversation (base data)
-        const badges = [
+        const badgesData = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
             { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
             { id: 'perfect-score', name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
@@ -409,63 +407,77 @@ app.post('/api/seed', async (req, res) => {
             { id: 'streak-master', name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
             { id: 'on-time-submissions', name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
         ];
-        for (const badge of badges) {
+        for (const badge of badgesData) {
             await client.sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
         }
         console.log("Badges seeded.");
 
-        // Users
         for (const user of users) {
-            await client.sql`INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack}, ${user.childIds}, ${user.parentIds}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds});`;
+            await client.sql`
+                INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) 
+                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${Array.isArray(user.childIds) ? user.childIds : '{}'}, ${Array.isArray(user.parentIds) ? user.parentIds : '{}'}, ${user.xp || 0}, ${user.streak || 0}, ${Array.isArray(user.earnedBadgeIds) ? user.earnedBadgeIds : '{}'});
+            `;
         }
         console.log(`${users.length} users seeded.`);
         
-        // Conversations
         for (const conv of conversations) {
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName}, ${conv.groupImage}, ${conv.adminId});`;
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${Array.isArray(conv.participantIds) ? conv.participantIds : '{}'}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
-        // Assignments
         for (const assignment of assignments) {
-            const submittedAtValue = assignment.submittedAt ? assignment.submittedAt.toISOString() : null;
-            await client.sql`INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${submittedAtValue}, ${JSON.stringify(assignment.checklist)}, ${assignment.submissionType});`;
+            await client.sql`
+                INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) 
+                VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt ? assignment.submittedAt.toISOString() : null}, ${JSON.stringify(assignment.checklist || [])}, ${assignment.submissionType});
+            `;
         }
         console.log(`${assignments.length} assignments seeded.`);
 
-        // Exams
         for (const exam of exams) {
-            await client.sql`INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date.toISOString()}, ${exam.totalQuestions}, ${exam.correct}, ${exam.incorrect}, ${exam.empty}, ${exam.netScore}, ${JSON.stringify(exam.subjects)}, ${exam.category}, ${exam.topic}, ${exam.type});`;
+            await client.sql`
+                INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) 
+                VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date.toISOString()}, ${exam.totalQuestions || 0}, ${exam.correct || 0}, ${exam.incorrect || 0}, ${exam.empty || 0}, ${exam.netScore || 0}, ${JSON.stringify(exam.subjects || [])}, ${exam.category || null}, ${exam.topic || null}, ${exam.type || null});
+            `;
         }
         console.log(`${exams.length} exams seeded.`);
 
-        // Goals
         for (const goal of goals) {
-            await client.sql`INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description}, ${goal.isCompleted}, ${JSON.stringify(goal.milestones)});`;
+            await client.sql`
+                INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) 
+                VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description || null}, ${goal.isCompleted || false}, ${JSON.stringify(goal.milestones || [])});
+            `;
         }
         console.log(`${goals.length} goals seeded.`);
         
-        // Resources
         for (const resource of resources) {
-             await client.sql`INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});`;
+             await client.sql`
+                INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
+                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${Array.isArray(resource.assignedTo) ? resource.assignedTo : '{}'}, ${resource.category});
+             `;
         }
         console.log(`${resources.length} resources seeded.`);
 
-        // Templates
         for (const template of templates) {
-             await client.sql`INSERT INTO templates (id, title, description, checklist) VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist)});`;
+             await client.sql`
+                INSERT INTO templates (id, title, description, checklist) 
+                VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist || [])});
+             `;
         }
         console.log(`${templates.length} templates seeded.`);
 
-        // Questions
         for (const q of questions) {
-             await client.sql`INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation}, ${q.imageUrl}, ${q.videoUrl}, ${q.audioUrl}, ${q.documentUrl}, ${q.documentName});`;
+             await client.sql`
+                INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
+                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${Array.isArray(q.options) ? q.options : '{}'}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
+             `;
         }
         console.log(`${questions.length} questions seeded.`);
         
-        // Messages
         for (const msg of messages) {
-             await client.sql`INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy});`;
+             await client.sql`
+                INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
+                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${Array.isArray(msg.readBy) ? msg.readBy : '{}'});
+             `;
         }
         console.log(`${messages.length} messages seeded.`);
 
