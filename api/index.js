@@ -336,7 +336,7 @@ const createCrudEndpoints = (tableName, idField = 'id') => {
         try {
             const { id } = req.params;
             const fields = Object.keys(req.body).filter(key => key !== idField);
-            const setClause = fields.map((field, i) => `${field} = $${i + 2}`).join(', ');
+            const setClause = fields.map((field, i) => `"${field}" = $${i + 2}`).join(', ');
             const values = [id, ...fields.map(field => req.body[field])];
             const query = `UPDATE ${tableName} SET ${setClause} WHERE ${idField} = $1 RETURNING *`;
             const { rows: [updatedItem] } = await sql.query(query, values);
@@ -372,12 +372,12 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
             SELECT * FROM conversations 
             WHERE isGroup = false 
             AND participantIds @> ARRAY[${userId1}, ${userId2}] 
-            AND participantIds <@ ARRAY[${userId1}, ${userId2}];
+            AND array_length(participantIds, 1) = 2;
         `;
         if (existing) {
             return res.json(existing);
         }
-        const newId = `conv_${Date.now()}`;
+        const newId = `conv_${Date.now()}${Math.random()}`;
         const { rows: [newConversation] } = await sql`
             INSERT INTO conversations (id, participantIds, isGroup) 
             VALUES (${newId}, ARRAY[${userId1}, ${userId2}], false) RETURNING *;
@@ -451,28 +451,10 @@ app.post('/api/gemini/generateWithImage', async (req, res) => {
     try {
         const { textPart, imagePart } = req.body;
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
+            model: 'gemini-2.5-flash',
             contents: { parts: [imagePart, textPart] },
-            config: {
-                responseModalities: ['IMAGE', 'TEXT'],
-            }
         });
-        
-        let textResult = '';
-        if (response.candidates && response.candidates[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.text) {
-                    textResult += part.text + ' ';
-                }
-            }
-        }
-        
-        // Use the convenience getter as a fallback
-        if (!textResult.trim() && response.text) {
-             textResult = response.text;
-        }
-
-        res.json({ result: textResult.trim() });
+        res.json({ result: response.text });
     } catch (error) {
         res.status(500).json({ error: 'Gemini API image generation failed.', details: error.message });
     }
