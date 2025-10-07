@@ -1,5 +1,5 @@
 
-import { UserRole, AssignmentStatus, AcademicTrack, ResourceCategory, QuestionDifficulty } from '../types';
+import { UserRole, AssignmentStatus, AcademicTrack, ResourceCategory, QuestionDifficulty, Question } from '../types';
 import { examCategories } from './examCategories.js';
 
 const uuid = () => crypto.randomUUID();
@@ -15,6 +15,9 @@ const student3Id = 'student-can-id';
 const student4Id = 'student-elif-id';
 const student5Id = 'student-mert-id';
 const student6Id = 'student-ipek-id';
+const studentIds = [student1Id, student2Id, student3Id, student4Id, student5Id, student6Id];
+const coachIds = [mahmutHocaId, ayseHocaId];
+
 
 const parent1Id = 'parent-yılmaz-id';
 const parent2Id = 'parent-fatma-id';
@@ -36,50 +39,25 @@ const users = [
     { id: parent2Id, name: 'Fatma Hanım', email: 'fatma@veli.com', password: 'password', role: UserRole.Parent, profilePicture: `https://i.pravatar.cc/150?u=fatma`, childIds: [student2Id], parentIds: [], earnedBadgeIds: [] },
 ];
 
-// --- ASSIGNMENTS ---
-const assignments = [
-    // Ahmet's Assignments
-    { id: uuid(), studentId: student1Id, coachId: mahmutHocaId, title: 'Matematik - Türev Testi', description: 'Türev kuralları ile ilgili 20 soruluk testi çöz.', dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Pending, submissionType: 'file', grade: null, feedback: '', fileUrl: null, submittedAt: null, checklist: [] },
-    { id: uuid(), studentId: student1Id, coachId: mahmutHocaId, title: 'Fizik - Vektörler Özet', description: 'Vektörler konusunun özetini çıkarıp metin olarak gönder.', dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Graded, submissionType: 'text', grade: 90, feedback: 'Harika bir özet olmuş Ahmet, başarılarının devamını dilerim.', fileUrl: null, submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), checklist: [] },
-    { id: uuid(), studentId: student1Id, coachId: mahmutHocaId, title: 'Kimya - Mol Hesaplamaları', description: 'Ders kitabındaki mol hesaplamaları alıştırmalarını yap.', dueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Graded, submissionType: 'completed', grade: 100, feedback: 'Mükemmel, tam puan!', fileUrl: null, submittedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000), checklist: [] },
-    // Zeynep's Assignments
-    { id: uuid(), studentId: student2Id, coachId: mahmutHocaId, title: 'Edebiyat - Divan Şiiri Analizi', description: 'Seçtiğin bir divan şiirini analiz et.', dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Pending, submissionType: 'text', grade: null, feedback: '', fileUrl: null, submittedAt: null, checklist: [] },
-    { id: uuid(), studentId: student2Id, coachId: mahmutHocaId, title: 'Tarih - Kurtuluş Savaşı Sunumu', description: 'Kurtuluş Savaşı cepheleri hakkında bir sunum hazırla.', dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Submitted, submissionType: 'file', grade: null, feedback: '', fileUrl: '#', submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), checklist: [] },
-    // Can's Assignments
-    { id: uuid(), studentId: student3Id, coachId: mahmutHocaId, title: 'Coğrafya - İklim Tipleri', description: 'Dünyadaki ana iklim tiplerini araştır.', dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Graded, submissionType: 'text', grade: 75, feedback: 'Güzel çalışma, ancak Akdeniz ikliminin özelliklerini daha detaylı inceleyebilirdin.', fileUrl: null, submittedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), checklist: [] },
-    // Elif's Assignments
-    { id: uuid(), studentId: student4Id, coachId: ayseHocaId, title: 'Biyoloji - Hücre Çizimi', description: 'Hayvan ve bitki hücresi çizerek organelleri göster.', dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: AssignmentStatus.Pending, submissionType: 'file', grade: null, feedback: '', fileUrl: null, submittedAt: null, checklist: [] }, // Overdue
-];
+// --- HELPERS ---
+const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const pastDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+const futureDate = (daysFuture: number) => new Date(Date.now() + daysFuture * 24 * 60 * 60 * 1000);
+function shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
 
-// --- EXAMS ---
-const exams = [
-    { id: uuid(), studentId: student1Id, title: 'TYT Deneme Sınavı - 1', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), totalQuestions: 120, correct: 85, incorrect: 20, empty: 15, netScore: 80.0, subjects: [{ name: 'Matematik', correct: 25, incorrect: 5, empty: 10, netScore: 23.75 }, { name: 'Türkçe', correct: 30, incorrect: 8, empty: 2, netScore: 28.0 }], category: 'Genel Deneme Sınavları', topic: 'TYT', type: 'deneme' },
-    { id: uuid(), studentId: student1Id, title: 'Türev Konu Taraması', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), totalQuestions: 20, correct: 18, incorrect: 2, empty: 0, netScore: 17.5, subjects: [], category: 'Matematik', topic: 'Türev', type: 'konu-tarama' },
-    { id: uuid(), studentId: student2Id, title: 'AYT Edebiyat Taraması', date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), totalQuestions: 40, correct: 32, incorrect: 8, empty: 0, netScore: 30.0, subjects: [], category: 'Edebiyat', topic: 'Divan Edebiyatı', type: 'konu-tarama' },
-];
+// --- DATA GENERATION ---
 
-// --- GOALS ---
-const goals = [
-    { id: uuid(), studentId: student1Id, title: 'Haftada 3 deneme sınavı çözmek', description: '', isCompleted: false, milestones: [{id: uuid(), text: '1. Deneme', isCompleted: true}, {id: uuid(), text: '2. Deneme', isCompleted: false}] },
-    { id: uuid(), studentId: student1Id, title: 'Türev konusunu bitirmek', description: '', isCompleted: true, milestones: [] },
-    { id: uuid(), studentId: student2Id, title: 'Günde 50 paragraf sorusu çözmek', description: '', isCompleted: false, milestones: [] },
-];
-
-// --- RESOURCES ---
-const resources = [
-    { id: uuid(), name: 'Limit ve Süreklilik Video Dersi', type: 'link', url: 'https://www.youtube.com', isPublic: true, uploaderId: mahmutHocaId, assignedTo: [], category: ResourceCategory.Matematik },
-    { id: uuid(), name: 'Organik Kimya Notları', type: 'pdf', url: '#', isPublic: true, uploaderId: mahmutHocaId, assignedTo: [], category: ResourceCategory.Kimya },
-    { id: uuid(), name: 'Ahmet için Özel Fizik Problemleri', type: 'document', url: '#', isPublic: false, uploaderId: mahmutHocaId, assignedTo: [student1Id], category: ResourceCategory.Fizik },
-];
-
-// --- TEMPLATES ---
+// 1. TEMPLATES
 const templates: any[] = [];
-
 examCategories.forEach(category => {
-  if (category.name === "Genel Deneme Sınavları") {
-    return;
-  }
-
+  if (category.name === "Genel Deneme Sınavları") return;
   category.topics.forEach(topic => {
     for (let i = 1; i <= 5; i++) {
       templates.push({
@@ -97,14 +75,132 @@ examCategories.forEach(category => {
   });
 });
 
+// 2. QUESTIONS
+const questions: any[] = [];
+examCategories.forEach(category => {
+    if (category.name === "Genel Deneme Sınavları") return;
+    const resourceCategoryKey = Object.keys(ResourceCategory).find(key => key.toLowerCase() === category.name.toLowerCase().replace(' ', ''));
+    const resourceCategory = resourceCategoryKey ? ResourceCategory[resourceCategoryKey as keyof typeof ResourceCategory] : ResourceCategory.Genel;
 
-// --- QUESTIONS ---
-const questions = [
-    { id: uuid(), creatorId: mahmutHocaId, category: ResourceCategory.Matematik, topic: 'Türev', questionText: 'f(x) = 3x² + 2x - 1 fonksiyonunun x=1 noktasındaki türevi nedir?', options: ['4', '6', '8', '10'], correctOptionIndex: 2, difficulty: QuestionDifficulty.Easy, explanation: 'f\'(x) = 6x + 2 olduğundan, f\'(1) = 6(1) + 2 = 8 olur.' },
-    { id: uuid(), creatorId: mahmutHocaId, category: ResourceCategory.Fizik, topic: 'Dinamik', questionText: 'Sürtünmesiz yatay düzlemde durmakta olan 2 kg kütleli cisme 10 N büyüklüğünde bir kuvvet uygulanırsa cismin ivmesi kaç m/s² olur?', options: ['2', '5', '10', '20'], correctOptionIndex: 1, difficulty: QuestionDifficulty.Easy, explanation: 'F=m.a formülünden 10 = 2 * a, buradan a = 5 m/s² bulunur.' },
-    { id: uuid(), creatorId: ayseHocaId, category: ResourceCategory.Turkce, topic: 'Paragraf', questionText: 'Bu parçada asıl anlatılmak istenen aşağıdakilerden hangisidir?', options: ['Seçenek A', 'Seçenek B', 'Seçenek C', 'Seçenek D'], correctOptionIndex: 0, difficulty: QuestionDifficulty.Medium, explanation: 'Parçanın ana fikri giriş cümlesinde verilmiştir.' },
-    { id: uuid(), creatorId: ayseHocaId, category: ResourceCategory.Biyoloji, topic: 'Hücre Bölünmeleri', questionText: 'Mitoz bölünmenin profaz evresinde aşağıdaki olaylardan hangisi gerçekleşmez?', options: ['Kromatin ipliklerin kısalıp kalınlaşması', 'Çekirdek zarının erimesi', 'İğ ipliklerinin oluşması', 'Kardeş kromatitlerin ayrılması'], correctOptionIndex: 3, difficulty: QuestionDifficulty.Medium, explanation: 'Kardeş kromatitlerin ayrılması anafaz evresinde gerçekleşir.' },
-];
+    category.topics.forEach(topic => {
+        // Generate 2 easy, 2 medium, 1 hard question for each topic
+        for (let i = 0; i < 5; i++) {
+            let difficulty: QuestionDifficulty;
+            if (i < 2) difficulty = QuestionDifficulty.Easy;
+            else if (i < 4) difficulty = QuestionDifficulty.Medium;
+            else difficulty = QuestionDifficulty.Hard;
+
+            const q: Partial<Question> = {
+                id: uuid(),
+                creatorId: getRandomItem(coachIds),
+                category: resourceCategory,
+                topic: topic,
+                questionText: `${topic} konusuyla ilgili olarak, aşağıdaki ifadelerden hangisi doğrudur? Bu, ${difficulty} seviyesinde bir sorudur.`,
+                options: [`Seçenek A`, `Doğru Cevap (${topic})`, `Seçenek C`, `Seçenek D`],
+                correctOptionIndex: 1,
+                difficulty: difficulty,
+                explanation: `Doğru cevap B'dir çünkü ${topic} ile ilgili temel bir kuraldır.`,
+                imageUrl: null, videoUrl: null, audioUrl: null, documentUrl: null, documentName: null
+            };
+
+            const mediaRoll = Math.random();
+            if (mediaRoll < 0.1) { // 10% chance for an image
+                q.imageUrl = `https://picsum.photos/seed/${q.id}/400/300`;
+            } else if (mediaRoll < 0.12) { // 2% chance for a document
+                q.documentUrl = `https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf`;
+                q.documentName = `${topic} Ek Belge.pdf`;
+            }
+
+            questions.push(q);
+        }
+    });
+});
+
+// 3. RESOURCES
+const resources: any[] = [];
+const resourceSamples = {
+    video: [ { name: "Konu Anlatım Videosu", url: "https://www.youtube.com/results?search_query=" } ],
+    link: [ { name: "Wikipedia Makalesi", url: "https://tr.wikipedia.org/wiki/" } ],
+    pdf: [ { name: "Konu Özeti PDF", url: "https://www.africau.edu/images/default/sample.pdf" } ]
+};
+examCategories.forEach(category => {
+    const resourceCategoryKey = Object.keys(ResourceCategory).find(key => key.toLowerCase() === category.name.toLowerCase().replace(' ', ''));
+    const resourceCategory = resourceCategoryKey ? ResourceCategory[resourceCategoryKey as keyof typeof ResourceCategory] : ResourceCategory.Genel;
+
+    category.topics.forEach(topic => {
+        resources.push({ id: uuid(), name: `${topic} - ${resourceSamples.video[0].name}`, type: 'video', url: resourceSamples.video[0].url + encodeURIComponent(topic), isPublic: true, uploaderId: getRandomItem(coachIds), assignedTo: [], category: resourceCategory });
+        resources.push({ id: uuid(), name: `${topic} - ${resourceSamples.link[0].name}`, type: 'link', url: resourceSamples.link[0].url + encodeURIComponent(topic), isPublic: true, uploaderId: getRandomItem(coachIds), assignedTo: [], category: resourceCategory });
+        resources.push({ id: uuid(), name: `${topic} - ${resourceSamples.pdf[0].name}`, type: 'pdf', url: resourceSamples.pdf[0].url, isPublic: true, uploaderId: getRandomItem(coachIds), assignedTo: [], category: resourceCategory });
+    });
+});
+
+// 4. ASSIGNMENTS
+const assignments: any[] = [];
+studentIds.forEach(studentId => {
+    examCategories.forEach(category => {
+        if (category.name === "Genel Deneme Sınavları") return;
+        const randomTopics = shuffleArray(category.topics).slice(0, 2); // 2 random topics per category
+        
+        randomTopics.forEach((topic, index) => {
+            const status = [AssignmentStatus.Pending, AssignmentStatus.Submitted, AssignmentStatus.Graded][Math.floor(Math.random() * 3)];
+            assignments.push({
+                id: uuid(), studentId, coachId: getRandomItem(coachIds), title: `${category.name} - ${topic} Çalışması`,
+                description: `${topic} konusu ile ilgili verilen kaynakları inceleyip 10 soruluk testi çözünüz.`,
+                dueDate: status === 'pending' ? futureDate(Math.floor(Math.random() * 10) + 1) : pastDate(Math.floor(Math.random() * 10) + 1),
+                status: status, submissionType: 'file',
+                grade: status === 'graded' ? Math.floor(Math.random() * 50) + 50 : null,
+                feedback: status === 'graded' ? 'İyi iş çıkardın, bazı noktalarda daha dikkatli olabilirsin.' : '',
+                fileUrl: null, submittedAt: status !== 'pending' ? pastDate(Math.floor(Math.random() * 10) + 2) : null,
+                checklist: []
+            });
+        });
+    });
+});
+
+// 5. EXAMS
+const exams: any[] = [];
+studentIds.forEach(studentId => {
+    // 2 general mock exams
+    ['TYT', 'AYT'].forEach((type, i) => {
+        const totalQ = type === 'TYT' ? 120 : 160;
+        const correct = Math.floor(Math.random() * (totalQ * 0.6)) + (totalQ * 0.2); // 20%-80% correct
+        const incorrect = Math.floor(Math.random() * (totalQ - correct));
+        const empty = totalQ - correct - incorrect;
+        exams.push({
+            id: uuid(), studentId, title: `${type} Deneme Sınavı - ${i + 1}`, date: pastDate((i + 1) * 20),
+            totalQuestions: totalQ, correct, incorrect, empty, netScore: correct - incorrect / 4,
+            subjects: [
+                { name: 'Matematik', totalQuestions: 40, correct: Math.floor(correct / 4), incorrect: Math.floor(incorrect / 4), empty: 0, netScore: 0 },
+                { name: 'Türkçe', totalQuestions: 40, correct: Math.floor(correct / 4), incorrect: Math.floor(incorrect / 4), empty: 0, netScore: 0 }
+            ],
+            category: 'Genel Deneme Sınavları', topic: type, type: 'deneme'
+        });
+    });
+
+    // Topic-specific exams
+    examCategories.filter(c => c.name !== "Genel Deneme Sınavları").forEach(category => {
+        const topic = getRandomItem(category.topics);
+        const correct = Math.floor(Math.random() * 15) + 5;
+        const incorrect = Math.floor(Math.random() * (20 - correct));
+        const empty = 20 - correct - incorrect;
+        exams.push({
+            id: uuid(), studentId, title: `${topic} Konu Taraması`, date: pastDate(Math.floor(Math.random() * 30)),
+            totalQuestions: 20, correct, incorrect, empty, netScore: correct - incorrect / 4,
+            subjects: [], category: category.name, topic: topic, type: 'konu-tarama'
+        });
+    });
+});
+
+// 6. GOALS
+const goals: any[] = [];
+studentIds.forEach(studentId => {
+    goals.push(
+        { id: uuid(), studentId, title: 'Haftada 2 deneme sınavı çözmek', description: '', isCompleted: Math.random() > 0.5, milestones: [{id: uuid(), text: '1. Deneme', isCompleted: true}, {id: uuid(), text: '2. Deneme', isCompleted: false}] },
+        { id: uuid(), studentId, title: 'Matematik - Türev konusunu tamamen bitirmek', description: '', isCompleted: Math.random() > 0.8, milestones: [] },
+        { id: uuid(), studentId, title: 'Günde 50 paragraf sorusu çözme alışkanlığı kazanmak', description: '', isCompleted: false, milestones: [] },
+        { id: uuid(), studentId, title: 'Fizik - Dinamik konusundan 100 soru çözmek', description: '', isCompleted: false, milestones: [] }
+    );
+});
 
 // --- CONVERSATIONS & MESSAGES ---
 const conversations = [
@@ -116,12 +212,11 @@ const conversations = [
 ];
 
 const messages = [
-    { id: uuid(), conversationId: 'conv-announcements', senderId: mahmutHocaId, text: 'Merhaba arkadaşlar, haftalık deneme sınavı sonuçları sisteme yüklenmiştir. Kontrol edebilirsiniz.', type: 'announcement', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), readBy: [] },
+    { id: uuid(), conversationId: 'conv-announcements', senderId: mahmutHocaId, text: 'Merhaba arkadaşlar, haftalık deneme sınavı sonuçları sisteme yüklenmiştir. Kontrol edebilirsiniz.', type: 'announcement', timestamp: pastDate(1), readBy: [] },
     { id: uuid(), conversationId: 'conv-mahmut-ahmet', senderId: mahmutHocaId, text: 'Ahmet, türev ödevindeki ilerlemen nasıl gidiyor?', type: 'text', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), readBy: [mahmutHocaId] },
     { id: uuid(), conversationId: 'conv-mahmut-ahmet', senderId: student1Id, text: 'İyi gidiyor hocam, son testteyim.', type: 'text', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), readBy: [student1Id] },
     { id: uuid(), conversationId: 'conv-ogretmenler', senderId: ayseHocaId, text: '12. sınıflar için ek bir etüt planlayalım mı?', type: 'text', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), readBy: [ayseHocaId] },
 ];
-
 
 export const seedData = {
     users,
