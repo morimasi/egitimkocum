@@ -5,14 +5,10 @@ import { examCategories } from './examCategories';
 
 const uuid = () => crypto.randomUUID();
 
-// FIX: Removed `: User` type annotation as seed data includes a `password` property not present in the frontend User type.
 const user1 = { id: 'user-superadmin', name: 'Süper Admin', email: 'admin@mahmuthoca.com', password: 'password', role: UserRole.SuperAdmin, profilePicture: 'https://i.pravatar.cc/150?u=admin' };
-// FIX: Removed `: User` type annotation as seed data includes a `password` property not present in the frontend User type.
 const user2 = { id: 'user-coach-1', name: 'Ayşe Yılmaz', email: 'ayse@mahmuthoca.com', password: 'password', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=ayse' };
-// FIX: Removed `: User` type annotation as seed data includes a `password` property not present in the frontend User type.
 const user3 = { id: 'user-coach-2', name: 'Mehmet Öztürk', email: 'mehmet@mahmuthoca.com', password: 'password', role: UserRole.Coach, profilePicture: 'https://i.pravatar.cc/150?u=mehmet' };
 
-// FIX: Removed `: User[]` type annotation to allow objects with the `password` property.
 const users = [user1, user2, user3];
 
 const conversations: Conversation[] = [
