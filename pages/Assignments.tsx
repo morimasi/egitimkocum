@@ -283,7 +283,10 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
         setIsGeneratingChecklist(true);
         try {
             const generatedItems = await generateAssignmentChecklist(title, description);
-            setChecklist(prev => [...prev, ...generatedItems]);
+            // FIX: Add a type guard to ensure generatedItems is an array before spreading.
+            if (Array.isArray(generatedItems)) {
+                setChecklist(prev => [...prev, ...generatedItems]);
+            }
         } catch (e) {
             addToast("Kontrol listesi üretilemedi.", "error");
         } finally {

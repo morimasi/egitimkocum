@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useUI } from '../contexts/UIContext';
 import { PhoneOffIcon, MicIcon, MicOffIcon, MoveIcon, MaximizeIcon, MinimizeIcon } from './Icons';
 import { User } from '../types';

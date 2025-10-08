@@ -42,7 +42,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children || null;
+    // FIX: Simplify the return, as ReactNode type for children can already be null or undefined.
+    return this.props.children;
   }
 }
 

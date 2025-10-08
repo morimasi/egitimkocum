@@ -92,7 +92,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                      <div>
                         <label className="block text-sm font-medium mb-1">Kategori</label>
                         <select value={category} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                            {/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */}
+                            {(Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                         </select>
                     </div>
                 </div>
@@ -235,9 +236,10 @@ export default function Library() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h1 className="text-3xl font-bold flex items-center gap-2"><LibraryIcon className="w-8 h-8"/> Kütüphane</h1>
                      <div className="flex items-center gap-4">
-                        <select value={filterCategory} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterCategory(e.target.value as any)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <select value={filterCategory} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterCategory(e.target.value as ResourceCategory | 'all')} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                              <option value="all">Tüm Kategoriler</option>
-                            {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                            {/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */}
+                            {(Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                         </select>
                         <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold">
                             + Yeni Kaynak

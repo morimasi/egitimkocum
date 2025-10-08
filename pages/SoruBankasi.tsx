@@ -282,7 +282,8 @@ const StudentView = () => {
                      <div className="flex items-center gap-4 w-full sm:w-auto">
                         <select value={filterCategory} onChange={e => {setFilterCategory(e.target.value as any); setFilterTopic('all');}} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full">
                              <option value="all">Tüm Dersler</option>
-                            {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                            {/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */}
+                            {(Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                         </select>
                          <select value={filterTopic} onChange={e => setFilterTopic(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 w-full" disabled={filterCategory === 'all'}>
                             <option value="all">Tüm Konular</option>
@@ -408,11 +409,12 @@ const CoachView = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h1 className="text-3xl font-bold flex items-center gap-2"><HelpCircleIcon className="w-8 h-8"/> Soru Yönetimi</h1>
                      <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-center">
-                        <select value={filterCategory} onChange={e => {setFilterCategory(e.target.value as any); setFilterTopic('all');}} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow">
+                        <select value={filterCategory} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {setFilterCategory(e.target.value as any); setFilterTopic('all');}} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow">
                              <option value="all">Tüm Dersler</option>
-                            {Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                            {/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */}
+                            {(Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                         </select>
-                         <select value={filterTopic} onChange={e => setFilterTopic(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" disabled={filterCategory === 'all'}>
+                         <select value={filterTopic} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterTopic(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 flex-grow" disabled={filterCategory === 'all'}>
                             <option value="all">Tüm Konular</option>
                             {topicsForCategory.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
@@ -647,7 +649,7 @@ const QuestionFormModal = ({ isOpen, onClose, questionToEdit }: { isOpen: boolea
         <Modal isOpen={isOpen} onClose={onClose} title={questionToEdit ? "Soruyu Düzenle" : "Yeni Soru Ekle"} size="lg">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <select value={questionData.category} onChange={e => handleCategoryChange(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="" disabled>Ders Seçin</option>{Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+                    <select value={questionData.category} onChange={e => handleCategoryChange(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="" disabled>Ders Seçin</option>{/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */ (Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
                     <select value={questionData.topic || ''} onChange={e => handleInputChange('topic', e.target.value)} required className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" disabled={!questionData.category || topicsForCategory.length === 0}>
                         <option value="" disabled>Konu Seçin</option>
                         {topicsForCategory.map(t => <option key={t} value={t}>{t}</option>)}
@@ -723,7 +725,7 @@ const AIQuestionGeneratorModal = ({ isOpen, onClose, onQuestionGenerated }: { is
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="AI ile Soru Oluştur">
             <div className="space-y-4">
-                <select value={category} onChange={e => handleCategoryChange(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">{Object.entries(ResourceCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+                <select value={category} onChange={e => handleCategoryChange(e.target.value as ResourceCategory)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">{/* FIX: Explicitly cast Object.entries to an array of string tuples to resolve TypeScript inference error. */(Object.entries(ResourceCategoryLabels) as [string, string][]).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
                 <select value={topic} onChange={e => setTopic(e.target.value)} required className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" disabled={topicsForCategory.length === 0}>
                     <option value="" disabled>Konu Seçin</option>
                     {topicsForCategory.map(t => <option key={t} value={t}>{t}</option>)}

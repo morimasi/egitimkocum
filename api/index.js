@@ -1,11 +1,11 @@
 
-
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
-import { seedData } from '../services/seedData';
+import { seedData, generateDynamicSeedData } from '../services/seedData';
+import { BadgeID, User } from '../types';
 
 const app = express();
 app.use(cors());
@@ -16,7 +16,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // --- DATABASE SCHEMA AND INIT ---
 
 const createTables = async (dbClient = sql) => {
-    await dbClient.sql`
+    // This is a way to check if we have the client object or the sql tag function
+    const executor = dbClient.sql || dbClient;
+    
+    await executor`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -36,7 +39,7 @@ const createTables = async (dbClient = sql) => {
             lastSubmissionDate TIMESTAMP,
             earnedBadgeIds TEXT[]
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS assignments (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -66,7 +69,7 @@ const createTables = async (dbClient = sql) => {
             startTime TIMESTAMP,
             endTime TIMESTAMP
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             participantIds TEXT[] NOT NULL,
@@ -76,7 +79,7 @@ const createTables = async (dbClient = sql) => {
             adminId TEXT,
             isArchived BOOLEAN DEFAULT false
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
             senderId TEXT NOT NULL,
@@ -96,7 +99,7 @@ const createTables = async (dbClient = sql) => {
             poll JSONB,
             priority VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -106,7 +109,7 @@ const createTables = async (dbClient = sql) => {
             priority VARCHAR(50) NOT NULL,
             link JSONB
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS templates (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -114,7 +117,7 @@ const createTables = async (dbClient = sql) => {
             checklist JSONB,
             isFavorite BOOLEAN DEFAULT false
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS resources (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -125,7 +128,7 @@ const createTables = async (dbClient = sql) => {
             assignedTo TEXT[],
             category VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS goals (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -134,7 +137,7 @@ const createTables = async (dbClient = sql) => {
             isCompleted BOOLEAN DEFAULT false,
             milestones JSONB
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS calendarEvents (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -145,7 +148,7 @@ const createTables = async (dbClient = sql) => {
             startTime TIME,
             endTime TIME
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS exams (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -163,7 +166,7 @@ const createTables = async (dbClient = sql) => {
             topic VARCHAR(100),
             type VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
             creatorId TEXT NOT NULL,
@@ -180,7 +183,7 @@ const createTables = async (dbClient = sql) => {
             documentUrl TEXT,
             documentName VARCHAR(255)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS badges (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -195,7 +198,7 @@ app.post('/api/init', async (req, res) => {
         await createTables();
         
         const { rows } = await sql`SELECT COUNT(*) FROM users;`;
-        if (rows[0].count > 0) {
+        if (Number(rows[0].count) > 0) {
             return res.status(200).json({ message: 'Database already initialized.' });
         }
         
@@ -377,7 +380,7 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
         const newId = `conv_${Date.now()}${Math.random()}`;
         const { rows: [newConversation] } = await sql`
             INSERT INTO conversations (id, participantIds, isGroup) 
-            VALUES (${newId}, ARRAY[${userId1}, ${userId2}], false) RETURNING *;
+            VALUES (${newId}, ${[userId1, userId2]}, false) RETURNING *;
         `;
         res.status(201).json(newConversation);
     } catch (error) {
@@ -388,18 +391,24 @@ app.post('/api/conversations/findOrCreate', async (req, res) => {
 app.post('/api/seed', async (req, res) => {
     const client = await db.connect();
     try {
-        await client.sql`BEGIN`;
+        await client.query('BEGIN');
         console.log("Seeding process started...");
 
         // Drop all tables
-        await client.sql`DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;`;
+        await client.query('DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;');
         console.log("Old tables dropped.");
 
         // Re-create tables
         await createTables(client);
         console.log("Tables re-created.");
+        
+        // Destructure static data
+        const { users, conversations } = seedData;
+        // Generate dynamic data *inside* the handler
+        const { templates, resources } = generateDynamicSeedData();
+        // The rest of the data is empty as per seedData export, which is fine
+        const { assignments, exams, goals, questions, messages } = seedData;
 
-        const { users, assignments, exams, goals, resources, templates, questions, conversations, messages } = seedData;
 
         const badgesData = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
@@ -418,13 +427,13 @@ app.post('/api/seed', async (req, res) => {
         for (const user of users) {
             await client.sql`
                 INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) 
-                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${Array.isArray(user.childIds) ? user.childIds : '{}'}, ${Array.isArray(user.parentIds) ? user.parentIds : '{}'}, ${user.xp || 0}, ${user.streak || 0}, ${Array.isArray(user.earnedBadgeIds) ? user.earnedBadgeIds : '{}'});
+                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${user.childIds}, ${user.parentIds}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds});
             `;
         }
         console.log(`${users.length} users seeded.`);
         
         for (const conv of conversations) {
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${Array.isArray(conv.participantIds) ? conv.participantIds : '{}'}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
@@ -455,7 +464,7 @@ app.post('/api/seed', async (req, res) => {
         for (const resource of resources) {
              await client.sql`
                 INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
-                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${Array.isArray(resource.assignedTo) ? resource.assignedTo : '{}'}, ${resource.category});
+                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});
              `;
         }
         console.log(`${resources.length} resources seeded.`);
@@ -471,7 +480,7 @@ app.post('/api/seed', async (req, res) => {
         for (const q of questions) {
              await client.sql`
                 INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
-                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${Array.isArray(q.options) ? q.options : '{}'}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
+                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
              `;
         }
         console.log(`${questions.length} questions seeded.`);
@@ -479,16 +488,16 @@ app.post('/api/seed', async (req, res) => {
         for (const msg of messages) {
              await client.sql`
                 INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
-                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${Array.isArray(msg.readBy) ? msg.readBy : '{}'});
+                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy});
              `;
         }
         console.log(`${messages.length} messages seeded.`);
 
-        await client.sql`COMMIT`;
+        await client.query('COMMIT');
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
 
     } catch (error) {
-        await client.sql`ROLLBACK`;
+        await client.query('ROLLBACK');
         console.error('Database seed error:', error);
         res.status(500).json({ error: 'Failed to seed database.', details: error.message });
     } finally {
