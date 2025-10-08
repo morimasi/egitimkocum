@@ -9,7 +9,7 @@ import { BadgeID, type Badge } from '../types';
 
 const app = express();
 app.use(cors());
-// FIX: Explicitly providing a path resolves a TypeScript overload issue with Express middleware.
+// FIX: Explicitly setting the path to '/' resolves a TypeScript overload issue where the middleware was being incorrectly interpreted as a path parameter.
 app.use('/', express.json({ limit: '10mb' }));
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
