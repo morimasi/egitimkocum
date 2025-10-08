@@ -8,8 +8,7 @@ app.use(cors());
 // This addresses the TypeScript overload issue by using the modern, built-in express.json() middleware.
 // Using this instead of the separate 'body-parser' can resolve type conflicts.
 // A limit is also added to handle potentially large payloads (e.g., images for AI).
-// FIX: Removed the explicit path '/' to resolve a TypeScript overload issue where types were incompatible. Applying the middleware globally without a path is a common pattern and helps the type checker.
-// FIX: Resolved TypeScript overload error by removing the redundant path argument.
+// FIX: Replaced deprecated bodyParser.json() with express.json()
 app.use(express.json({ limit: '10mb' }));
 
 // A dummy handler for Vercel to confirm the function is working.
