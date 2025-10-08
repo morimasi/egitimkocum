@@ -1,26 +1,23 @@
-
 import express from 'express';
-import type { Request, Response } from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
-import type { VercelPoolClient, VercelSql } from '@vercel/postgres';
+import type { VercelPoolClient } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData, generateDynamicSeedData } from '../services/seedData';
-import type { Badge } from '../types';
+import { BadgeID, type Badge } from '../types';
 
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json({ limit: '10mb' }));
+// FIX: Explicitly providing a path resolves a TypeScript overload issue with Express middleware.
+app.use('/', express.json({ limit: '10mb' }));
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // --- DATABASE SCHEMA AND INIT ---
 
-const createTables = async (dbClient: VercelSql | VercelPoolClient = sql) => {
-    // This is a way to check if we have the client object or the sql tag function
-    const executor = 'sql' in dbClient ? dbClient.sql : dbClient;
+const createTables = async (dbClient: typeof sql | VercelPoolClient = sql) => {
+    const executor = 'query' in dbClient ? dbClient.query.bind(dbClient) : sql;
 
     await executor`
         CREATE TABLE IF NOT EXISTS users (
@@ -196,7 +193,7 @@ const createTables = async (dbClient: VercelSql | VercelPoolClient = sql) => {
 };
 
 
-app.post('/api/init', async (req: Request, res: Response) => {
+app.post('/api/init', async (req, res) => {
     try {
         await createTables();
 
@@ -206,13 +203,13 @@ app.post('/api/init', async (req: Request, res: Response) => {
         }
 
         const badges: Badge[] = [
-            { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
-            { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
-            { id: 'perfect-score', name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
-            { id: 'goal-getter', name: "Hedef Avcısı", description: "Haftalık hedeflerinin hepsine ulaştın!" },
-            { id: 'streak-starter', name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
-            { id: 'streak-master', name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
-            { id: 'on-time-submissions', name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
+            { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
+            { id: BadgeID.HighAchiever, name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
+            { id: BadgeID.PerfectScore, name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
+            { id: BadgeID.GoalGetter, name: "Hedef Avcısı", description: "Haftalık hedeflerinin hepsine ulaştın!" },
+            { id: BadgeID.StreakStarter, name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
+            { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
+            { id: BadgeID.OnTimeSubmissions, name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
         ];
 
         for (const badge of badges) {
@@ -234,7 +231,7 @@ app.post('/api/init', async (req: Request, res: Response) => {
 });
 
 
-app.post('/api/register', async (req: Request, res: Response) => {
+app.post('/api/register', async (req, res) => {
     const { id, name, email, password, role, profilePicture } = req.body;
     try {
         const { rows: existingUsers } = await sql`SELECT id FROM users WHERE email = ${email}`;
@@ -264,7 +261,7 @@ app.post('/api/register', async (req: Request, res: Response) => {
     }
 });
 
-app.post('/api/login', async (req: Request, res: Response) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const { rows: [user] } = await sql`SELECT * FROM users WHERE email = ${email}`;
@@ -281,7 +278,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
     }
 });
 
-app.get('/api/data', async (req: Request, res: Response) => {
+app.get('/api/data', async (req, res) => {
     try {
         const [
             users, assignments, messages, conversations, notifications, 
@@ -321,20 +318,20 @@ app.get('/api/data', async (req: Request, res: Response) => {
 });
 
 const createCrudEndpoints = (tableName: string, idField = 'id') => {
-    app.post(`/api/${tableName}`, async (req: Request, res: Response) => {
+    app.post(`/api/${tableName}`, async (req, res) => {
         try {
             const columns = Object.keys(req.body);
             const values = Object.values(req.body).map(v => (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v);
             const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
             const query = `INSERT INTO ${tableName} (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`;
-            const { rows: [newItem] } = await sql.query(query, values);
+            const { rows: [newItem] } = await db.query(query, values as any);
             res.status(201).json(newItem);
         } catch (error: any) {
             res.status(500).json({ error: `Failed to create ${tableName}.`, details: error.message });
         }
     });
 
-    app.put(`/api/${tableName}/:id`, async (req: Request, res: Response) => {
+    app.put(`/api/${tableName}/:id`, async (req, res) => {
         try {
             const { id } = req.params;
             const fields = Object.keys(req.body).filter(key => key !== idField);
@@ -344,20 +341,20 @@ const createCrudEndpoints = (tableName: string, idField = 'id') => {
                 return (typeof value === 'object' && value !== null) ? JSON.stringify(value) : value;
             })];
             const query = `UPDATE ${tableName} SET ${setClause} WHERE ${idField} = $1 RETURNING *`;
-            const { rows: [updatedItem] } = await sql.query(query, values);
+            const { rows: [updatedItem] } = await db.query(query, values);
             res.status(200).json(updatedItem);
         } catch (error: any) {
             res.status(500).json({ error: `Failed to update ${tableName}.`, details: error.message });
         }
     });
 
-    app.delete(`/api/${tableName}`, async (req: Request, res: Response) => {
+    app.delete(`/api/${tableName}`, async (req, res) => {
         try {
             const { ids } = req.body; 
             if (!ids || !Array.isArray(ids) || ids.length === 0) {
                  return res.status(400).json({ error: "IDs array is required." });
             }
-            await sql.query(`DELETE FROM ${tableName} WHERE id = ANY($1::text[])`, [ids]);
+            await db.query(`DELETE FROM ${tableName} WHERE id = ANY($1::text[])`, [ids]);
             res.status(204).send();
         } catch (error: any) {
              res.status(500).json({ error: `Failed to delete from ${tableName}.`, details: error.message });
@@ -368,7 +365,7 @@ const createCrudEndpoints = (tableName: string, idField = 'id') => {
 ['users', 'assignments', 'messages', 'conversations', 'notifications', 'templates', 'resources', 'goals', 'badges', 'calendarEvents', 'exams', 'questions'].forEach(table => createCrudEndpoints(table));
 
 
-app.post('/api/conversations/findOrCreate', async (req: Request, res: Response) => {
+app.post('/api/conversations/findOrCreate', async (req, res) => {
     const { userId1, userId2 } = req.body;
     try {
         const { rows: [existing] } = await sql`
@@ -383,7 +380,7 @@ app.post('/api/conversations/findOrCreate', async (req: Request, res: Response) 
         const newId = `conv_${Date.now()}${Math.random()}`;
         const { rows: [newConversation] } = await sql`
             INSERT INTO conversations (id, participantIds, isGroup) 
-            VALUES (${newId}, ${[userId1, userId2]}, false) RETURNING *;
+            VALUES (${newId}, ${[userId1, userId2] as any}, false) RETURNING *;
         `;
         res.status(201).json(newConversation);
     } catch (error: any) {
@@ -391,110 +388,70 @@ app.post('/api/conversations/findOrCreate', async (req: Request, res: Response) 
     }
 });
 
-app.post('/api/seed', async (req: Request, res: Response) => {
+app.post('/api/seed', async (req, res) => {
     const client = await db.connect();
     try {
         await client.query('BEGIN');
         console.log("Seeding process started...");
 
-        // Drop all tables
         await client.query('DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;');
         console.log("Old tables dropped.");
 
-        // Re-create tables
         await createTables(client);
         console.log("Tables re-created.");
 
-        // Destructure static data
         const { users, conversations } = seedData;
-        // Generate dynamic data *inside* the handler
         const { templates, resources } = generateDynamicSeedData();
-        // The rest of the data is empty as per seedData export, which is fine
         const { assignments, exams, goals, questions, messages } = seedData;
 
-
         const badgesData: Badge[] = [
-            { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
-            { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
-            { id: 'perfect-score', name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
-            { id: 'goal-getter', name: "Hedef Avcısı", description: "Haftalık hedeflerinin hepsine ulaştın!" },
-            { id: 'streak-starter', name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
-            { id: 'streak-master', name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
-            { id: 'on-time-submissions', name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
+            { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
+            { id: BadgeID.HighAchiever, name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
+            { id: BadgeID.PerfectScore, name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın!" },
+            { id: BadgeID.GoalGetter, name: "Hedef Avcısı", description: "Haftalık hedeflerinin hepsine ulaştın!" },
+            { id: BadgeID.StreakStarter, name: "Seri Başladı", description: "3 gün üst üste ödev teslim ettin." },
+            { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 gün üst üste ödev teslim ettin." },
+            { id: BadgeID.OnTimeSubmissions, name: "Dakik Oyuncu", description: "5 ödevi zamanında teslim ettin." },
         ];
         for (const badge of badgesData) {
-            await client.sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
+            await client.query('INSERT INTO badges (id, name, description) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING;', [badge.id, badge.name, badge.description]);
         }
         console.log("Badges seeded.");
 
         for (const user of users) {
-            await client.sql`
-                INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) 
-                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${user.childIds}, ${user.parentIds}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds});
-            `;
+            await client.query('INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);', [user.id, user.name, user.email, user.password, user.role, user.profilePicture, user.assignedCoachId || null, user.gradeLevel || null, user.academicTrack || null, user.childIds, user.parentIds, user.xp || 0, user.streak || 0, user.earnedBadgeIds]);
         }
         console.log(`${users.length} users seeded.`);
 
         for (const conv of conversations) {
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
+            await client.query('INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES ($1, $2, $3, $4, $5, $6);', [conv.id, conv.participantIds, conv.isGroup, conv.groupName || null, conv.groupImage || null, conv.adminId || null]);
         }
         console.log(`${conversations.length} conversations seeded.`);
-
+        
+        // Loop and insert other data similarly...
         for (const assignment of assignments) {
-            await client.sql`
-                INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) 
-                VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt ? assignment.submittedAt.toISOString() : null}, ${JSON.stringify(assignment.checklist || [])}, ${assignment.submissionType});
-            `;
+            await client.query('INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);', [assignment.id, assignment.title, assignment.description, assignment.dueDate, assignment.status, assignment.grade, assignment.feedback, assignment.fileUrl, assignment.studentId, assignment.coachId, assignment.submittedAt ? assignment.submittedAt : null, JSON.stringify(assignment.checklist || []), assignment.submissionType]);
         }
-        console.log(`${assignments.length} assignments seeded.`);
-
         for (const exam of exams) {
-            await client.sql`
-                INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) 
-                VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date.toISOString()}, ${exam.totalQuestions || 0}, ${exam.correct || 0}, ${exam.incorrect || 0}, ${exam.empty || 0}, ${exam.netScore || 0}, ${JSON.stringify(exam.subjects || [])}, ${exam.category || null}, ${exam.topic || null}, ${exam.type || null});
-            `;
+             await client.query('INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);', [exam.id, exam.studentId, exam.title, exam.date, exam.totalQuestions || 0, exam.correct || 0, exam.incorrect || 0, exam.empty || 0, exam.netScore || 0, JSON.stringify(exam.subjects || []), exam.category || null, exam.topic || null, exam.type || null]);
         }
-        console.log(`${exams.length} exams seeded.`);
-
         for (const goal of goals) {
-            await client.sql`
-                INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) 
-                VALUES (${goal.id}, ${goal.studentId}, ${goal.title}, ${goal.description || null}, ${goal.isCompleted || false}, ${JSON.stringify(goal.milestones || [])});
-            `;
+            await client.query('INSERT INTO goals (id, studentId, title, description, isCompleted, milestones) VALUES ($1, $2, $3, $4, $5, $6);', [goal.id, goal.studentId, goal.title, goal.description || null, goal.isCompleted || false, JSON.stringify(goal.milestones || [])]);
         }
-        console.log(`${goals.length} goals seeded.`);
-
         for (const resource of resources) {
-             await client.sql`
-                INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
-                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo}, ${resource.category});
-             `;
+            await client.query('INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);', [resource.id, resource.name, resource.type, resource.url, resource.isPublic, resource.uploaderId, resource.assignedTo, resource.category]);
         }
-        console.log(`${resources.length} resources seeded.`);
-
         for (const template of templates) {
-             await client.sql`
-                INSERT INTO templates (id, title, description, checklist) 
-                VALUES (${template.id}, ${template.title}, ${template.description}, ${JSON.stringify(template.checklist || [])});
-             `;
+            await client.query('INSERT INTO templates (id, title, description, checklist) VALUES ($1, $2, $3, $4);', [template.id, template.title, template.description, JSON.stringify(template.checklist || [])]);
         }
-        console.log(`${templates.length} templates seeded.`);
-
         for (const q of questions) {
-             await client.sql`
-                INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
-                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
-             `;
+             await client.query('INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);', [q.id, q.creatorId, q.category, q.topic, q.questionText, q.options, q.correctOptionIndex, q.difficulty, q.explanation || null, q.imageUrl || null, q.videoUrl || null, q.audioUrl || null, q.documentUrl || null, q.documentName || null]);
         }
-        console.log(`${questions.length} questions seeded.`);
-
         for (const msg of messages) {
-             await client.sql`
-                INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
-                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy});
-             `;
+             await client.query('INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) VALUES ($1, $2, $3, $4, $5, $6, $7);', [msg.id, msg.senderId, msg.conversationId, msg.text, msg.timestamp, msg.type, msg.readBy]);
         }
-        console.log(`${messages.length} messages seeded.`);
+
+        console.log(`Seeded ${assignments.length}a, ${exams.length}e, ${goals.length}g, ${resources.length}r, ${templates.length}t, ${questions.length}q, ${messages.length}m.`);
 
         await client.query('COMMIT');
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
@@ -521,7 +478,7 @@ const schemas: Record<string, any> = {
 };
 
 
-app.post('/api/gemini/generateText', async (req: Request, res: Response) => {
+app.post('/api/gemini/generateText', async (req, res) => {
     try {
         const { prompt, temperature = 0.7 } = req.body;
         const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { temperature } });
@@ -531,7 +488,7 @@ app.post('/api/gemini/generateText', async (req: Request, res: Response) => {
     }
 });
 
-app.post('/api/gemini/generateWithImage', async (req: Request, res: Response) => {
+app.post('/api/gemini/generateWithImage', async (req, res) => {
     try {
         const { textPart, imagePart } = req.body;
         const response = await ai.models.generateContent({
@@ -544,7 +501,7 @@ app.post('/api/gemini/generateWithImage', async (req: Request, res: Response) =>
     }
 });
 
-app.post('/api/gemini/generateJson', async (req: Request, res: Response) => {
+app.post('/api/gemini/generateJson', async (req, res) => {
     try {
         const { prompt, schema } = req.body;
         if (!schemas[schema]) {
@@ -561,7 +518,7 @@ app.post('/api/gemini/generateJson', async (req: Request, res: Response) => {
     }
 });
 
-app.post('/api/gemini/chat', async (req: Request, res: Response) => {
+app.post('/api/gemini/chat', async (req, res) => {
     try {
         const { history, systemInstruction } = req.body;
         const response = await ai.models.generateContent({

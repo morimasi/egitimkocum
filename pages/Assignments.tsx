@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
@@ -283,7 +284,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
         setIsGeneratingChecklist(true);
         try {
             const generatedItems = await generateAssignmentChecklist(title, description);
-            // FIX: Add a type guard to ensure generatedItems is an array before spreading.
             if (Array.isArray(generatedItems)) {
                 setChecklist(prev => [...prev, ...generatedItems]);
             }

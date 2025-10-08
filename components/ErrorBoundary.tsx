@@ -1,3 +1,4 @@
+
 import React, { ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -42,7 +43,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: Simplify the return, as ReactNode type for children can already be null or undefined.
     return this.props.children;
   }
 }
