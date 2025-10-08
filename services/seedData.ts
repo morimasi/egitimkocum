@@ -1,5 +1,5 @@
 import {
-  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID
+  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID, Assignment, Message, AppNotification, Goal, Badge, CalendarEvent, Exam, Question
 } from '../types';
 import { examCategories } from './examCategories';
 
@@ -153,15 +153,15 @@ export function generateDynamicSeedData() {
 
 export const seedData = {
     users,
-    assignments: [],
-    messages: [],
+    assignments: [] as Assignment[],
+    messages: [] as Message[],
     conversations,
-    notifications: [],
+    notifications: [] as AppNotification[],
     templates: [] as AssignmentTemplate[],
     resources: [] as Resource[],
-    goals: [],
-    badges: [],
-    calendarEvents: [],
-    exams: [],
-    questions: [],
+    goals: [] as Goal[],
+    badges: [] as Badge[],
+    calendarEvents: [] as CalendarEvent[],
+    exams: [] as Exam[],
+    questions: [] as Question[],
 };

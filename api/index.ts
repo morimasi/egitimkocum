@@ -1,15 +1,14 @@
-
-
-
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData, generateDynamicSeedData } from '../services/seedData';
+import { BadgeID, User } from '../types';
 
 const app = express();
-app.use(cors());
+// FIX: Cast to 'any' to bypass a likely type definition issue.
+app.use(cors() as any);
 app.use(bodyParser.json({ limit: '10mb' }));
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -17,7 +16,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // --- DATABASE SCHEMA AND INIT ---
 
 const createTables = async (dbClient: any = sql) => {
-    await dbClient.sql`
+    // This is a way to check if we have the client object or the sql tag function
+    const executor = dbClient.sql || dbClient;
+    
+    await executor`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -37,7 +39,7 @@ const createTables = async (dbClient: any = sql) => {
             lastSubmissionDate TIMESTAMP,
             earnedBadgeIds TEXT[]
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS assignments (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -67,7 +69,7 @@ const createTables = async (dbClient: any = sql) => {
             startTime TIMESTAMP,
             endTime TIMESTAMP
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             participantIds TEXT[] NOT NULL,
@@ -77,7 +79,7 @@ const createTables = async (dbClient: any = sql) => {
             adminId TEXT,
             isArchived BOOLEAN DEFAULT false
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
             senderId TEXT NOT NULL,
@@ -97,7 +99,7 @@ const createTables = async (dbClient: any = sql) => {
             poll JSONB,
             priority VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -107,7 +109,7 @@ const createTables = async (dbClient: any = sql) => {
             priority VARCHAR(50) NOT NULL,
             link JSONB
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS templates (
             id TEXT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
@@ -115,7 +117,7 @@ const createTables = async (dbClient: any = sql) => {
             checklist JSONB,
             isFavorite BOOLEAN DEFAULT false
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS resources (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -126,7 +128,7 @@ const createTables = async (dbClient: any = sql) => {
             assignedTo TEXT[],
             category VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS goals (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -135,7 +137,7 @@ const createTables = async (dbClient: any = sql) => {
             isCompleted BOOLEAN DEFAULT false,
             milestones JSONB
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS calendarEvents (
             id TEXT PRIMARY KEY,
             userId TEXT NOT NULL,
@@ -146,7 +148,7 @@ const createTables = async (dbClient: any = sql) => {
             startTime TIME,
             endTime TIME
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS exams (
             id TEXT PRIMARY KEY,
             studentId TEXT NOT NULL,
@@ -164,7 +166,7 @@ const createTables = async (dbClient: any = sql) => {
             topic VARCHAR(100),
             type VARCHAR(50)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS questions (
             id TEXT PRIMARY KEY,
             creatorId TEXT NOT NULL,
@@ -181,7 +183,7 @@ const createTables = async (dbClient: any = sql) => {
             documentUrl TEXT,
             documentName VARCHAR(255)
         );`;
-    await dbClient.sql`
+    await executor`
         CREATE TABLE IF NOT EXISTS badges (
             id TEXT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -213,7 +215,7 @@ app.post('/api/init', async (_req: any, res: any) => {
         for (const badge of badges) {
             await sql`INSERT INTO badges (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description}) ON CONFLICT (id) DO NOTHING;`;
         }
-// Fix(api/index.ts:218): Replaced empty array parameter with a string literal '{}' for Postgres array syntax.
+
         await sql`
             INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) 
             VALUES ('conv-announcements', '{}', true, '📢 Duyurular', 'https://i.pravatar.cc/150?u=announcements', null)
@@ -240,7 +242,6 @@ app.post('/api/register', async (req: any, res: any) => {
         const { rows: allUsers } = await sql`SELECT COUNT(*) FROM users`;
         const finalRole = allUsers[0].count === '0' ? 'superadmin' : role;
         
-// Fix(api/index.ts:245): Replaced empty array parameter with a string literal '{}' for Postgres array syntax.
         await sql`
             INSERT INTO users (id, name, email, password, role, profilePicture, childIds, parentIds, earnedBadgeIds)
             VALUES (${id}, ${name}, ${email}, ${password}, ${finalRole}, ${profilePicture}, '{}', '{}', '{}');
@@ -377,7 +378,6 @@ app.post('/api/conversations/findOrCreate', async (req: any, res: any) => {
             return res.json(existing);
         }
         const newId = `conv_${Date.now()}${Math.random()}`;
-// Fix(api/index.ts:381): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
         const { rows: [newConversation] } = await sql`
             INSERT INTO conversations (id, participantIds, isGroup) 
             VALUES (${newId}, ${[userId1, userId2] as any}, false) RETURNING *;
@@ -391,16 +391,15 @@ app.post('/api/conversations/findOrCreate', async (req: any, res: any) => {
 app.post('/api/seed', async (_req: any, res: any) => {
     const client = await db.connect();
     try {
-// Fix(api/index.ts:392): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
-        await client.sql`BEGIN`;
+        await client.query('BEGIN');
         console.log("Seeding process started...");
 
         // Drop all tables
-        await client.sql`DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;`;
+        await client.query('DROP TABLE IF EXISTS users, assignments, conversations, messages, notifications, templates, resources, goals, badges, calendarEvents, exams, questions CASCADE;');
         console.log("Old tables dropped.");
 
         // Re-create tables
-        await createTables(client);
+        await createTables(client.sql.bind(client));
         console.log("Tables re-created.");
         
         // Destructure static data
@@ -426,24 +425,22 @@ app.post('/api/seed', async (_req: any, res: any) => {
         console.log("Badges seeded.");
 
         for (const user of users) {
-// Fix(api/index.ts:428): Cast dynamic arrays to 'any' to satisfy TypeScript's primitive type constraint for template literals.
             await client.sql`
                 INSERT INTO users (id, name, email, password, role, profilePicture, assignedCoachId, gradeLevel, academicTrack, childIds, parentIds, xp, streak, earnedBadgeIds) 
-                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${user.childIds || [] as any}, ${user.parentIds || [] as any}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds || [] as any});
+                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.assignedCoachId || null}, ${user.gradeLevel || null}, ${user.academicTrack || null}, ${user.childIds as any}, ${user.parentIds as any}, ${user.xp || 0}, ${user.streak || 0}, ${user.earnedBadgeIds as any});
             `;
         }
         console.log(`${users.length} users seeded.`);
         
         for (const conv of conversations) {
-// Fix(api/index.ts:434): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
-             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds || [] as any}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
+             await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds as any}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
         }
         console.log(`${conversations.length} conversations seeded.`);
 
         for (const assignment of assignments) {
             await client.sql`
                 INSERT INTO assignments (id, title, description, dueDate, status, grade, feedback, fileUrl, studentId, coachId, submittedAt, checklist, submissionType) 
-                VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate.toISOString()}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt ? assignment.submittedAt.toISOString() : null}, ${JSON.stringify(assignment.checklist || [])}, ${assignment.submissionType});
+                VALUES (${assignment.id}, ${assignment.title}, ${assignment.description}, ${assignment.dueDate}, ${assignment.status}, ${assignment.grade}, ${assignment.feedback}, ${assignment.fileUrl}, ${assignment.studentId}, ${assignment.coachId}, ${assignment.submittedAt ? assignment.submittedAt : null}, ${JSON.stringify(assignment.checklist || [])}, ${assignment.submissionType});
             `;
         }
         console.log(`${assignments.length} assignments seeded.`);
@@ -451,7 +448,7 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const exam of exams) {
             await client.sql`
                 INSERT INTO exams (id, studentId, title, date, totalQuestions, correct, incorrect, empty, netScore, subjects, category, topic, type) 
-                VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date.toISOString()}, ${exam.totalQuestions || 0}, ${exam.correct || 0}, ${exam.incorrect || 0}, ${exam.empty || 0}, ${exam.netScore || 0}, ${JSON.stringify(exam.subjects || [])}, ${exam.category || null}, ${exam.topic || null}, ${exam.type || null});
+                VALUES (${exam.id}, ${exam.studentId}, ${exam.title}, ${exam.date}, ${exam.totalQuestions || 0}, ${exam.correct || 0}, ${exam.incorrect || 0}, ${exam.empty || 0}, ${exam.netScore || 0}, ${JSON.stringify(exam.subjects || [])}, ${exam.category || null}, ${exam.topic || null}, ${exam.type || null});
             `;
         }
         console.log(`${exams.length} exams seeded.`);
@@ -465,10 +462,9 @@ app.post('/api/seed', async (_req: any, res: any) => {
         console.log(`${goals.length} goals seeded.`);
         
         for (const resource of resources) {
-// Fix(api/index.ts:465): Cast dynamic array to 'any' to satisfy TypeScript's primitive type constraint for template literals.
              await client.sql`
                 INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
-                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo || [] as any}, ${resource.category});
+                VALUES (${resource.id}, ${resource.name}, ${resource.type}, ${resource.url}, ${resource.isPublic}, ${resource.uploaderId}, ${resource.assignedTo as any}, ${resource.category});
              `;
         }
         console.log(`${resources.length} resources seeded.`);
@@ -484,7 +480,7 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const q of questions) {
              await client.sql`
                 INSERT INTO questions (id, creatorId, category, topic, questionText, options, correctOptionIndex, difficulty, explanation, imageUrl, videoUrl, audioUrl, documentUrl, documentName) 
-                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options || [] as any}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
+                VALUES (${q.id}, ${q.creatorId}, ${q.category}, ${q.topic}, ${q.questionText}, ${q.options as any}, ${q.correctOptionIndex}, ${q.difficulty}, ${q.explanation || null}, ${q.imageUrl || null}, ${q.videoUrl || null}, ${q.audioUrl || null}, ${q.documentUrl || null}, ${q.documentName || null});
              `;
         }
         console.log(`${questions.length} questions seeded.`);
@@ -492,18 +488,16 @@ app.post('/api/seed', async (_req: any, res: any) => {
         for (const msg of messages) {
              await client.sql`
                 INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
-                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp.toISOString()}, ${msg.type}, ${msg.readBy || [] as any});
+                VALUES (${msg.id}, ${msg.senderId}, ${msg.conversationId}, ${msg.text}, ${msg.timestamp}, ${msg.type}, ${msg.readBy as any});
              `;
         }
         console.log(`${messages.length} messages seeded.`);
 
-// Fix(api/index.ts:494): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
-        await client.sql`COMMIT`;
+        await client.query('COMMIT');
         res.status(200).json({ message: 'Database reset and seeded successfully.' });
 
     } catch (error: any) {
-// Fix(api/index.ts:498): Replaced 'client.query' with 'client.sql' to use the correct method for executing SQL with @vercel/postgres.
-        await client.sql`ROLLBACK`;
+        await client.query('ROLLBACK');
         console.error('Database seed error:', error);
         res.status(500).json({ error: 'Failed to seed database.', details: error.message });
     } finally {
