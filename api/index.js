@@ -5,6 +5,7 @@ import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData, generateDynamicSeedData } from '../services/seedData';
 
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -16,7 +17,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const createTables = async (dbClient = sql) => {
     // This is a way to check if we have the client object or the sql tag function
     const executor = dbClient.sql || dbClient;
-    
+
     await executor`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -194,12 +195,12 @@ const createTables = async (dbClient = sql) => {
 app.post('/api/init', async (req, res) => {
     try {
         await createTables();
-        
+
         const { rows } = await sql`SELECT COUNT(*) FROM users;`;
         if (Number(rows[0].count) > 0) {
             return res.status(200).json({ message: 'Database already initialized.' });
         }
-        
+
         const badges = [
             { id: 'first-assignment', name: "İlk Adım", description: "İlk ödevini başarıyla tamamladın!" },
             { id: 'high-achiever', name: "Yüksek Başarı", description: "Not ortalaman 90'ın üzerinde!" },
@@ -236,7 +237,7 @@ app.post('/api/register', async (req, res) => {
         if (existingUsers.length > 0) {
             return res.status(409).json({ error: 'This email is already registered.' });
         }
-        
+
         const { rows: allUsers } = await sql`SELECT COUNT(*) FROM users`;
         const finalRole = allUsers[0].count === '0' ? 'superadmin' : role;
 
@@ -244,13 +245,13 @@ app.post('/api/register', async (req, res) => {
             INSERT INTO users (id, name, email, password, role, profilePicture, childIds, parentIds, earnedBadgeIds)
             VALUES (${id}, ${name}, ${email}, ${password}, ${finalRole}, ${profilePicture}, '{}', '{}', '{}');
         `;
-        
+
         await sql`
             UPDATE conversations
             SET participantIds = array_append(participantIds, ${id})
             WHERE id = 'conv-announcements';
         `;
-        
+
         const { rows: [newUser] } = await sql`SELECT * FROM users WHERE id = ${id}`;
         const { password: _, ...userToReturn } = newUser;
         res.status(201).json(userToReturn);
@@ -295,7 +296,7 @@ app.get('/api/data', async (req, res) => {
             sql`SELECT * FROM exams`,
             sql`SELECT * FROM questions`,
         ]);
-        
+
         res.json({
             users: users.rows,
             assignments: assignments.rows,
@@ -399,7 +400,7 @@ app.post('/api/seed', async (req, res) => {
         // Re-create tables
         await createTables(client);
         console.log("Tables re-created.");
-        
+
         // Destructure static data
         const { users, conversations } = seedData;
         // Generate dynamic data *inside* the handler
@@ -429,7 +430,7 @@ app.post('/api/seed', async (req, res) => {
             `;
         }
         console.log(`${users.length} users seeded.`);
-        
+
         for (const conv of conversations) {
              await client.sql`INSERT INTO conversations (id, participantIds, isGroup, groupName, groupImage, adminId) VALUES (${conv.id}, ${conv.participantIds}, ${conv.isGroup}, ${conv.groupName || null}, ${conv.groupImage || null}, ${conv.adminId || null});`;
         }
@@ -458,7 +459,7 @@ app.post('/api/seed', async (req, res) => {
             `;
         }
         console.log(`${goals.length} goals seeded.`);
-        
+
         for (const resource of resources) {
              await client.sql`
                 INSERT INTO resources (id, name, type, url, isPublic, uploaderId, assignedTo, category) 
@@ -482,7 +483,7 @@ app.post('/api/seed', async (req, res) => {
              `;
         }
         console.log(`${questions.length} questions seeded.`);
-        
+
         for (const msg of messages) {
              await client.sql`
                 INSERT INTO messages (id, senderId, conversationId, text, timestamp, type, readBy) 
