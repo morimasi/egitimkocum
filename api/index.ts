@@ -1,6 +1,4 @@
-
-
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import cors from 'cors';
 import { sql } from '@vercel/postgres';
 // FIX: Changed import to fix Express middleware type errors.
@@ -12,7 +10,8 @@ import { seedData, generateDynamicSeedData } from '../services/seedData';
 
 // Initialize Express App
 const app = express();
-app.use(cors());
+// FIX: Cast `cors()` to `RequestHandler` to resolve middleware type error.
+app.use(cors() as RequestHandler);
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize Gemini AI
@@ -146,7 +145,7 @@ app.post('/api/init', async (_req, res) => {
 app.get('/api/data', async (_req, res) => {
     try {
         const [users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions] = await Promise.all([
-            sql`SELECT * FROM "users";`,
+            sql`SELECT id, name, email, role, "profilePicture", notes, "assignedCoachId", "gradeLevel", "academicTrack", "childIds", "parentIds", xp, streak, "lastSubmissionDate", "earnedBadgeIds" FROM "users";`,
             sql`SELECT * FROM "assignments";`,
             sql`SELECT * FROM "messages";`,
             sql`SELECT * FROM "conversations";`,
