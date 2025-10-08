@@ -1,4 +1,8 @@
-import express, { Request, Response } from 'express';
+// FIX: Corrected express import to use a namespace import (`import * as express from 'express'`)
+// and updated type annotations to be fully qualified (e.g., `express.Request`). This resolves
+// type conflicts (especially with the global `Response` type) and fixes module interop issues,
+// ensuring that the correct Express types and method overloads are used throughout the file.
+import * as express from 'express';
 import cors from 'cors';
 
 // FIX: Explicitly typing `app` as `express.Application` resolves type inference issues
@@ -11,11 +15,11 @@ app.use(cors());
 // Using this instead of the separate 'body-parser' can resolve type conflicts.
 // A limit is also added to handle potentially large payloads (e.g., images for AI).
 // FIX: Replaced deprecated bodyParser.json() with express.json()
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // A dummy handler for Vercel to confirm the function is working.
 // FIX: Added explicit types for request and response objects for better type safety and consistency.
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get('/api/health', (_req: express.Request, res: express.Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
