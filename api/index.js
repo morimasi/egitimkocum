@@ -1,11 +1,9 @@
-
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { sql, db } from '@vercel/postgres';
 import { GoogleGenAI, Type } from "@google/genai";
 import { seedData, generateDynamicSeedData } from '../services/seedData';
-import { BadgeID, User } from '../types';
 
 const app = express();
 app.use(cors());
