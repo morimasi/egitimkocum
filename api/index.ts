@@ -1,7 +1,9 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 
-const app = express();
+// FIX: Explicitly typing `app` as `express.Application` resolves type inference issues
+// that can cause overload errors with middleware like `express.json()`.
+const app: express.Application = express();
 
 app.use(cors());
 
@@ -12,7 +14,8 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 // A dummy handler for Vercel to confirm the function is working.
-app.get('/api/health', (_req, res) => {
+// FIX: Added explicit types for request and response objects for better type safety and consistency.
+app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
