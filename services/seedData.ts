@@ -10,27 +10,27 @@ const uuid = () => crypto.randomUUID();
 // Kayıt olan ilk kullanıcı "Süper Admin" rolünü alacaktır.
 // "Veri Ekle" özelliği artık yalnızca temel rozetleri oluşturacaktır.
 
-const users: any[] = [];
-const conversations: Conversation[] = [];
+const users = [];
+const conversations = [];
 
 export function generateDynamicSeedData() {
-    const templates: AssignmentTemplate[] = [];
-    const resources: Resource[] = [];
+    const templates = [];
+    const resources = [];
     return { templates, resources };
 }
 
 
 export const seedData = {
     users,
-    assignments: [] as Assignment[],
-    messages: [] as Message[],
+    assignments: [],
+    messages: [],
     conversations,
-    notifications: [] as AppNotification[],
-    templates: [] as AssignmentTemplate[],
-    resources: [] as Resource[],
-    goals: [] as Goal[],
-    badges: [] as Badge[],
-    calendarEvents: [] as CalendarEvent[],
-    exams: [] as Exam[],
-    questions: [] as Question[],
+    notifications: [],
+    templates: [],
+    resources: [],
+    goals: [],
+    badges: [],
+    calendarEvents: [],
+    exams: [],
+    questions: [],
 };
