@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
@@ -329,7 +325,6 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
             coachId: coach.id,
             submittedAt: null,
             coachAttachments: [],
-            // FIX: Explicitly type 'item' in map function to resolve type inference error where 'item' was 'unknown'.
             checklist: checklist.map((item: { text: string }, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
             feedbackReaction: null,
             submissionType,

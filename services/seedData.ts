@@ -1,5 +1,5 @@
 import {
-  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID, Assignment, Message, AppNotification, Goal, Badge, CalendarEvent, Exam, Question
+  UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID, Assignment, Message, AppNotification, Goal, Badge, CalendarEvent, Exam, Question, User
 } from '../types';
 import { examCategories } from './examCategories';
 
@@ -10,27 +10,22 @@ const uuid = () => crypto.randomUUID();
 // Kayıt olan ilk kullanıcı "Süper Admin" rolünü alacaktır.
 // "Veri Ekle" özelliği artık yalnızca temel rozetleri oluşturacaktır.
 
-const users = [];
-const conversations = [];
-
 export function generateDynamicSeedData() {
-    const templates = [];
-    const resources = [];
-    return { templates, resources };
+    return { templates: [] as AssignmentTemplate[], resources: [] as Resource[] };
 }
 
 
 export const seedData = {
-    users,
-    assignments: [],
-    messages: [],
-    conversations,
-    notifications: [],
-    templates: [],
-    resources: [],
-    goals: [],
-    badges: [],
-    calendarEvents: [],
-    exams: [],
-    questions: [],
+    users: [] as User[],
+    assignments: [] as Assignment[],
+    messages: [] as Message[],
+    conversations: [] as Conversation[],
+    notifications: [] as AppNotification[],
+    templates: [] as AssignmentTemplate[],
+    resources: [] as Resource[],
+    goals: [] as Goal[],
+    badges: [] as Badge[],
+    calendarEvents: [] as CalendarEvent[],
+    exams: [] as Exam[],
+    questions: [] as Question[],
 };

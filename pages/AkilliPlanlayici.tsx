@@ -1,7 +1,3 @@
-
-
-
-
 import { useState } from 'react';
 import Card from '../components/Card';
 import { useDataContext } from '../contexts/DataContext';
@@ -66,7 +62,6 @@ const AkilliPlanlayici = () => {
                 sessionDuration,
                 breakDuration
             });
-            // FIX: Cast planData to the correct type to resolve type inference issue.
             setPlan(planData as StudyPlanEvent[]);
         } catch (error) {
             console.error("Plan oluşturulurken hata:", error);
@@ -78,7 +73,6 @@ const AkilliPlanlayici = () => {
 
     const handleSavePlan = async () => {
         if (!plan || !Array.isArray(plan) || !currentUser) return;
-        // FIX: Cast plan to StudyPlanEvent[] to fix type error where plan was inferred as 'unknown'.
         const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as StudyPlanEvent[]).map(item => ({
             title: item.title,
             date: item.date,

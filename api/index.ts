@@ -381,10 +381,11 @@ app.post('/api/seed', async (_req, res) => {
 
         // Insert users
         for (const user of seedData.users) {
+            // FIX: Cast user to any to access password property, which exists in seed data but not in the frontend User type.
             // FIX: Manually format array to string literal for postgres to satisfy vercel/postgres primitive type constraint.
             await sql`
                 INSERT INTO "users" (id, name, email, password, role, "profilePicture", xp, streak, "childIds", "parentIds", "earnedBadgeIds", "assignedCoachId", "gradeLevel", "academicTrack")
-                VALUES (${user.id}, ${user.name}, ${user.email}, ${user.password}, ${user.role}, ${user.profilePicture}, ${user.xp}, ${user.streak}, ${Array.isArray(user.childIds) ? `{${user.childIds.join(',')}}` : null}, ${Array.isArray(user.parentIds) ? `{${user.parentIds.join(',')}}` : null}, ${Array.isArray(user.earnedBadgeIds) ? `{${user.earnedBadgeIds.join(',')}}` : null}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack})
+                VALUES (${user.id}, ${user.name}, ${user.email}, ${(user as any).password}, ${user.role}, ${user.profilePicture}, ${user.xp}, ${user.streak}, ${Array.isArray(user.childIds) ? `{${user.childIds.join(',')}}` : null}, ${Array.isArray(user.parentIds) ? `{${user.parentIds.join(',')}}` : null}, ${Array.isArray(user.earnedBadgeIds) ? `{${user.earnedBadgeIds.join(',')}}` : null}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack})
                 ON CONFLICT (email) DO NOTHING;
             `;
         }

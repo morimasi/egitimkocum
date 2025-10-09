@@ -1,7 +1,3 @@
-
-
-
-
 import React, { ErrorInfo, ReactNode } from 'react';
 import Card from './Card';
 
@@ -46,7 +42,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: Destructuring props to work around a potential tooling issue causing a false positive error.
     const { children } = this.props;
     return children;
   }
