@@ -171,7 +171,8 @@ const AddResourceModal = ({ onClose }: { onClose: () => void }) => {
                             <option value="12">12. Sınıf</option>
                             <option value="mezun">Mezun</option>
                         </select>
-                        <select multiple value={assignedTo} onChange={e => setAssignedTo(Array.from(e.target.selectedOptions, opt => opt.value))} className="w-full h-32 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        {/* FIX: Explicitly typed 'opt' as HTMLOptionElement to fix error where it was inferred as 'unknown'. */}
+                        <select multiple value={assignedTo} onChange={e => setAssignedTo(Array.from(e.target.selectedOptions, (opt: HTMLOptionElement) => opt.value))} className="w-full h-32 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                              {availableStudents.map(student => <option key={student.id} value={student.id}>{student.name}</option>)}
                         </select>
                     </div>
@@ -260,7 +261,8 @@ export default function Library() {
                                         <div className="flex-1">
                                             <a href={resource.url} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">{resource.name}</a>
                                             <div className="text-xs text-gray-500 mt-1">
-                                                {!resource.isPublic ? `Özel (${resource.assignedTo?.map(id => students.find(s=>s.id === id)?.name.split(' ')[0]).join(', ') || '0 Öğrenci'})` : 'Herkese Açık'}
+                                                {/* FIX: Guard against 'resource.assignedTo' not being an array and add optional chaining for '.name' to prevent runtime errors. */}
+                                                {!resource.isPublic ? `Özel (${(Array.isArray(resource.assignedTo) ? resource.assignedTo.map(id => students.find(s=>s.id === id)?.name?.split(' ')[0]).filter(Boolean).join(', ') : '') || '0 Öğrenci'})` : 'Herkese Açık'}
                                             </div>
                                         </div>
                                     </div>

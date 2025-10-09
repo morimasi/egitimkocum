@@ -327,7 +327,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
             coachId: coach.id,
             submittedAt: null,
             coachAttachments: [],
-            checklist: checklist.map((item, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
+            // FIX: Explicitly type 'item' in map function to resolve type inference error where 'item' was 'unknown'.
+            checklist: checklist.map((item: { text: string }, index) => ({ ...item, id: `chk-${Date.now()}-${index}`, isCompleted: false })),
             feedbackReaction: null,
             submissionType,
             videoDescriptionUrl,

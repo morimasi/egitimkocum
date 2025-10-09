@@ -15,11 +15,11 @@ const user1 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [] as string[],
-    parentIds: [] as string[],
+    childIds: [],
+    parentIds: [],
     xp: 0,
     streak: 0,
-    earnedBadgeIds: [] as BadgeID[]
+    earnedBadgeIds: []
 };
 const user2 = {
     id: 'user-coach-1',
@@ -31,11 +31,11 @@ const user2 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [] as string[],
-    parentIds: [] as string[],
+    childIds: [],
+    parentIds: [],
     xp: 1500,
     streak: 5,
-    earnedBadgeIds: [] as BadgeID[]
+    earnedBadgeIds: []
 };
 const user3 = {
     id: 'user-coach-2',
@@ -47,11 +47,11 @@ const user3 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: [] as string[],
-    parentIds: [] as string[],
+    childIds: [],
+    parentIds: [],
     xp: 800,
     streak: 2,
-    earnedBadgeIds: [] as BadgeID[]
+    earnedBadgeIds: []
 };
 
 const student1 = {
@@ -64,11 +64,11 @@ const student1 = {
     assignedCoachId: 'user-coach-1',
     gradeLevel: '12',
     academicTrack: AcademicTrack.Sayisal,
-    childIds: [] as string[],
-    parentIds: ['user-parent-1'] as string[],
+    childIds: [],
+    parentIds: ['user-parent-1'],
     xp: 250,
     streak: 3,
-    earnedBadgeIds: [BadgeID.FirstAssignment] as BadgeID[]
+    earnedBadgeIds: [BadgeID.FirstAssignment]
 };
 const student2 = {
     id: 'user-student-2',
@@ -80,11 +80,11 @@ const student2 = {
     assignedCoachId: 'user-coach-1',
     gradeLevel: 'mezun',
     academicTrack: AcademicTrack.EsitAgirlik,
-    childIds: [] as string[],
-    parentIds: [] as string[],
+    childIds: [],
+    parentIds: [],
     xp: 1200,
     streak: 10,
-    earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter] as BadgeID[]
+    earnedBadgeIds: [BadgeID.FirstAssignment, BadgeID.HighAchiever, BadgeID.StreakStarter]
 };
 const student3 = {
     id: 'user-student-3',
@@ -96,11 +96,11 @@ const student3 = {
     assignedCoachId: 'user-coach-2',
     gradeLevel: '11',
     academicTrack: AcademicTrack.Sozel,
-    childIds: [] as string[],
-    parentIds: [] as string[],
+    childIds: [],
+    parentIds: [],
     xp: 50,
     streak: 0,
-    earnedBadgeIds: [] as BadgeID[]
+    earnedBadgeIds: []
 };
 const parent1 = {
     id: 'user-parent-1',
@@ -112,11 +112,11 @@ const parent1 = {
     assignedCoachId: null,
     gradeLevel: undefined,
     academicTrack: undefined,
-    childIds: ['user-student-1'] as string[],
-    parentIds: [] as string[],
+    childIds: ['user-student-1'],
+    parentIds: [],
     xp: 0,
     streak: 0,
-    earnedBadgeIds: [] as BadgeID[]
+    earnedBadgeIds: []
 };
 
 

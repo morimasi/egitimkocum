@@ -10,9 +10,9 @@ import { seedData, generateDynamicSeedData } from '../services/seedData';
 
 // Initialize Express App
 const app = express();
-// FIX: Cast `cors()` to `RequestHandler` to resolve middleware type error.
-app.use(cors() as RequestHandler);
-app.use(express.json({ limit: '50mb' }));
+// FIX: Explicitly provide path to resolve middleware type inference error.
+app.use('/', cors());
+app.use('/', express.json({ limit: '50mb' }));
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });

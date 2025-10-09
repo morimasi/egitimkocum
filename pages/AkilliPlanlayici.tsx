@@ -64,7 +64,8 @@ const AkilliPlanlayici = () => {
                 sessionDuration,
                 breakDuration
             });
-            setPlan(planData);
+            // FIX: Cast planData to the correct type to resolve type inference issue.
+            setPlan(planData as StudyPlanEvent[]);
         } catch (error) {
             console.error("Plan oluşturulurken hata:", error);
             addToast("Plan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.", "error");
@@ -75,7 +76,8 @@ const AkilliPlanlayici = () => {
 
     const handleSavePlan = async () => {
         if (!plan || !Array.isArray(plan) || !currentUser) return;
-        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map(item => ({
+        // FIX: Cast plan to StudyPlanEvent[] to fix type error where plan was inferred as 'unknown'.
+        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as StudyPlanEvent[]).map(item => ({
             title: item.title,
             date: item.date,
             type: 'study',

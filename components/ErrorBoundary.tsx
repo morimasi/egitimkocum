@@ -43,7 +43,9 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    // FIX: Destructuring props to work around a potential tooling issue causing a false positive error.
+    const { children } = this.props;
+    return children;
   }
 }
 
