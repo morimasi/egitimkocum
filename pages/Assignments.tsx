@@ -376,7 +376,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
                  <div>
                     <label className="block text-sm font-medium mb-1">Kontrol Listesi</label>
                     <div className="space-y-2">
-                        {checklist.map((item, index) => (
+                        {checklist.map((item: { text: string }, index) => (
                             <div key={index} className="flex items-center">
                                 <input type="text" value={item.text} 
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {

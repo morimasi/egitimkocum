@@ -1,9 +1,6 @@
 import {
   UserRole, AssignmentTemplate, Resource, ResourceCategory, Conversation, AcademicTrack, BadgeID, Assignment, Message, AppNotification, Goal, Badge, CalendarEvent, Exam, Question, User
 } from '../types';
-import { examCategories } from './examCategories';
-
-const uuid = () => crypto.randomUUID();
 
 // Kullanıcı isteği üzerine tüm test verileri kaldırıldı.
 // Uygulama artık temiz bir veritabanı ile başlayacak.

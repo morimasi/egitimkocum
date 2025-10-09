@@ -10,8 +10,8 @@ import { seedData, generateDynamicSeedData } from '../services/seedData';
 
 // Initialize Express App
 const app = express();
-// FIX: Explicitly provide path to resolve middleware type inference error.
-app.use('/', cors());
+// FIX: The cors middleware was causing a TypeScript type error due to incompatible RequestHandler types. Casting to RequestHandler resolves the type mismatch.
+app.use('/', cors() as RequestHandler);
 app.use('/', express.json({ limit: '50mb' }));
 
 // Initialize Gemini AI
@@ -382,7 +382,6 @@ app.post('/api/seed', async (_req, res) => {
         // Insert users
         for (const user of seedData.users) {
             // FIX: Cast user to any to access password property, which exists in seed data but not in the frontend User type.
-            // FIX: Manually format array to string literal for postgres to satisfy vercel/postgres primitive type constraint.
             await sql`
                 INSERT INTO "users" (id, name, email, password, role, "profilePicture", xp, streak, "childIds", "parentIds", "earnedBadgeIds", "assignedCoachId", "gradeLevel", "academicTrack")
                 VALUES (${user.id}, ${user.name}, ${user.email}, ${(user as any).password}, ${user.role}, ${user.profilePicture}, ${user.xp}, ${user.streak}, ${Array.isArray(user.childIds) ? `{${user.childIds.join(',')}}` : null}, ${Array.isArray(user.parentIds) ? `{${user.parentIds.join(',')}}` : null}, ${Array.isArray(user.earnedBadgeIds) ? `{${user.earnedBadgeIds.join(',')}}` : null}, ${user.assignedCoachId}, ${user.gradeLevel}, ${user.academicTrack})
