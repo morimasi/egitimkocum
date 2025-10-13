@@ -95,7 +95,6 @@ interface DataContextType {
     updateQuestion: (question: Question) => Promise<void>;
     deleteQuestion: (questionId: string) => Promise<void>;
     updateBadge: (badge: Badge) => Promise<void>;
-    seedDatabase: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -501,17 +500,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         setBadges(prev => prev.map(b => b.id === updated.id ? updated : b));
     }, []);
     
-    const seedDatabase = useCallback(async () => {
-        try {
-            await apiFetch('seed', { method: 'POST' });
-            addToast("Veritabanı başarıyla sıfırlandı ve yeniden oluşturuldu.", "success");
-            window.location.reload();
-        } catch (error) {
-            console.error("Failed to seed database:", error);
-            addToast("Veritabanı sıfırlanırken bir hata oluştu.", "error");
-        }
-    }, [addToast]);
-
     // Memoized derived state for messages
     const { messagesByConversation, unreadCounts, lastMessagesMap } = useMemo(() => {
         const msgByConv = new Map<string, Message[]>();
@@ -572,7 +560,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addCalendarEvent, addMultipleCalendarEvents, deleteCalendarEvent,
         addExam, updateExam, deleteExam, addQuestion, updateQuestion, deleteQuestion,
         updateBadge,
-        seedDatabase,
     };
 
     return <DataContext.Provider value={contextValue}>{children}</DataContext.Provider>;

@@ -64,12 +64,11 @@ const EditBadgeModal = ({ badge, onClose }: { badge: Badge; onClose: () => void 
 };
 
 export default function SuperAdminDashboard() {
-    const { users, assignments, badges, deleteUser, seedDatabase } = useDataContext();
+    const { users, assignments, badges, deleteUser } = useDataContext();
     const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const [badgeToEdit, setBadgeToEdit] = useState<Badge | null>(null);
-    const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
 
     const kpis = useMemo(() => ({
         totalUsers: users.length,
@@ -100,11 +99,6 @@ export default function SuperAdminDashboard() {
             deleteUser(userToDelete.id);
             setUserToDelete(null);
         }
-    };
-    
-    const handleConfirmSeed = () => {
-        seedDatabase();
-        setIsConfirmSeedOpen(false);
     };
     
     return (
@@ -166,7 +160,7 @@ export default function SuperAdminDashboard() {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card title="Rozet Yönetimi">
+                <Card title="Rozet Yönetimi" className="lg:col-span-2">
                      <div className="space-y-3 max-h-96 overflow-y-auto">
                         {badges.map(badge => (
                              <div key={badge.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
@@ -179,39 +173,12 @@ export default function SuperAdminDashboard() {
                         ))}
                     </div>
                 </Card>
-                <Card title="Platform Yönetimi">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div>
-                            <h4 className="font-semibold">Deneme Verileri</h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                Platformu test etmek için örnek verilerle doldurun.
-                                <strong> Not:</strong> Bu işlem mevcut oturumdaki tüm verileri sıfırlar.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={() => setIsConfirmSeedOpen(true)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold w-full sm:w-auto flex-shrink-0"
-                        >
-                            Veri Ekle
-                        </button>
-                    </div>
-                </Card>
             </div>
             
             {isNewUserModalOpen && <Modal isOpen={isNewUserModalOpen} onClose={() => setIsNewUserModalOpen(false)} title="Yeni Kullanıcı Ekle"><AddUserForm onClose={() => setIsNewUserModalOpen(false)}/></Modal>}
             {userToEdit && <EditUserModal user={userToEdit} onClose={() => setUserToEdit(null)} />}
             {userToDelete && <ConfirmationModal isOpen={!!userToDelete} onClose={() => setUserToDelete(null)} onConfirm={handleUserDelete} title="Kullanıcıyı Sil" message={`'${userToDelete.name}' adlı kullanıcıyı silmek istediğinizden emin misiniz?`} />}
             {badgeToEdit && <EditBadgeModal badge={badgeToEdit} onClose={() => setBadgeToEdit(null)} />}
-            {isConfirmSeedOpen && (
-                 <ConfirmationModal
-                    isOpen={isConfirmSeedOpen}
-                    onClose={() => setIsConfirmSeedOpen(false)}
-                    onConfirm={handleConfirmSeed}
-                    title="Veritabanını Sıfırla"
-                    message="Bu işlem, tüm mevcut verileri silecek ve uygulamayı başlangıçtaki deneme verileriyle yeniden yükleyecektir. Emin misiniz?"
-                    confirmText="Evet, Sıfırla"
-                />
-            )}
         </div>
     );
 }
