@@ -131,7 +131,9 @@ export const generateComprehensiveStudentReport = async (student: any, assignmen
 // --- Functions returning JSON ---
 export const generateAssignmentChecklist = async (title: string, description: string): Promise<{ text: string }[]> => {
     const prompt = `Bir eğitim koçu olarak, "${title}" başlıklı ve "${description}" açıklamalı bir ödev için öğrencilerin takip etmesi gereken 3 ila 5 adımlık bir kontrol listesi oluştur.`;
-    return geminiFetch('generateJson', { prompt, schema: 'checklist' }).catch(() => []);
+    // Fix: Ensure the result is an array to prevent runtime errors.
+    const result = await geminiFetch('generateJson', { prompt, schema: 'checklist' }).catch(() => []);
+    return Array.isArray(result) ? result : [];
 };
 
 export const suggestGrade = async (assignment: Assignment): Promise<{ suggestedGrade: number, rationale: string } | null> => {
@@ -146,7 +148,9 @@ export const generateAiTemplate = async (topic: string, level: string, duration:
 
 export const generateStudyPlan = async (params: any): Promise<any[] | null> => {
     const prompt = `Bir öğrenci için haftalık ders çalışma planı oluştur. Bilgiler: Hedef sınavlar: ${params.targetExams.join(', ')}. Odak dersler: ${params.focusSubjects.join(', ')}. Haftalık müsait zamanlar: ${JSON.stringify(params.weeklyAvailability)}. Bir ders süresi ${params.sessionDuration} dakika, mola süresi ${params.breakDuration} dakika. Bu bilgilere göre, önümüzdeki 7 gün için bir plan oluştur. Her plan öğesi için 'title', 'date' (YYYY-MM-DD formatında, bugünden başlayarak), 'startTime', 'endTime', ve 'description' alanlarını içeren bir JSON dizisi döndür.`;
-    return geminiFetch('generateJson', { prompt, schema: 'studyPlan' });
+    // Fix: Ensure the result is an array or null to prevent runtime errors.
+    const result = await geminiFetch('generateJson', { prompt, schema: 'studyPlan' });
+    return Array.isArray(result) ? result : null;
 };
 
 export const generateGoalWithMilestones = async (goalTitle: string): Promise<{ description: string, milestones: { text: string }[] } | null> => {

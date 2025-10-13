@@ -247,11 +247,12 @@ export default function Library() {
             </Card>
 
             {filteredResources.length > 0 ? (
-                Object.entries(categorizedResources).map(([category, resourcesInCategory]) => (
+                // Fix: Changed from Object.entries to Object.keys to avoid potential typing issues with `map` on unknown.
+                Object.keys(categorizedResources).map(category => (
                     <div key={category}>
                         <h2 className="text-xl font-bold mb-2">{category}</h2>
                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {resourcesInCategory.map(resource => (
+                            {categorizedResources[category].map(resource => (
                                 <Card key={resource.id} className="p-4 flex flex-col justify-between">
                                     <div className="flex items-start gap-3">
                                         <ResourceIcon type={resource.type} />

@@ -1,17 +1,15 @@
-import express, { RequestHandler } from 'express';
+import express from 'express';
 import cors from 'cors';
 import { sql } from '@vercel/postgres';
-// FIX: Changed import to fix Express middleware type errors.
 import { GoogleGenAI, Type } from "@google/genai";
 import {
-  User, UserRole, Assignment, Message, Conversation, AppNotification, AssignmentTemplate, Resource, Goal, Badge, CalendarEvent, Exam, Question, ResourceCategory, AcademicTrack, BadgeID, AssignmentStatus
+  User, UserRole, Assignment, Message, Conversation, AppNotification, AssignmentTemplate, Resource, Goal, Badge, CalendarEvent, Exam, Question, BadgeID
 } from '../types';
 
 // Initialize Express App
 const app = express();
-// FIX: The cors middleware was causing a TypeScript type error due to incompatible RequestHandler types. Casting to RequestHandler resolves the type mismatch.
-app.use('/', cors() as RequestHandler);
-app.use('/', express.json({ limit: '50mb' }));
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
@@ -132,9 +130,42 @@ app.post('/api/init', async (_req, res) => {
         await sql`CREATE TABLE IF NOT EXISTS "exams" ( id TEXT PRIMARY KEY, "studentId" TEXT, title TEXT, date TEXT, "totalQuestions" INTEGER, correct INTEGER, incorrect INTEGER, empty INTEGER, "netScore" REAL, subjects JSONB, "coachNotes" TEXT, "studentReflections" TEXT, category TEXT, topic TEXT, type TEXT );`;
         await sql`CREATE TABLE IF NOT EXISTS "questions" ( id TEXT PRIMARY KEY, "creatorId" TEXT, category TEXT, topic TEXT, "questionText" TEXT, options TEXT[], "correctOptionIndex" INTEGER, difficulty TEXT, explanation TEXT, "imageUrl" TEXT, "videoUrl" TEXT, "audioUrl" TEXT, "documentUrl" TEXT, "documentName" TEXT );`;
 
+        // Create the default "Announcements" conversation if it doesn't exist
+        await sql`
+            INSERT INTO "conversations" (id, "participantIds", "isGroup", "groupName", "groupImage", "adminId") 
+            VALUES ('conv-announcements', '{}', true, 'Duyurular', 'https://i.pravatar.cc/150?u=announcements', null)
+            ON CONFLICT (id) DO NOTHING;
+        `;
+
         res.status(200).json({ message: 'Database initialized' });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/seed', async (_req, res) => {
+    try {
+        // Clear all data
+        await sql`TRUNCATE "users", "assignments", "messages", "conversations", "notifications", "templates", "resources", "goals", "badges", "calendarEvents", "exams", "questions" RESTART IDENTITY CASCADE;`;
+
+        // Seed initial badges
+        const badges: Badge[] = [
+            { id: BadgeID.FirstAssignment, name: "İlk Adım", description: "İlk ödevini başarıyla teslim ettin." },
+            { id: BadgeID.HighAchiever, name: "Yüksek Uçan", description: "Bir ödevden 90 üzeri not aldın." },
+            { id: BadgeID.PerfectScore, name: "Mükemmel Skor", description: "Bir ödevden 100 tam puan aldın." },
+            { id: BadgeID.GoalGetter, name: "Hedef Avcısı", description: "İlk hedefini tamamladın." },
+            { id: BadgeID.StreakStarter, name: "Seri Başlangıcı", description: "3 günlük ödev teslim serisi yakaladın." },
+            { id: BadgeID.StreakMaster, name: "Seri Ustası", description: "7 günlük ödev teslim serisi yakaladın." },
+            { id: BadgeID.OnTimeSubmissions, name: "Zaman Yönetimi", description: "Arka arkaya 5 ödevi zamanında teslim ettin." },
+        ];
+        
+        for (const badge of badges) {
+            await sql`INSERT INTO "badges" (id, name, description) VALUES (${badge.id}, ${badge.name}, ${badge.description});`;
+        }
+        
+        res.status(200).json({ message: 'Database seeded successfully with initial data.' });
+    } catch (error: any) {
+        res.status(500).json({ error: `Seeding failed: ${error.message}` });
     }
 });
 
@@ -349,3 +380,12 @@ app.post('/api/gemini/chat', async (req, res) => {
             model: 'gemini-2.5-flash',
             history,
             config: { systemInstruction }
+        });
+        const response = await chat.sendMessage({ message: history[history.length - 1].parts[0].text });
+        res.status(200).json({ text: response.text });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+export default app;
