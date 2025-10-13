@@ -71,8 +71,7 @@ Bu projeyi Vercel üzerinde dakikalar içinde canlıya alabilirsiniz.
 
 ### Kurulum Sonrası
 
--   **İlk Kullanıcı Süper Admin'dir:** Platforma ilk kayıt olan kullanıcı, otomatik olarak **Süper Admin** yetkilerine sahip olur.
--   **Test Verileri:** Süper Admin olarak giriş yapın, "Süper Admin Paneli"ne gidin ve **"Veri Ekle"** butonuna tıklayarak uygulamayı zengin ve çeşitli test verileriyle (kullanıcılar, ödevler, sınavlar, sorular vb.) doldurun. Bu, tüm özellikleri anında denemenizi sağlar!
+-   **İlk Kullanıcı Süper Admin'dir:** Platforma ilk kayıt olan kullanıcı, otomatik olarak **Süper Admin** yetkilerine sahip olur. Süper Admin paneli üzerinden yeni koçlar ve öğrenciler ekleyebilirsiniz.
 
 ## 📂 Proje Yapısı
 

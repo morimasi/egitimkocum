@@ -9,7 +9,8 @@ import {
 // Initialize Express App
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// FIX: Add root path to resolve express.json() type ambiguity
+app.use('/', express.json({ limit: '50mb' }));
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
