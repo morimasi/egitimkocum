@@ -3,13 +3,11 @@
 _Yapay zeka ile güçlendirilmiş, yeni nesil eğitim koçluğu platformu._
 
 [![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://reactjs.org/)
-[![Vercel](https://img.shields.io/badge/Vercel-black?logo=vercel)](https://vercel.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-black?logo=nodedotjs)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue?logo=postgresql)](https://www.postgresql.org/)
 [![Gemini API](https://img.shields.io/badge/Gemini%20API-blueviolet?logo=google&logoColor=white)](https://ai.google.dev/)
 
 **Mahmut Hoca**, öğrenciler ve eğitim koçları için tasarlanmış, Google Gemini API'nin gücünü kullanarak öğrenme sürecini merkezileştiren, kişiselleştiren ve oyunlaştıran modern bir web uygulamasıdır. Ödev atama, takip, değerlendirme ve iletişim gibi temel işlevleri tek bir çatı altında toplarken, yapay zeka entegrasyonları ile hem öğrencilere hem de koçlara benzersiz araçlar sunar.
-
-Vercel üzerinde kolayca dağıtılabilen, sunucusuz (serverless) mimari ve Vercel Postgres veritabanı ile geliştirilmiştir. Bu sayede ölçeklenebilir, güvenli ve bakımı kolay bir yapıya sahiptir.
 
 ## ✨ Ana Özellikler
 
@@ -47,37 +45,64 @@ Platformumuzun zekası, Google Gemini API'nin gelişmiş yeteneklerinden gelir:
 ## 🛠️ Teknoloji Mimarisi
 
 -   **Frontend:** React, TypeScript, Vite, Tailwind CSS, Recharts
--   **Backend:** Vercel Functions (Node.js & Express.js)
+-   **Backend:** Node.js & Express.js
 -   **Veritabanı:** Vercel Postgres
 -   **Yapay Zeka:** Google Gemini API (`@google/genai`)
 
-## 🚀 Hızlı Başlangıç: Vercel'de Dağıtma
+## 🚀 Hızlı Başlangıç: Yerelde Çalıştırma
 
-Bu projeyi Vercel üzerinde dakikalar içinde canlıya alabilirsiniz.
+Bu projeyi kendi bilgisayarınızda geliştirmeye başlamak için aşağıdaki adımları izleyin.
 
-1.  **Projeyi Fork'layın:** Bu repoyu kendi GitHub hesabınıza fork'layın.
-2.  **Vercel Projesi Oluşturun:**
-    -   Vercel'e gidin ve `Add New... -> Project` seçeneğiyle GitHub reponuzu içeri aktarın.
-    -   Framework olarak "Vite" seçildiğinden emin olun.
+### Gereksinimler
+- Node.js (v18 veya üstü)
+- npm
+- Bir Vercel hesabı (Postgres veritabanı için)
+- Bir Google Gemini API anahtarı
+
+### Kurulum
+
+1.  **Projeyi Klonlayın:**
+    ```bash
+    git clone <proje-github-url>
+    cd mahmut-hoca
+    ```
+
+2.  **Bağımlılıkları Yükleyin:**
+    ```bash
+    npm install
+    ```
+
 3.  **Veritabanı Oluşturun:**
-    -   Proje ayarlarında `Storage` sekmesine gidin ve bir **Postgres** veritabanı oluşturun.
-    -   Veritabanını projenize bağlayın. Vercel, gerekli `POSTGRES_*` ortam değişkenlerini otomatik olarak ekleyecektir.
-4.  **API Anahtarını Ekleyin:**
-    -   Proje ayarlarında `Settings -> Environment Variables` bölümüne gidin.
-    -   `API_KEY` adında yeni bir değişken oluşturun ve değer olarak kendi Google Gemini API anahtarınızı yapıştırın.
-5.  **Dağıtın (Deploy):**
-    -   Vercel, bu ayarlardan sonra projenizi otomatik olarak dağıtacaktır. `Deploy` butonuna basarak işlemi manuel de başlatabilirsiniz.
-    -   Dağıtım tamamlandıktan sonra Vercel'in size verdiği domain adresine gidin.
+    -   [Vercel](https://vercel.com/)'e gidin ve yeni bir proje oluşturun (bu repoyu bağlayabilirsiniz, ancak dağıtmanız gerekmez).
+    -   Proje kontrol panelinde `Storage` sekmesine gidin ve bir **Postgres** veritabanı oluşturun.
+    -   Veritabanını oluşturduktan sonra `.env` sekmesine gidin, "Show secret" diyerek `POSTGRES_URL` değerini kopyalayın.
+
+4.  **Ortam Değişkenlerini Ayarlayın:**
+    -   Projenin ana dizininde `.env.example` dosyasının bir kopyasını oluşturup `.env` olarak adlandırın.
+    -   `.env` dosyasını açın ve Vercel'den kopyaladığınız `POSTGRES_URL` değerini ve kendi [Google Gemini API anahtarınızı](https://makersuite.google.com/app/apikey) `API_KEY` değişkenine yapıştırın.
+    
+    ```.env
+    API_KEY="YOUR_GEMINI_API_KEY"
+    POSTGRES_URL="YOUR_POSTGRES_CONNECTION_STRING"
+    ```
+
+5.  **Uygulamayı Başlatın:**
+    -   Aşağıdaki komutla hem frontend (Vite) hem de backend (Express) sunucularını aynı anda başlatın:
+    ```bash
+    npm run dev
+    ```
+    -   Uygulamanız varsayılan olarak `http://localhost:5173` adresinde açılacaktır. API istekleri otomatik olarak backend sunucusuna yönlendirilecektir.
 
 ### Kurulum Sonrası
 
 -   **İlk Kullanıcı Süper Admin'dir:** Platforma ilk kayıt olan kullanıcı, otomatik olarak **Süper Admin** yetkilerine sahip olur. Süper Admin paneli üzerinden yeni koçlar ve öğrenciler ekleyebilirsiniz.
 
+
 ## 📂 Proje Yapısı
 
 ```
 .
-├── api/          # Vercel sunucusuz fonksiyonları (Backend)
+├── api/          # Express.js backend sunucusu
 ├── components/   # Tekrar kullanılabilir React bileşenleri
 ├── contexts/     # Global state yönetimi (DataContext, UIContext)
 ├── pages/        # Ana sayfa bileşenleri

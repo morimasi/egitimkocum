@@ -3,7 +3,7 @@ import { useDataContext } from '../contexts/DataContext';
 import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon } from '../components/Icons';
+import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon, PaperclipIcon, VideoIcon, ClipboardListIcon, CheckCircleIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
 import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
@@ -142,6 +142,23 @@ const getStatusChip = (status: AssignmentStatus) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{text[status]}</span>;
 };
 
+// FIX: The `title` prop is not a valid prop for the Icon components, causing a TypeScript error.
+// The icons are wrapped in a `span` element and the `title` attribute is moved to the `span` to provide a tooltip on hover.
+const SubmissionTypeIcon = ({ assignment }: { assignment: Assignment }) => {
+    if (assignment.videoDescriptionUrl) {
+        return <span title="Video Ödevi"><VideoIcon className="w-4 h-4 text-purple-500" /></span>;
+    }
+    switch (assignment.submissionType) {
+        case 'text':
+            return <span title="Metin Teslimi"><ClipboardListIcon className="w-4 h-4 text-blue-500" /></span>;
+        case 'completed':
+            return <span title="Tamamlama Ödevi"><CheckCircleIcon className="w-4 h-4 text-green-500" /></span>;
+        case 'file':
+        default:
+            return <span title="Dosya Teslimi"><PaperclipIcon className="w-4 h-4 text-gray-500" /></span>;
+    }
+};
+
 const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSelect, isSelected }: { 
     assignment: Assignment; 
     onSelect: (assignment: Assignment) => void; 
@@ -183,11 +200,14 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
             </div>
             
             <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                <div>
-                    <span className="font-semibold">Teslim: </span>
-                    <span className={isOverdue ? 'text-red-500 font-bold' : ''}>
-                        {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
-                    </span>
+                <div className="flex items-center gap-2">
+                    <SubmissionTypeIcon assignment={assignment} />
+                    <div>
+                        <span className="font-semibold">Teslim: </span>
+                        <span className={isOverdue ? 'text-red-500 font-bold' : ''}>
+                            {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
+                        </span>
+                    </div>
                 </div>
                 <div>
                     <span className="font-semibold">Not: </span>
