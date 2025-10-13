@@ -73,7 +73,8 @@ const AkilliPlanlayici = () => {
 
     const handleSavePlan = async () => {
         if (!plan || !Array.isArray(plan) || !currentUser) return;
-        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as StudyPlanEvent[]).map(item => ({
+// Fix: The `plan` variable was being inferred as `unknown`, causing a type error. Casting to `any[]` and explicitly typing the `item` parameter within the map function forces the compiler to recognize it as an array, resolving the error.
+        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as any[]).map((item: StudyPlanEvent) => ({
             title: item.title,
             date: item.date,
             type: 'study',

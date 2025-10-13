@@ -41,9 +41,9 @@ class ErrorBoundary extends React.Component<Props, State> {
         </div>
       );
     }
-
-    // Fix: Directly return `this.props.children` to avoid potential issues with destructuring `this.props`.
-    return this.props.children;
+// Fix: The original code was correct, but TypeScript was failing to infer `this.props`. Destructuring `children` from `this.props` is a common pattern that can resolve such inference issues.
+    const { children } = this.props;
+    return children;
   }
 }
 

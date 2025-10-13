@@ -296,7 +296,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
+// Fix: The 't' parameter was being inferred as 'unknown', causing a type error when accessing 't.id'. Casting to 'any' to bypass the incorrect type inference.
+        const template = templates.find((t: any) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
