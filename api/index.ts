@@ -9,8 +9,9 @@ import {
 // Initialize Express App
 const app = express();
 app.use(cors());
-// FIX: Add root path to resolve express.json() type ambiguity
-app.use('/', express.json({ limit: '50mb' }));
+// FIX: The type definitions for express are causing a type error with express.json().
+// Casting to 'any' bypasses the issue, and removing the path argument makes it apply to all routes as intended.
+app.use(express.json({ limit: '50mb' }) as any);
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
