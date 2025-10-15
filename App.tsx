@@ -74,7 +74,7 @@ const AppSkeleton = () => (
 
 const AppContent = () => {
     const { activePage, startTour } = useUI();
-    const { currentUser, isLoading, isDbInitialized } = useDataContext();
+    const { currentUser, isLoading } = useDataContext();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -155,13 +155,22 @@ const AppContent = () => {
     };
 
     if (isLoading) {
-        return <AppSkeleton />;
-    }
-
-    if (!isDbInitialized) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-                <h1 className="text-2xl font-bold mt-4">Veritabanı hazırlanıyor...</h1>
+                <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-primary animate-float-subtle">
+                    <g>
+                        <path d="M 20 50 C 20 25, 60 25, 60 50 C 60 75, 20 75, 20 50 Z" fill="#f2d5b1" stroke="currentColor" strokeWidth="2"/>
+                        <rect x="22" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                        <rect x="42" y="38" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                        <line x1="40" y1="44" x2="42" y2="44" stroke="currentColor" strokeWidth="2.5"/>
+                        <circle cx="31" cy="44" r="1.5" fill="currentColor"/>
+                        <g transform="translate(51 44)"><g className="animate-wink"><circle cx="0" cy="0" r="1.5" fill="currentColor"/></g></g>
+                        <path d="M 35 60 Q 40 62, 45 60" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M 20 70 L 35 80 L 45 80 L 60 70 L 60 55 L 20 55 Z" className="fill-slate-700 dark:fill-slate-300"/>
+                        <path d="M 40 70 L 45 80 L 35 80 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1"/>
+                    </g>
+                </svg>
+                <h1 className="text-2xl font-bold mt-4">Uygulama hazırlanıyor...</h1>
                 <p className="text-muted-foreground mt-2">Bu işlem ilk kurulumda biraz zaman alabilir.</p>
             </div>
         );

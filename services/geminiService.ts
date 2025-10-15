@@ -167,3 +167,23 @@ export const generateQuestion = async (category: string, topic: string, difficul
     const prompt = `"${category}" dersi ve "${topic}" konusu için, "${difficulty}" zorluk seviyesinde, 4 seçenekli bir çoktan seçmeli soru oluştur. Cevabı JSON formatında, 'questionText' (soru metni), 'options' (4 elemanlı string dizisi), 'correctOptionIndex' (0-3 arası sayı) ve 'explanation' (doğru cevabın açıklaması) alanlarını içerecek şekilde ver.`;
     return geminiFetch('generateJson', { prompt, schema: 'question' });
 };
+
+// FIX: Add missing continueChat function for the AI Chatbot.
+export const continueChat = async (history: any[], systemInstruction: string): Promise<string> => {
+    try {
+        const response = await fetch('/api/gemini/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history, systemInstruction }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `API request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        return data.text; // The chat endpoint returns { text: '...' }
+    } catch (error) {
+        console.error('Gemini API proxy error at /api/gemini/chat:', error);
+        throw error;
+    }
+};

@@ -479,7 +479,7 @@ const MessageInput = ({ onSendMessage, replyTo, onClearReply, disabled, openFile
 };
 
 const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBack: () => void; }) => {
-    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation, uploadFile } = useDataContext();
+    const { currentUser, getMessagesForConversation, sendMessage, addReaction, typingStatus, users, addUserToConversation, uploadFile, isApiLoading } = useDataContext();
     const { startCall, addToast } = useUI();
     const [replyTo, setReplyTo] = useState<Message | null>(null);
     const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
@@ -496,14 +496,12 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
     useLayoutEffect(() => {
         const container = chatContainerRef.current;
         if (container) {
-            // Adjust scroll for infinite loading
             if (prevScrollHeightRef.current !== null) {
                 container.scrollTop = container.scrollHeight - prevScrollHeightRef.current;
                 prevScrollHeightRef.current = null;
                 return;
             }
     
-            // Determine if auto-scroll is needed
             const lastMessage = displayedMessages[displayedMessages.length - 1];
             const isOwnMessage = lastMessage?.senderId === currentUser?.id;
             const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 150;
@@ -601,7 +599,7 @@ const ChatWindow = ({ conversation, onBack }: { conversation: Conversation; onBa
                 </div>
             </main>
             {canSend ? (
-                <MessageInput onSendMessage={handleSendMessage} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} />
+                <MessageInput onSendMessage={handleSendMessage} replyTo={replyTo} onClearReply={() => setReplyTo(null)} openFileDialog={open} disabled={isApiLoading}/>
             ) : (
                 <div className="bg-gray-100 dark:bg-gray-900 p-4 text-center text-sm text-gray-500 border-t dark:border-gray-700">
                     Duyuru kanalına sadece koçlar mesaj gönderebilir.
@@ -767,17 +765,15 @@ export default function Messages() {
         [conversations, selectedConversationId]
     );
 
-    // New state for animation handling
     const [renderedConversation, setRenderedConversation] = useState(selectedConversation);
 
     useEffect(() => {
         if (selectedConversation) {
             setRenderedConversation(selectedConversation);
         } else {
-            // Wait for the slide-out animation to finish before removing the component from the DOM
             const timer = setTimeout(() => {
                 setRenderedConversation(undefined);
-            }, 300); // This duration should match the transition duration
+            }, 300); 
             return () => clearTimeout(timer);
         }
     }, [selectedConversation]);
@@ -792,7 +788,6 @@ export default function Messages() {
     
     return (
         <div className="relative h-[calc(100vh-128px)] lg:h-[calc(100vh-96px)] bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden lg:flex">
-            {/* Contact List Wrapper */}
             <div className={`
                 w-full lg:w-1/3 xl:w-1/4 border-r dark:border-gray-700
                 transition-transform duration-300 ease-in-out
@@ -806,7 +801,6 @@ export default function Messages() {
                 />
             </div>
 
-            {/* Chat Window Wrapper */}
             <div className={`
                 w-full lg:w-2/3 xl:w-3/4
                 transition-transform duration-300 ease-in-out

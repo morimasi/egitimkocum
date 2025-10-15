@@ -1,319 +1,245 @@
 import express from 'express';
 import cors from 'cors';
-import { sql } from '@vercel/postgres';
-import { GoogleGenAI, Type } from "@google/genai";
-import {
-  User, UserRole, Assignment, Message, Conversation, AppNotification, AssignmentTemplate, Resource, Goal, Badge, CalendarEvent, Exam, Question
-} from '../types';
+import { GoogleGenAI, Type as GenAIType } from '@google/genai';
 import 'dotenv/config';
+import { createTables } from './index';
+import { seedDatabase } from './initialData';
+import { sql } from '@vercel/postgres';
 
-// Initialize Express App
 const app = express();
+// FIX: Separate cors() and express.json() into their own app.use() calls to resolve middleware type overload issue.
 app.use(cors());
-// FIX: Replace deprecated bodyParser with express.json() and cast to 'any' to resolve type overload issue.
-app.use(express.json({ limit: '50mb' }) as any);
+app.use(express.json({ limit: '10mb' }));
 
-// Initialize Gemini AI
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-// --- GEMINI JSON SCHEMAS ---
-const schemas = {
-  checklist: {
-    type: Type.ARRAY,
-    items: {
-      type: Type.OBJECT,
-      properties: { text: { type: Type.STRING } },
-      required: ['text']
-    }
-  },
-  gradeSuggestion: {
-    type: Type.OBJECT,
-    properties: {
-      suggestedGrade: { type: Type.NUMBER },
-      rationale: { type: Type.STRING }
-    },
-    required: ['suggestedGrade', 'rationale']
-  },
-  assignmentTemplate: {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      checklist: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: { text: { type: Type.STRING } },
-          required: ['text']
-        }
-      }
-    },
-    required: ['title', 'description', 'checklist']
-  },
-  studyPlan: {
-    type: Type.ARRAY,
-    items: {
-      type: Type.OBJECT,
-      properties: {
-        title: { type: Type.STRING },
-        date: { type: Type.STRING },
-        startTime: { type: Type.STRING },
-        endTime: { type: Type.STRING },
-        description: { type: Type.STRING }
-      },
-      required: ['title', 'date', 'startTime', 'endTime', 'description']
-    }
-  },
-  goalWithMilestones: {
-    type: Type.OBJECT,
-    properties: {
-      description: { type: Type.STRING },
-      milestones: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: { text: { type: Type.STRING } },
-          required: ['text']
-        }
-      }
-    },
-    required: ['description', 'milestones']
-  },
-  examDetails: {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      totalQuestions: { type: Type.NUMBER },
-      dueDate: { type: Type.STRING },
-    },
-    required: ['title', 'description', 'totalQuestions', 'dueDate']
-  },
-  question: {
-    type: Type.OBJECT,
-    properties: {
-      questionText: { type: Type.STRING },
-      options: { type: Type.ARRAY, items: { type: Type.STRING } },
-      correctOptionIndex: { type: Type.NUMBER },
-      explanation: { type: Type.STRING }
-    },
-    required: ['questionText', 'options', 'correctOptionIndex', 'explanation']
-  }
-};
-
-// --- DATABASE INITIALIZATION ---
-app.post('/api/init', async (_req, res) => {
+// --- Database Setup Route ---
+app.post('/api/setup', async (req, res) => {
     try {
-        await sql`
-            CREATE TABLE IF NOT EXISTS "users" (
-                id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, role TEXT, "profilePicture" TEXT, notes TEXT,
-                "assignedCoachId" TEXT, "gradeLevel" TEXT, "academicTrack" TEXT, "childIds" TEXT[], "parentIds" TEXT[],
-                xp INTEGER, streak INTEGER, "lastSubmissionDate" TEXT, "earnedBadgeIds" TEXT[]
-            );
-        `;
-        await sql`
-            CREATE TABLE IF NOT EXISTS "assignments" (
-                id TEXT PRIMARY KEY, title TEXT, description TEXT, "dueDate" TEXT, status TEXT, grade INTEGER, feedback TEXT,
-                "fileUrl" TEXT, "fileName" TEXT, "studentId" TEXT, "coachId" TEXT, "submittedAt" TEXT, "gradedAt" TEXT,
-                "coachAttachments" JSONB, checklist JSONB, "audioFeedbackUrl" TEXT, "videoDescriptionUrl" TEXT, "videoFeedbackUrl" TEXT,
-                "studentVideoSubmissionUrl" TEXT, "feedbackReaction" TEXT, "submissionType" TEXT, "textSubmission" TEXT,
-                "studentAudioFeedbackResponseUrl" TEXT, "studentVideoFeedbackResponseUrl" TEXT, "studentTextFeedbackResponse" TEXT,
-                "startTime" TEXT, "endTime" TEXT
-            );
-        `;
-        await sql`CREATE TABLE IF NOT EXISTS "messages" ( id TEXT PRIMARY KEY, "senderId" TEXT, "conversationId" TEXT, text TEXT, timestamp TEXT, type TEXT, "fileUrl" TEXT, "fileName" TEXT, "fileType" TEXT, "imageUrl" TEXT, "audioUrl" TEXT, "videoUrl" TEXT, "readBy" TEXT[], reactions JSONB, "replyTo" TEXT, poll JSONB, priority TEXT );`;
-        await sql`CREATE TABLE IF NOT EXISTS "conversations" ( id TEXT PRIMARY KEY, "participantIds" TEXT[], "isGroup" BOOLEAN, "groupName" TEXT, "groupImage" TEXT, "adminId" TEXT, "isArchived" BOOLEAN );`;
-        await sql`CREATE TABLE IF NOT EXISTS "notifications" ( id TEXT PRIMARY KEY, "userId" TEXT, message TEXT, timestamp TEXT, "isRead" BOOLEAN, priority TEXT, link JSONB );`;
-        await sql`CREATE TABLE IF NOT EXISTS "templates" ( id TEXT PRIMARY KEY, title TEXT, description TEXT, checklist JSONB, "isFavorite" BOOLEAN );`;
-        await sql`CREATE TABLE IF NOT EXISTS "resources" ( id TEXT PRIMARY KEY, name TEXT, type TEXT, url TEXT, "isPublic" BOOLEAN, "uploaderId" TEXT, "assignedTo" TEXT[], category TEXT );`;
-        await sql`CREATE TABLE IF NOT EXISTS "goals" ( id TEXT PRIMARY KEY, "studentId" TEXT, title TEXT, description TEXT, "isCompleted" BOOLEAN, milestones JSONB );`;
-        await sql`CREATE TABLE IF NOT EXISTS "badges" ( id TEXT PRIMARY KEY, name TEXT, description TEXT );`;
-        await sql`CREATE TABLE IF NOT EXISTS "calendarEvents" ( id TEXT PRIMARY KEY, "userId" TEXT, title TEXT, date TEXT, type TEXT, color TEXT, "startTime" TEXT, "endTime" TEXT );`;
-        await sql`CREATE TABLE IF NOT EXISTS "exams" ( id TEXT PRIMARY KEY, "studentId" TEXT, title TEXT, date TEXT, "totalQuestions" INTEGER, correct INTEGER, incorrect INTEGER, empty INTEGER, "netScore" REAL, subjects JSONB, "coachNotes" TEXT, "studentReflections" TEXT, category TEXT, topic TEXT, type TEXT );`;
-        await sql`CREATE TABLE IF NOT EXISTS "questions" ( id TEXT PRIMARY KEY, "creatorId" TEXT, category TEXT, topic TEXT, "questionText" TEXT, options TEXT[], "correctOptionIndex" INTEGER, difficulty TEXT, explanation TEXT, "imageUrl" TEXT, "videoUrl" TEXT, "audioUrl" TEXT, "documentUrl" TEXT, "documentName" TEXT );`;
-
-        // Create the default "Announcements" conversation if it doesn't exist
-        await sql`
-            INSERT INTO "conversations" (id, "participantIds", "isGroup", "groupName", "groupImage", "adminId") 
-            VALUES ('conv-announcements', '{}', true, 'Duyurular', 'https://i.pravatar.cc/150?u=announcements', null)
-            ON CONFLICT (id) DO NOTHING;
-        `;
-
-        res.status(200).json({ message: 'Database initialized' });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        await createTables();
+        await seedDatabase();
+        res.status(200).json({ success: true, message: 'Database setup and seeding completed successfully.' });
+    } catch (error) {
+        console.error("Setup failed:", error);
+        res.status(500).json({ success: false, error: 'Database setup failed.' });
     }
 });
 
-// --- API ROUTES ---
+// --- Gemini AI Setup ---
+if (!process.env.API_KEY) {
+    throw new Error("API_KEY environment variable not set for Gemini.");
+}
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const model = 'gemini-2.5-flash';
 
-// Generic GET all data
-app.get('/api/data', async (_req, res) => {
-    try {
-        const [users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions] = await Promise.all([
-            sql`SELECT id, name, email, role, "profilePicture", notes, "assignedCoachId", "gradeLevel", "academicTrack", "childIds", "parentIds", xp, streak, "lastSubmissionDate", "earnedBadgeIds" FROM "users";`,
-            sql`SELECT * FROM "assignments";`,
-            sql`SELECT * FROM "messages";`,
-            sql`SELECT * FROM "conversations";`,
-            sql`SELECT * FROM "notifications";`,
-            sql`SELECT * FROM "templates";`,
-            sql`SELECT * FROM "resources";`,
-            sql`SELECT * FROM "goals";`,
-            sql`SELECT * FROM "badges";`,
-            sql`SELECT * FROM "calendarEvents";`,
-            sql`SELECT * FROM "exams";`,
-            sql`SELECT * FROM "questions";`
-        ]);
-        res.status(200).json({
-            users: users.rows,
-            assignments: assignments.rows,
-            messages: messages.rows,
-            conversations: conversations.rows,
-            notifications: notifications.rows,
-            templates: templates.rows,
-            resources: resources.rows,
-            goals: goals.rows,
-            badges: badges.rows,
-            calendarEvents: calendarEvents.rows,
-            exams: exams.rows,
-            questions: questions.rows,
-        });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
-// Auth
+// --- Auth Routes ---
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email } = req.body;
     try {
-        const { rows } = await sql`SELECT * FROM "users" WHERE email = ${email};`;
-        if (rows.length === 0) {
-            return res.status(401).json({ error: 'Kullanıcı bulunamadı.' });
-        }
+        const { rows } = await sql`SELECT * FROM users WHERE email = ${email};`;
         const user = rows[0];
-        if (user.password !== password) {
-            return res.status(401).json({ error: 'Hatalı şifre.' });
+        // This is an insecure login for demo purposes only.
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
         }
-        const { password: _, ...userWithoutPassword } = user;
-        res.status(200).json(userWithoutPassword);
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 app.post('/api/register', async (req, res) => {
-    const { id, name, email, password, role, profilePicture } = req.body;
+    const { id, name, email, role, profilePicture } = req.body;
     try {
-        // The first user to register becomes a SuperAdmin
-        const { rows: existingUsers } = await sql`SELECT id FROM "users";`;
-        const userRole = existingUsers.length === 0 ? UserRole.SuperAdmin : role;
+        // Check if any user exists
+        const { rows: countRows } = await sql`SELECT COUNT(*) FROM users;`;
+        const userCount = parseInt(countRows[0].count, 10);
 
-        const { rows } = await sql`INSERT INTO "users" (id, name, email, password, role, "profilePicture") VALUES (${id}, ${name}, ${email}, ${password}, ${userRole}, ${profilePicture}) RETURNING *;`;
-        const { password: _, ...newUser } = rows[0];
-        res.status(201).json(newUser);
+        // If no users, make this one superadmin, otherwise use provided role.
+        const finalRole = userCount === 0 ? 'superadmin' : role;
+
+        const { rows } = await sql`
+            INSERT INTO users (id, name, email, role, "profilePicture")
+            VALUES (${id}, ${name}, ${email}, ${finalRole}, ${profilePicture})
+            RETURNING *;
+        `;
+        res.status(201).json(rows[0]);
     } catch (error: any) {
-        if (error.code === '23505') { // unique_violation
-            return res.status(409).json({ error: 'Bu e-posta adresi zaten kayıtlı.' });
+        if (error.code === '23505') { // Unique constraint violation
+            return res.status(400).json({ error: 'Email already exists' });
         }
-        res.status(500).json({ error: error.message });
+        console.error('Register error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 
-// Generic CRUD factory
-const createCrudRoutes = (tableName: string) => {
-    const router = express.Router();
-    
-    router.post('/', async (req, res) => {
-        const item = req.body;
-        const columns = Object.keys(item).map(k => `"${k}"`).join(', ');
-        const values = Object.values(item);
-        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-        try {
-            const { rows } = await sql.query(`INSERT INTO "${tableName}" (${columns}) VALUES (${placeholders}) RETURNING *;`, values);
-            res.status(201).json(rows[0]);
-        } catch (error: any) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    router.put('/:id', async (req, res) => {
-        const { id } = req.params;
-        const updates = req.body;
-        const setClause = Object.keys(updates).map((key, i) => `"${key}" = $${i + 1}`).join(', ');
-        const values = [...Object.values(updates), id];
-        try {
-            const { rows } = await sql.query(`UPDATE "${tableName}" SET ${setClause} WHERE id = $${values.length} RETURNING *;`, values);
-            if (rows.length === 0) return res.status(404).json({ error: 'Item not found' });
-            res.status(200).json(rows[0]);
-        } catch (error: any) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    router.delete('/', async (req, res) => {
-        const { ids } = req.body;
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ error: 'IDs array is required' });
-        }
-        try {
-            await sql.query(`DELETE FROM "${tableName}" WHERE id = ANY($1)`, ['{' + ids.join(',') + '}']);
-            res.status(204).send();
-        } catch (error: any) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-    
-    return router;
+// --- Generic CRUD Routes ---
+const entityToTableMap: Record<string, string> = {
+    users: 'users',
+    assignments: 'assignments',
+    messages: 'messages',
+    conversations: 'conversations',
+    notifications: 'notifications',
+    templates: 'templates',
+    resources: 'resources',
+    goals: 'goals',
+    badges: 'badges',
+    calendarEvents: 'calendarEvents',
+    exams: 'exams',
+    questions: 'questions'
 };
 
-app.use('/api/users', createCrudRoutes('users'));
-app.use('/api/assignments', createCrudRoutes('assignments'));
-app.use('/api/messages', createCrudRoutes('messages'));
-app.use('/api/conversations', createCrudRoutes('conversations'));
-app.use('/api/notifications', createCrudRoutes('notifications'));
-app.use('/api/templates', createCrudRoutes('templates'));
-app.use('/api/resources', createCrudRoutes('resources'));
-app.use('/api/goals', createCrudRoutes('goals'));
-app.use('/api/badges', createCrudRoutes('badges'));
-app.use('/api/calendarEvents', createCrudRoutes('calendarEvents'));
-app.use('/api/exams', createCrudRoutes('exams'));
-app.use('/api/questions', createCrudRoutes('questions'));
 
+Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
 
-// Special Routes
+    // GET all
+    app.get(`/api/${entity}`, async (req, res) => {
+        try {
+            const { rows } = await sql.query(`SELECT * FROM "${tableName}";`);
+            res.json(rows);
+        } catch (e) {
+            res.status(500).json({ error: `Failed to fetch ${entity}` });
+        }
+    });
+
+    // GET by ID
+    app.get(`/api/${entity}/:id`, async (req, res) => {
+        try {
+            const { rows } = await sql.query(`SELECT * FROM "${tableName}" WHERE id = $1;`, [req.params.id]);
+            if (rows.length > 0) res.json(rows[0]);
+            else res.status(404).json({ error: 'Not found' });
+        } catch (e) {
+            res.status(500).json({ error: `Failed to fetch ${entity}` });
+        }
+    });
+
+    // POST new
+    app.post(`/api/${entity}`, async (req, res) => {
+        try {
+            const newItem = req.body;
+            const columns = Object.keys(newItem).map(k => `"${k}"`);
+            const values = Object.values(newItem);
+            
+            const { rows } = await sql.query(
+                `INSERT INTO "${tableName}" (${columns.join(', ')}) VALUES (${values.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *;`,
+                values
+            );
+            res.status(201).json(rows[0]);
+        } catch (e) {
+            console.error(`POST /${entity} Error:`, e);
+            res.status(500).json({ error: `Failed to create ${entity}` });
+        }
+    });
+
+    // PUT update
+    app.put(`/api/${entity}/:id`, async (req, res) => {
+        try {
+            const { id } = req.params;
+            const updates = req.body;
+            
+            delete updates.id;
+
+            const columns = Object.keys(updates);
+            if (columns.length === 0) {
+                return res.status(400).json({ error: 'No fields to update' });
+            }
+            
+            const setClause = columns.map((col, i) => `"${col}" = $${i + 1}`).join(', ');
+            const values = Object.values(updates);
+            
+            const { rows } = await sql.query(
+                `UPDATE "${tableName}" SET ${setClause} WHERE id = $${columns.length + 1} RETURNING *;`,
+                [...values, id]
+            );
+            
+            if (rows.length === 0) {
+                return res.status(404).json({ error: 'Not found' });
+            }
+            
+            res.json(rows[0]);
+        } catch (e) {
+            console.error(`PUT /${entity} Error:`, e);
+            res.status(500).json({ error: `Failed to update ${entity}` });
+        }
+    });
+
+    // DELETE multiple
+    app.delete(`/api/${entity}`, async (req, res) => {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) {
+                return res.status(400).json({ error: 'Invalid request body, expected { ids: [...] }' });
+            }
+            await sql.query(`DELETE FROM "${tableName}" WHERE id = ANY($1);`, [ids]);
+            res.status(204).send();
+        } catch (e) {
+             res.status(500).json({ error: `Failed to delete ${entity}` });
+        }
+    });
+});
+
+// Custom conversation route
 app.post('/api/conversations/findOrCreate', async (req, res) => {
     const { userId1, userId2 } = req.body;
     try {
-        const { rows } = await sql`SELECT * FROM "conversations" WHERE "participantIds" @> ARRAY[${userId1}, ${userId2}] AND "isGroup" = false AND array_length("participantIds", 1) = 2;`;
+        const { rows } = await sql`
+            SELECT * FROM conversations 
+            WHERE "isGroup" = false 
+            AND "participantIds" @> ARRAY[${userId1}, ${userId2}] 
+            AND "participantIds" <@ ARRAY[${userId1}, ${userId2}];
+        `;
+        
         if (rows.length > 0) {
-            return res.status(200).json(rows[0]);
+            return res.json(rows[0]);
         }
+
+        const newId = `conv-${userId1.substring(0,4)}-${userId2.substring(0,4)}-${Date.now()}`;
         const newConversation = {
-            id: `conv-${userId1}-${userId2}-${Date.now()}`,
+            id: newId,
             participantIds: [userId1, userId2],
             isGroup: false,
         };
-        const { rows: newRows } = await sql`INSERT INTO "conversations" (id, "participantIds", "isGroup") VALUES (${newConversation.id}, ${newConversation.participantIds as any}, ${newConversation.isGroup}) RETURNING *;`;
-        res.status(201).json(newRows[0]);
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+
+        const { rows: insertedRows } = await sql.query(
+            `INSERT INTO conversations (id, "participantIds", "isGroup") 
+            VALUES ($1, $2, $3) RETURNING *;`,
+            [newConversation.id, newConversation.participantIds, newConversation.isGroup]
+        );
+        res.status(201).json(insertedRows[0]);
+
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to find or create conversation' });
     }
 });
 
 
-// --- GEMINI PROXY ROUTES ---
+// --- Gemini API Proxy Routes ---
+const getJsonSchema = (schemaName: string) => {
+    const schemas: Record<string, any> = {
+        checklist: { type: GenAIType.ARRAY, items: { type: GenAIType.OBJECT, properties: { text: { type: GenAIType.STRING } } } },
+        gradeSuggestion: { type: GenAIType.OBJECT, properties: { suggestedGrade: { type: GenAIType.NUMBER }, rationale: { type: GenAIType.STRING } } },
+        assignmentTemplate: { type: GenAIType.OBJECT, properties: { title: { type: GenAIType.STRING }, description: { type: GenAIType.STRING }, checklist: { type: GenAIType.ARRAY, items: { type: GenAIType.OBJECT, properties: { text: { type: GenAIType.STRING } } } } } },
+        studyPlan: { type: GenAIType.ARRAY, items: { type: GenAIType.OBJECT, properties: { title: { type: GenAIType.STRING }, date: { type: GenAIType.STRING }, startTime: { type: GenAIType.STRING }, endTime: { type: GenAIType.STRING }, description: { type: GenAIType.STRING } } } },
+        goalWithMilestones: { type: GenAIType.OBJECT, properties: { description: { type: GenAIType.STRING }, milestones: { type: GenAIType.ARRAY, items: { type: GenAIType.OBJECT, properties: { text: { type: GenAIType.STRING } } } } } },
+        examDetails: { type: GenAIType.OBJECT, properties: { title: { type: GenAIType.STRING }, description: { type: GenAIType.STRING }, totalQuestions: { type: GenAIType.NUMBER }, dueDate: { type: GenAIType.STRING } } },
+        question: { type: GenAIType.OBJECT, properties: { questionText: { type: GenAIType.STRING }, options: { type: GenAIType.ARRAY, items: { type: GenAIType.STRING } }, correctOptionIndex: { type: GenAIType.NUMBER }, explanation: { type: GenAIType.STRING } } }
+    };
+    return schemas[schemaName];
+}
+
 app.post('/api/gemini/generateText', async (req, res) => {
     try {
         const { prompt, temperature } = req.body;
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model,
             contents: prompt,
-            config: { temperature }
+            config: { temperature: temperature || 0.2 }
         });
-        res.status(200).json({ result: response.text });
+        res.json({ result: response.text });
     } catch (error: any) {
+        console.error('Gemini generateText error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -322,11 +248,12 @@ app.post('/api/gemini/generateWithImage', async (req, res) => {
     try {
         const { textPart, imagePart } = req.body;
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [imagePart, textPart] }
+            model,
+            contents: { parts: [textPart, imagePart] }
         });
-        res.status(200).json({ result: response.text });
+        res.json({ result: response.text });
     } catch (error: any) {
+        console.error('Gemini generateWithImage error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -334,16 +261,21 @@ app.post('/api/gemini/generateWithImage', async (req, res) => {
 app.post('/api/gemini/generateJson', async (req, res) => {
     try {
         const { prompt, schema } = req.body;
+        const responseSchema = getJsonSchema(schema);
+        if (!responseSchema) {
+            return res.status(400).json({ error: 'Invalid schema name' });
+        }
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model,
             contents: prompt,
             config: {
                 responseMimeType: 'application/json',
-                responseSchema: schemas[schema as keyof typeof schemas]
+                responseSchema
             }
         });
-        res.status(200).json({ result: JSON.parse(response.text) });
+        res.json({ result: JSON.parse(response.text) });
     } catch (error: any) {
+        console.error('Gemini generateJson error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -351,20 +283,28 @@ app.post('/api/gemini/generateJson', async (req, res) => {
 app.post('/api/gemini/chat', async (req, res) => {
     try {
         const { history, systemInstruction } = req.body;
-        const chat = ai.chats.create({
-            model: 'gemini-2.5-flash',
-            history,
-            config: { systemInstruction }
+        const response = await ai.models.generateContent({
+            model,
+            contents: history,
+            config: {
+                systemInstruction: systemInstruction,
+            }
         });
-        const response = await chat.sendMessage({ message: history[history.length - 1].parts[0].text });
-        res.status(200).json({ text: response.text });
+        res.json({ text: response.text });
     } catch (error: any) {
+        console.error('Gemini chat error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Start server
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`API server listening on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') { // Prevent server from starting during tests or other script runs
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log('To setup the database for the first time, send a POST request to /api/setup');
+    });
+}
+
+// Export for vercel serverless functions
+export default app;

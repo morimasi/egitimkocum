@@ -274,3 +274,13 @@ export interface Exam {
     topic: string; // e.g., 'Türev', 'TYT'
     type: 'deneme' | 'konu-tarama';
 }
+
+export const getAcademicTrackLabel = (track: AcademicTrack): string => {
+    switch (track) {
+        case AcademicTrack.Sayisal: return 'Sayısal';
+        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
+        case AcademicTrack.Sozel: return 'Sözel';
+        case AcademicTrack.Dil: return 'Dil';
+        default: return '';
+    }
+};

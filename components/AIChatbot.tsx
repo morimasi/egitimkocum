@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { BotIcon, XIcon, SendIcon } from './Icons';
 import { useDataContext } from '../contexts/DataContext';
+import { continueChat } from '../services/geminiService';
 
 type Message = {
     sender: 'user' | 'ai';
@@ -23,7 +24,7 @@ const AIChatbot = () => {
         if (isOpen && messages.length === 0) {
             setMessages([{ sender: 'ai', text: "Selamlar! Ben çalışma arkadaşın Mahmut Hoca. Hangi konuda yardıma ihtiyacın var?" }]);
         }
-    }, [isOpen]);
+    }, [isOpen, messages.length]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,31 +34,19 @@ const AIChatbot = () => {
         if (!input.trim() || isLoading) return;
 
         const userMessage: Message = { sender: 'user', text: input };
-        setMessages(prev => [...prev, userMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setInput('');
         setIsLoading(true);
 
         try {
-            const history = [...messages, userMessage].map(msg => ({
+            const history = newMessages.map(msg => ({
                 role: msg.sender === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.text }]
             }));
 
-            const response = await fetch('/api/gemini/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    history,
-                    systemInstruction
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error("API isteği başarısız oldu");
-            }
-
-            const data = await response.json();
-            setMessages(prev => [...prev, { sender: 'ai', text: data.text }]);
+            const responseText = await continueChat(history, systemInstruction);
+            setMessages(prev => [...prev, { sender: 'ai', text: responseText }]);
         } catch (error) {
             setMessages(prev => [...prev, { sender: 'ai', text: "Üzgünüm, bir hata oluştu." }]);
         } finally {

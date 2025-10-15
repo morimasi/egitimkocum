@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AcademicTrack, AssignmentTemplate } from '../types';
+import { UserRole, Assignment, AssignmentStatus, User, ChecklistItem, SubmissionType, AssignmentTemplate, getAcademicTrackLabel } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { SparklesIcon, XIcon, AssignmentsIcon as NoAssignmentsIcon, TrashIcon, ArrowLeftIcon, ImageIcon, BotIcon, SendIcon, AlertTriangleIcon, PaperclipIcon, VideoIcon, ClipboardListIcon, CheckCircleIcon } from '../components/Icons';
 import { useUI } from '../contexts/UIContext';
-import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade, getVisualAssignmentHelp } from '../services/geminiService';
+import { generateAssignmentDescription, generateSmartFeedback, generateAssignmentChecklist, suggestGrade } from '../services/geminiService';
 import AudioRecorder from '../components/AudioRecorder';
 import FileUpload from '../components/FileUpload';
 import EmptyState from '../components/EmptyState';
@@ -15,21 +15,40 @@ import { useDropzone } from 'react-dropzone';
 import { SkeletonText } from '../components/SkeletonLoader';
 
 
+type ChatPart = { text: string } | { inlineData: { mimeType: string; data: string }};
+type ChatMessage = {
+    sender: 'user' | 'ai';
+    parts: ChatPart[];
+};
+
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = error => reject(error);
+    });
+};
+
+
 const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmission }: { 
     isOpen: boolean; 
     onClose: () => void; 
     assignment: Assignment;
     onUseAsSubmission: (submissionText: string) => void;
 }) => {
-    const [messages, setMessages] = useState<{ sender: 'user' | 'ai'; text: string }[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [imageToUpload, setImageToUpload] = useState<{ file: File; preview: string } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const { addToast } = useUI();
 
     useEffect(() => {
         if (isOpen) {
-            setMessages([{ sender: 'ai', text: "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Sana yardımcı olmak için buradayım!" }]);
+            setMessages([{ sender: 'ai', parts: [{ text: "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Bir görsel yükleyebilir veya sorunu yazabilirsin!" }] }]);
+            setInput('');
+            setImageToUpload(null);
         }
     }, [isOpen]);
 
@@ -37,18 +56,52 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            const file = acceptedFiles[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageToUpload({ file, preview: reader.result as string });
+            };
+            reader.readAsDataURL(file);
+        }
+    }, []);
+    const { getRootProps, getInputProps, open, isDragActive } = useDropzone({ onDrop, accept: { 'image/*': [] }, multiple: false, noClick: true, noKeyboard: true });
+
     const handleSendMessage = async () => {
-        if (!input.trim() || isLoading) return;
-        const userMessage = { sender: 'user' as const, text: input };
+        if ((!input.trim() && !imageToUpload) || isLoading) return;
+        
+        const userParts: ChatPart[] = [];
+        
+        if (imageToUpload) {
+            try {
+                const base64Data = await fileToBase64(imageToUpload.file);
+                userParts.push({
+                    inlineData: {
+                        mimeType: imageToUpload.file.type,
+                        data: base64Data,
+                    },
+                });
+            } catch (error) {
+                addToast("Görsel işlenirken bir hata oluştu.", "error");
+                return;
+            }
+        }
+        if (input.trim()) {
+            userParts.push({ text: input });
+        }
+
+        const userMessage: ChatMessage = { sender: 'user', parts: userParts };
         const newMessages = [...messages, userMessage];
         setMessages(newMessages);
         setInput('');
+        setImageToUpload(null);
         setIsLoading(true);
 
         try {
             const history = newMessages.map(msg => ({
                 role: msg.sender === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.text }]
+                parts: msg.parts
             }));
 
             const response = await fetch('/api/gemini/chat', {
@@ -56,7 +109,7 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     history,
-                    systemInstruction: `Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Bir öğrenciye "${assignment.title}" başlıklı ödevde yardımcı oluyorsun. Ödevin açıklaması: "${assignment.description}". Öğrenci sana bu ödevle ilgili sorular soracak. Ona doğrudan cevapları verme, bunun yerine düşünmesini sağlayacak ipuçları ver, yol göster ve konuyu anlamasına yardımcı ol. Cesaretlendirici ve samimi bir dil kullan.`
+                    systemInstruction: `Senin adın Mahmut Hoca. Sen bir 'Çalışma Arkadaşı'sın. Bir öğrenciye "${assignment.title}" başlıklı ödevde yardımcı oluyorsun. Ödevin açıklaması: "${assignment.description}". Öğrenci sana bu ödevle ilgili sorular soracak, bazen de çözemediği bir sorunun resmini gönderecek. Ona doğrudan cevapları verme, bunun yerine düşünmesini sağlayacak ipuçları ver, yol göster ve konuyu anlamasına yardımcı ol. Cesaretlendirici ve samimi bir dil kullan.`
                 })
             });
 
@@ -65,9 +118,9 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
             }
             
             const data = await response.json();
-            setMessages(prev => [...prev, { sender: 'ai', text: data.text }]);
+            setMessages(prev => [...prev, { sender: 'ai', parts: [{ text: data.text }] }]);
         } catch (error) {
-            setMessages(prev => [...prev, { sender: 'ai', text: "Üzgünüm, bir hata oluştu." }]);
+            setMessages(prev => [...prev, { sender: 'ai', parts: [{ text: "Üzgünüm, bir hata oluştu." }] }]);
         } finally {
             setIsLoading(false);
         }
@@ -75,9 +128,11 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
     
     const handleUseAsSubmission = () => {
         const aiResponses = messages
-            .filter(msg => msg.sender === 'ai' && msg.text !== "Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Sana yardımcı olmak için buradayım!")
-            .map(msg => msg.text)
-            .join('\n\n---\n\n');
+            .filter(msg => msg.sender === 'ai')
+            .map(msg => msg.parts.filter((p): p is { text: string } => 'text' in p).map(p => p.text).join('\n'))
+            .join('\n\n---\n\n')
+            .replace("Bu ödevle ilgili aklına takılan ne varsa sorabilirsin. Bir görsel yükleyebilir veya sorunu yazabilirsin!", "") // remove initial message
+            .trim();
         
         if (!aiResponses.trim()) {
             addToast("Aktarılacak bir yapay zeka yanıtı bulunmuyor.", "info");
@@ -90,13 +145,25 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Yardım: ${assignment.title}`}>
-            <div className="flex flex-col h-[60vh]">
+            <div {...getRootProps({ className: "flex flex-col h-[60vh]" })}>
+                <input {...getInputProps()} />
                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex items-end gap-2.5 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                             {msg.sender === 'ai' && <BotIcon className="w-8 h-8 p-1.5 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"/>}
                             <div className={`px-4 py-2 rounded-2xl max-w-[80%] ${msg.sender === 'user' ? 'bg-primary-600 text-white rounded-br-lg' : 'bg-gray-200 dark:bg-gray-700 rounded-bl-lg'}`}>
-                                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                                {msg.parts.map((part, partIndex) => {
+                                    if ('inlineData' in part) {
+                                        return <img key={partIndex} src={`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`} alt="Uploaded content" className="max-w-full rounded-lg mb-2" />;
+                                    }
+                                    return null;
+                                })}
+                                {msg.parts.map((part, partIndex) => {
+                                    if ('text' in part) {
+                                        return <p key={partIndex} className="text-sm whitespace-pre-wrap">{part.text}</p>;
+                                    }
+                                    return null;
+                                })}
                             </div>
                         </div>
                     ))}
@@ -108,6 +175,11 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
                             </div>
                         </div>
                     )}
+                    {isDragActive && (
+                        <div className="absolute inset-0 bg-primary-500/20 backdrop-blur-sm border-4 border-dashed border-primary-500 rounded-lg flex items-center justify-center pointer-events-none z-10">
+                            <p className="text-primary-800 dark:text-primary-100 font-bold text-xl">Görseli buraya bırakın</p>
+                        </div>
+                    )}
                     <div ref={messagesEndRef} />
                 </div>
                 <div className="p-3 border-t dark:border-gray-700 flex-shrink-0">
@@ -117,9 +189,16 @@ const AssignmentHelpChatModal = ({ isOpen, onClose, assignment, onUseAsSubmissio
                     >
                         Bu Bilgileri Ödev Metni Olarak Kullan
                     </button>
+                    {imageToUpload && (
+                        <div className="relative mb-2 w-24">
+                            <img src={imageToUpload.preview} alt="Preview" className="rounded-lg" />
+                            <button onClick={() => setImageToUpload(null)} className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full p-0.5"><XIcon className="w-4 h-4" /></button>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
+                        <button onClick={open} className="p-2 text-gray-500 hover:text-primary-500"><PaperclipIcon className="w-5 h-5"/></button>
                         <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' ? handleSendMessage() : null} placeholder="Bir soru sorun..." className="flex-1 bg-transparent focus:outline-none" disabled={isLoading}/>
-                        <button onClick={handleSendMessage} disabled={isLoading || !input.trim()} className="p-2 text-primary-500 disabled:text-gray-400"><SendIcon className="w-5 h-5" /></button>
+                        <button onClick={handleSendMessage} disabled={isLoading || (!input.trim() && !imageToUpload)} className="p-2 text-primary-500 disabled:text-gray-400"><SendIcon className="w-5 h-5" /></button>
                     </div>
                 </div>
             </div>
@@ -142,8 +221,6 @@ const getStatusChip = (status: AssignmentStatus) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>{text[status]}</span>;
 };
 
-// FIX: The `title` prop is not a valid prop for the Icon components, causing a TypeScript error.
-// The icons are wrapped in a `span` element and the `title` attribute is moved to the `span` to provide a tooltip on hover.
 const SubmissionTypeIcon = ({ assignment }: { assignment: Assignment }) => {
     if (assignment.videoDescriptionUrl) {
         return <span title="Video Ödevi"><VideoIcon className="w-4 h-4 text-purple-500" /></span>;
@@ -219,16 +296,6 @@ const AssignmentCard = ({ assignment, onSelect, studentName, isCoach, onToggleSe
 };
 const MemoizedAssignmentCard = React.memo(AssignmentCard);
 
-const getAcademicTrackLabel = (track: AcademicTrack): string => {
-    switch (track) {
-        case AcademicTrack.Sayisal: return 'Sayısal';
-        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
-        case AcademicTrack.Sozel: return 'Sözel';
-        case AcademicTrack.Dil: return 'Dil';
-        default: return '';
-    }
-};
-
 const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen: boolean; onClose: () => void; preselectedStudentIds?: string[] | null; }) => {
     const { coach, students, addAssignment, templates } = useDataContext();
     const { addToast } = useUI();
@@ -270,7 +337,8 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     }, [students, filterGrade]);
 
     const handleSelectAll = () => {
-        const allStudentIdsInView = Object.values(availableStudents).flat().map(s => s.id);
+        // FIX: Explicitly type `s` as `User` to help TypeScript infer the correct type after `flat()`.
+        const allStudentIdsInView = Object.values(availableStudents).flat().map((s: User) => s.id);
         if (selectedStudents.length === allStudentIdsInView.length) {
             setSelectedStudents([]);
         } else {
@@ -316,8 +384,7 @@ const NewAssignmentModal = ({ isOpen, onClose, preselectedStudentIds }: { isOpen
     const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const templateId = e.target.value;
         setSelectedTemplate(templateId);
-// Fix: The 't' parameter was being inferred as 'unknown', causing a type error when accessing 't.id'. Casting to 'any' to bypass the incorrect type inference.
-        const template = templates.find((t: any) => t.id === templateId);
+        const template = templates.find((t: AssignmentTemplate) => t.id === templateId);
         if (template) {
             setTitle(template.title);
             setDescription(template.description);
@@ -501,50 +568,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
     const [studentTextFeedbackResponse, setStudentTextFeedbackResponse] = useState('');
     const [submissionFile, setSubmissionFile] = useState<File | null>(null);
 
-    // AI Help State
-    const [aiHelpImage, setAiHelpImage] = useState<File | null>(null);
-    const [aiHelpImagePreview, setAiHelpImagePreview] = useState<string | null>(null);
-    const [isGettingHelp, setIsGettingHelp] = useState(false);
-    const [aiHelpText, setAiHelpText] = useState('');
-
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        if (acceptedFiles.length > 0) {
-            const file = acceptedFiles[0];
-            setAiHelpImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setAiHelpImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
-        }
-    }, []);
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'image/*': [] }, multiple: false });
-
-    const fileToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = error => reject(error);
-        });
-    };
-
-    const handleGetAIAssistance = async () => {
-        if (!aiHelpImage || !assignment) return;
-        setIsGettingHelp(true);
-        setAiHelpText('');
-        try {
-            const base64Data = await fileToBase64(aiHelpImage);
-            const helpText = await getVisualAssignmentHelp(assignment, { base64Data, mimeType: aiHelpImage.type });
-            setAiHelpText(helpText);
-        } catch (error) {
-            console.error(error);
-            addToast("Yapay zekadan yardım alınırken bir hata oluştu.", "error");
-        } finally {
-            setIsGettingHelp(false);
-        }
-    };
-
-
     useEffect(() => {
         if (assignment) {
             setGrade(assignment.grade?.toString() || '');
@@ -557,11 +580,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
             setStudentVideoFeedbackResponseUrl(assignment.studentVideoFeedbackResponseUrl || null);
             setStudentTextFeedbackResponse(assignment.studentTextFeedbackResponse || '');
             setSubmissionFile(null);
-            // Reset AI help state
-            setAiHelpImage(null);
-            setAiHelpImagePreview(null);
-            setIsGettingHelp(false);
-            setAiHelpText('');
         }
     }, [assignment]);
 
@@ -772,31 +790,6 @@ const AssignmentDetailModal = ({ assignment, onClose, studentName, onNavigate, c
                         </div>
                     ) : null}
                 </div>
-
-                {isStudentViewing && !isSubmitted && (
-                    <div className="pt-4 border-t dark:border-slate-700 space-y-3">
-                         <h4 className="font-semibold">Görsel Yükleyerek Yardım İste 🤖</h4>
-                         <p className="text-sm text-slate-500">Bu ödevde zorlanıyor musun? Sorunun fotoğrafını yükle, yapay zeka sana ipucu versin.</p>
-                         <div {...getRootProps()} className={`p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/50' : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'}`}>
-                            <input {...getInputProps()} />
-                            {aiHelpImagePreview ? (
-                                <div className="relative">
-                                    <img src={aiHelpImagePreview} alt="Soru önizlemesi" className="max-h-40 mx-auto rounded-md"/>
-                                    <button onClick={(e) => { e.stopPropagation(); setAiHelpImage(null); setAiHelpImagePreview(null); }} className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white"><XIcon className="w-4 h-4"/></button>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                                    <ImageIcon className="w-10 h-10 mb-2"/>
-                                    <p className="font-semibold">Görseli sürükle veya seç</p>
-                                </div>
-                            )}
-                        </div>
-                        {aiHelpImage && <button onClick={handleGetAIAssistance} disabled={isGettingHelp} className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"><SparklesIcon className={`w-5 h-5 ${isGettingHelp ? 'animate-spin' : ''}`}/>{isGettingHelp ? 'Analiz Ediliyor...' : 'Yardım İste'}</button>}
-                        {isGettingHelp && <SkeletonText className="h-20 w-full mt-2"/>}
-                        {aiHelpText && <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/50 rounded-lg text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{aiHelpText}</div>}
-                    </div>
-                )}
-
 
                 {/* Grading Section */}
                 {isCoach && isSubmitted && (

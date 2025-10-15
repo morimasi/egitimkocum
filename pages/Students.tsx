@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDataContext } from '../contexts/DataContext';
-import { User, AssignmentStatus, UserRole, AcademicTrack } from '../types';
+import { User, AssignmentStatus, UserRole, AcademicTrack, getAcademicTrackLabel } from '../types';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { useUI } from '../contexts/UIContext';
@@ -14,17 +14,6 @@ import NotesTab from '../components/studentDetail/NotesTab';
 import { suggestStudentGoal } from '../services/geminiService';
 import InviteStudentModal from '../components/InviteStudentModal';
 import AIReportModal from '../components/AIReportModal';
-
-// Helper function to get display name for academic track
-const getAcademicTrackLabel = (track: AcademicTrack): string => {
-    switch (track) {
-        case AcademicTrack.Sayisal: return 'Sayısal';
-        case AcademicTrack.EsitAgirlik: return 'Eşit Ağırlık';
-        case AcademicTrack.Sozel: return 'Sözel';
-        case AcademicTrack.Dil: return 'Dil';
-        default: return '';
-    }
-};
 
 const StudentDetailModal = ({ student, onClose, onNavigate, canNavigate }: { 
     student: User | null; 

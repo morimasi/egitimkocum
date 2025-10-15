@@ -247,7 +247,6 @@ export default function Library() {
             </Card>
 
             {filteredResources.length > 0 ? (
-                // Fix: Changed from Object.entries to Object.keys to avoid potential typing issues with `map` on unknown.
                 Object.keys(categorizedResources).map(category => (
                     <div key={category}>
                         <h2 className="text-xl font-bold mb-2">{category}</h2>

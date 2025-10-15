@@ -44,10 +44,10 @@ const Tour = () => {
 
         if (isCoach) {
             baseSteps.push({
-                id: 'tour-step-4',
-                title: 'Yeni Ödev Oluşturma',
-                content: 'Öğrencilerinize yeni bir ödev atamak için bu butonu kullanabilirsiniz.',
-                position: 'bottom',
+                id: 'nav-assignments', // Changed ID to target correct element
+                title: 'Ödev Yönetimi',
+                content: 'Öğrencilerinize yeni bir ödev atamak veya mevcut ödevleri yönetmek için bu sekmeyi kullanabilirsiniz.',
+                position: 'right',
                 action: () => setActivePage('assignments'),
             });
         }
@@ -64,47 +64,63 @@ const Tour = () => {
                 step.action();
             }
 
-            const targetElement = document.getElementById(step.id);
-            if (targetElement && tooltipRef.current) {
-                const targetRect = targetElement.getBoundingClientRect();
-                const tooltip = tooltipRef.current;
-                
-                tooltip.style.display = 'block';
+            // A small delay to allow the page to re-render if action changes it
+            setTimeout(() => {
+                const targetElement = document.getElementById(step.id);
+                if (targetElement && tooltipRef.current) {
+                    const targetRect = targetElement.getBoundingClientRect();
+                    const tooltip = tooltipRef.current;
+                    
+                    tooltip.style.display = 'block';
 
-                switch (step.position) {
-                    case 'top':
-                        tooltip.style.left = `${targetRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
-                        tooltip.style.top = `${targetRect.top - tooltip.offsetHeight - 10}px`;
-                        break;
-                    case 'bottom':
-                        tooltip.style.left = `${targetRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
-                        tooltip.style.top = `${targetRect.bottom + 10}px`;
-                        break;
-                    case 'left':
-                        tooltip.style.left = `${targetRect.left - tooltip.offsetWidth - 10}px`;
-                        tooltip.style.top = `${targetRect.top + targetRect.height / 2 - tooltip.offsetHeight / 2}px`;
-                        break;
-                    case 'right':
-                        tooltip.style.left = `${targetRect.right + 10}px`;
-                        tooltip.style.top = `${targetRect.top + targetRect.height / 2 - tooltip.offsetHeight / 2}px`;
-                        break;
-                    default:
-                         tooltip.style.left = `${window.innerWidth / 2 - tooltip.offsetWidth / 2}px`;
-                         tooltip.style.top = `${window.innerHeight / 2 - tooltip.offsetHeight / 2}px`;
-                }
+                    switch (step.position) {
+                        case 'top':
+                            tooltip.style.left = `${targetRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
+                            tooltip.style.top = `${targetRect.top - tooltip.offsetHeight - 10}px`;
+                            break;
+                        case 'bottom':
+                            tooltip.style.left = `${targetRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
+                            tooltip.style.top = `${targetRect.bottom + 10}px`;
+                            break;
+                        case 'left':
+                            tooltip.style.left = `${targetRect.left - tooltip.offsetWidth - 10}px`;
+                            tooltip.style.top = `${targetRect.top + targetRect.height / 2 - tooltip.offsetHeight / 2}px`;
+                            break;
+                        case 'right':
+                            tooltip.style.left = `${targetRect.right + 10}px`;
+                            tooltip.style.top = `${targetRect.top + targetRect.height / 2 - tooltip.offsetHeight / 2}px`;
+                            break;
+                        default:
+                            tooltip.style.left = `${window.innerWidth / 2 - tooltip.offsetWidth / 2}px`;
+                            tooltip.style.top = `${window.innerHeight / 2 - tooltip.offsetHeight / 2}px`;
+                    }
 
-                targetElement.classList.add('tour-highlight');
-            }
-             // Cleanup previous highlight
-            return () => {
-                if (targetElement) {
-                     targetElement.classList.remove('tour-highlight');
+                    targetElement.classList.add('tour-highlight');
+
+                    // Cleanup previous highlight
+                    const prevStep = tourSteps[tourStep - 1];
+                    if(prevStep) {
+                        const prevTarget = document.getElementById(prevStep.id);
+                        prevTarget?.classList.remove('tour-highlight');
+                    }
                 }
-            }
+            }, 100);
+
         } else if (isTourActive) {
             endTour();
         }
-    }, [isTourActive, tourStep, tourSteps, endTour]);
+    }, [isTourActive, tourStep]);
+
+     useEffect(() => {
+        // Cleanup all highlights when tour ends
+        if (!isTourActive) {
+            tourSteps.forEach(step => {
+                const targetElement = document.getElementById(step.id);
+                targetElement?.classList.remove('tour-highlight');
+            });
+        }
+    }, [isTourActive]);
+
 
     if (!isTourActive || tourStep >= tourSteps.length) {
         return null;
@@ -137,6 +153,7 @@ const Tour = () => {
                         z-index: 9999;
                         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7);
                         border-radius: 6px;
+                        transition: box-shadow 0.3s;
                     }
                 `}</style>
             </div>

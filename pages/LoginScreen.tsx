@@ -9,23 +9,17 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
-    const { login } = useDataContext();
+    const { login, isApiLoading } = useDataContext();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-
+    
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setIsLoading(true);
-        
         try {
             await login(email, password);
         } catch (err: any) {
-            setError(err.message || 'Giriş sırasında bir hata oluştu.');
-        } finally {
-            setIsLoading(false);
+            // Hata artık apiService interceptor tarafından yakalanıp toast ile gösteriliyor.
+            console.error(err);
         }
     };
 
@@ -61,6 +55,7 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
                         onChange={e => setEmail(e.target.value)}
                         className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         placeholder="E-posta Adresi"
+                        disabled={isApiLoading}
                     />
                     <input
                         type="password"
@@ -70,17 +65,16 @@ export default function LoginScreen({ onSwitchToRegister }: LoginScreenProps) {
                         onChange={e => setPassword(e.target.value)}
                         className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         placeholder="Şifre"
+                        disabled={isApiLoading}
                     />
-
-                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                     
                     <div>
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                             className="w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+                            {isApiLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                         </button>
                     </div>
                 </form>

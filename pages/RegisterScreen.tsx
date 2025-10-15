@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef } from 'react';
 import { useDataContext } from '../contexts/DataContext';
 import { ImageIcon } from '../components/Icons';
@@ -8,13 +9,12 @@ interface RegisterScreenProps {
 }
 
 export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps) {
-    const { register } = useDataContext();
+    const { register, isApiLoading } = useDataContext();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,15 +46,12 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
         }
 
         setError('');
-        setIsLoading(true);
 
         try {
             await register(name, email, password, profilePicture);
-            // On successful registration, user is automatically logged in by DataContext.
         } catch (err: any) {
-             setError(err.message || 'Kayıt sırasında bir hata oluştu.');
-        } finally {
-            setIsLoading(false);
+             // Hata artık apiService interceptor tarafından yakalanıp toast ile gösteriliyor.
+             console.error(err);
         }
     };
 
@@ -120,7 +117,7 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="Ad Soyad"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                         />
                         <input
                             id="email-register"
@@ -132,7 +129,7 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="E-posta Adresi"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                         />
                         <input
                             id="password-register"
@@ -144,7 +141,7 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="Şifre"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                         />
                          <input
                             id="confirm-password-register"
@@ -156,17 +153,17 @@ export default function RegisterScreen({ onSwitchToLogin }: RegisterScreenProps)
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="w-full px-4 py-3 text-lg border border-slate-300 dark:border-slate-600 rounded-md placeholder-slate-500 bg-slate-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="Şifre Tekrar"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                         />
                     </div>
                     {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                     <div>
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isApiLoading}
                             className="w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-400 disabled:cursor-not-allowed shadow-primary hover:shadow-lg transition-shadow"
                         >
-                            {isLoading ? 'Kayıt Olunuyor...' : 'Kayıt Ol'}
+                            {isApiLoading ? 'Kayıt Olunuyor...' : 'Kayıt Ol'}
                         </button>
                     </div>
                 </form>

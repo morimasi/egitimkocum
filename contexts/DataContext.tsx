@@ -1,26 +1,10 @@
 import { createContext, useContext, ReactNode, useEffect, useCallback, useMemo, useState } from 'react';
 import { User, Assignment, Message, UserRole, AppNotification, AssignmentTemplate, Resource, Goal, Conversation, Badge, CalendarEvent, Exam, Question } from '../types';
 import { useUI } from './UIContext';
+import apiService, { setToastHandler } from '../services/apiService';
+import { AxiosResponse } from 'axios';
 
 const uuid = () => crypto.randomUUID();
-
-// API Helper
-const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-    const response = await fetch(`/api/${endpoint}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Bilinmeyen sunucu hatası." }));
-        throw new Error(errorData.error || `API isteği başarısız: ${response.status}`);
-    }
-    if (response.status === 204) return null; // No content for DELETE
-    return response.json();
-};
-
 
 interface DataContextType {
     currentUser: User | null;
@@ -39,6 +23,7 @@ interface DataContextType {
     exams: Exam[];
     questions: Question[];
     isLoading: boolean;
+    isApiLoading: boolean;
     isDbInitialized: boolean;
     typingStatus: { [userId: string]: boolean };
 
@@ -117,46 +102,79 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDbInitialized, setIsDbInitialized] = useState(false);
+    const [isApiLoading, setIsApiLoading] = useState(false);
+
+    useEffect(() => {
+        setToastHandler(addToast);
+    }, [addToast]);
     
-    // Initial data load and DB initialization
     useEffect(() => {
         const initialize = async () => {
             try {
-                // Step 1: Initialize DB schema
-                await apiFetch('init', { method: 'POST' });
-                
-                // Step 2: Check for a logged-in user in sessionStorage
+                await apiService.post('/api/setup');
+
+                const [
+                    usersRes, assignmentsRes, messagesRes, conversationsRes,
+                    notificationsRes, templatesRes, resourcesRes, goalsRes,
+                    badgesRes, calendarEventsRes, examsRes, questionsRes
+                ] = await Promise.all([
+                    apiService.get<User[]>('/api/users'),
+                    apiService.get<Assignment[]>('/api/assignments'),
+                    apiService.get<Message[]>('/api/messages'),
+                    apiService.get<Conversation[]>('/api/conversations'),
+                    apiService.get<AppNotification[]>('/api/notifications'),
+                    apiService.get<AssignmentTemplate[]>('/api/templates'),
+                    apiService.get<Resource[]>('/api/resources'),
+                    apiService.get<Goal[]>('/api/goals'),
+                    apiService.get<Badge[]>('/api/badges'),
+                    apiService.get<CalendarEvent[]>('/api/calendarEvents'),
+                    apiService.get<Exam[]>('/api/exams'),
+                    apiService.get<Question[]>('/api/questions')
+                ]);
+
+                setUsers(usersRes.data);
+                setAssignments(assignmentsRes.data);
+                setMessages(messagesRes.data);
+                setConversations(conversationsRes.data);
+                setNotifications(notificationsRes.data);
+                setTemplates(templatesRes.data);
+                setResources(resourcesRes.data);
+                setGoals(goalsRes.data);
+                setBadges(badgesRes.data);
+                setCalendarEvents(calendarEventsRes.data);
+                setExams(examsRes.data);
+                setQuestions(questionsRes.data);
+
                 const storedUser = sessionStorage.getItem('currentUser');
                 if (storedUser) {
-                    setCurrentUser(JSON.parse(storedUser));
+                    const parsedUser = JSON.parse(storedUser);
+                    const freshUser = usersRes.data.find(u => u.id === parsedUser.id);
+                    if (freshUser) {
+                        setCurrentUser(freshUser);
+                    } else {
+                        sessionStorage.removeItem('currentUser');
+                    }
                 }
-
-                // Step 3: Fetch all data
-                const data = await apiFetch('data');
-                setUsers(data.users);
-                setAssignments(data.assignments);
-                setMessages(data.messages);
-                setConversations(data.conversations);
-                setNotifications(data.notifications);
-                setTemplates(data.templates);
-                setResources(data.resources);
-                setGoals(data.goals);
-                setBadges(data.badges);
-                setCalendarEvents(data.calendarEvents);
-                setExams(data.exams);
-                setQuestions(data.questions);
                 
                 setIsDbInitialized(true);
             } catch (error) {
                 console.error("Initialization failed:", error);
-                addToast("Uygulama başlatılamadı. Sunucuya bağlanılamıyor.", "error");
             } finally {
                 setIsLoading(false);
             }
         };
         initialize();
-    }, [addToast]);
+    }, []);
     
+    const withApiLoading = async <T,>(promise: Promise<T>): Promise<T> => {
+        setIsApiLoading(true);
+        try {
+            return await promise;
+        } finally {
+            setIsApiLoading(false);
+        }
+    };
+
     const uploadFile = useCallback(async (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -173,10 +191,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, []);
 
     const login = useCallback(async (email: string, password: string): Promise<User | null> => {
-        const user = await apiFetch('login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
-        });
+        const response: AxiosResponse<User> = await withApiLoading(apiService.post('/api/login', { email, password }));
+        const user = response.data;
         if (user) {
             setCurrentUser(user);
             sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -191,33 +207,35 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, []);
 
     const register = useCallback(async (name: string, email: string, password: string, profilePictureFile: File | null): Promise<User | null> => {
-        const id = uuid();
-        let profilePicture = `https://i.pravatar.cc/150?u=${email}`;
-        if (profilePictureFile) {
-            profilePicture = await uploadFile(profilePictureFile);
-        }
-        const user = await apiFetch('register', {
-            method: 'POST',
-            body: JSON.stringify({ id, name, email, password, role: 'student', profilePicture }),
-        });
-        if (user) {
-            setUsers(prev => [...prev, user]);
-            setCurrentUser(user);
-            sessionStorage.setItem('currentUser', JSON.stringify(user));
-            return user;
-        }
-        return null;
+        return await withApiLoading((async () => {
+            const id = uuid();
+            let profilePicture = `https://i.pravatar.cc/150?u=${email}`;
+            if (profilePictureFile) {
+                profilePicture = await uploadFile(profilePictureFile);
+            }
+            const response: AxiosResponse<User> = await apiService.post('/api/register', { id, name, email, password, role: 'student', profilePicture });
+            const user = response.data;
+            if (user) {
+                setUsers(prev => [...prev, user]);
+                setCurrentUser(user);
+                sessionStorage.setItem('currentUser', JSON.stringify(user));
+                return user;
+            }
+            return null;
+        })());
     }, [uploadFile]);
 
     const addUser = useCallback(async (newUser: Omit<User, 'id'>): Promise<User | null> => {
         const userWithId = { ...newUser, id: uuid() };
-        const addedUser = await apiFetch('users', { method: 'POST', body: JSON.stringify(userWithId) });
+        const response: AxiosResponse<User> = await withApiLoading(apiService.post('/api/users', userWithId));
+        const addedUser = response.data;
         setUsers(prev => [...prev, addedUser]);
         return addedUser;
     }, []);
 
     const updateUser = useCallback(async (updatedUser: User) => {
-        const user = await apiFetch(`users/${updatedUser.id}`, { method: 'PUT', body: JSON.stringify(updatedUser) });
+        const response: AxiosResponse<User> = await withApiLoading(apiService.put(`/api/users/${updatedUser.id}`, updatedUser));
+        const user = response.data;
         setUsers(prev => prev.map(u => u.id === user.id ? user : u));
         if (currentUser?.id === user.id) {
             setCurrentUser(user);
@@ -226,16 +244,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [currentUser?.id]);
     
     const deleteUser = useCallback(async (userId: string) => {
-        await apiFetch('users', { method: 'DELETE', body: JSON.stringify({ ids: [userId] }) });
+        await withApiLoading(apiService.delete('/api/users', { data: { ids: [userId] } }));
         setUsers(prev => prev.filter(u => u.id !== userId));
     }, []);
 
     const findOrCreateConversation = useCallback(async (otherParticipantId: string): Promise<string | undefined> => {
         if (!currentUser) return;
-        const result = await apiFetch('conversations/findOrCreate', {
-            method: 'POST',
-            body: JSON.stringify({ userId1: currentUser.id, userId2: otherParticipantId })
-        });
+        const response: AxiosResponse<Conversation> = await withApiLoading(apiService.post('/api/conversations/findOrCreate', { userId1: currentUser.id, userId2: otherParticipantId }));
+        const result = response.data;
         if (!conversations.some(c => c.id === result.id)) {
             setConversations(prev => [...prev, result]);
         }
@@ -253,28 +269,30 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [currentUser, addUser, findOrCreateConversation]);
     
     const addAssignment = useCallback(async (assignmentData: Omit<Assignment, 'id' | 'studentId'>, studentIds: string[]) => {
-        for (const studentId of studentIds) {
-            const newAssignment = { ...assignmentData, id: uuid(), studentId };
-            const added = await apiFetch('assignments', { method: 'POST', body: JSON.stringify(newAssignment) });
-            setAssignments(prev => [...prev, added]);
-        }
+        await withApiLoading((async () => {
+            for (const studentId of studentIds) {
+                const newAssignment = { ...assignmentData, id: uuid(), studentId };
+                const response: AxiosResponse<Assignment> = await apiService.post('/api/assignments', newAssignment);
+                setAssignments(prev => [...prev, response.data]);
+            }
+        })());
     }, []);
 
     const updateAssignment = useCallback(async (updatedAssignment: Assignment) => {
-        const updated = await apiFetch(`assignments/${updatedAssignment.id}`, { method: 'PUT', body: JSON.stringify(updatedAssignment) });
-        setAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
+        const response: AxiosResponse<Assignment> = await withApiLoading(apiService.put(`/api/assignments/${updatedAssignment.id}`, updatedAssignment));
+        setAssignments(prev => prev.map(a => a.id === response.data.id ? response.data : a));
     }, []);
 
     const deleteAssignments = useCallback(async (assignmentIds: string[]) => {
-        await apiFetch('assignments', { method: 'DELETE', body: JSON.stringify({ ids: assignmentIds }) });
+        await withApiLoading(apiService.delete('/api/assignments', { data: { ids: assignmentIds } }));
         setAssignments(prev => prev.filter(a => !assignmentIds.includes(a.id)));
     }, []);
 
     const sendMessage = useCallback(async (messageData: Omit<Message, 'id' | 'timestamp' | 'readBy'>) => {
         if (!currentUser) return;
         const message: Message = { ...messageData, id: uuid(), timestamp: new Date().toISOString(), readBy: [currentUser.id] };
-        const added = await apiFetch('messages', { method: 'POST', body: JSON.stringify(message) });
-        setMessages(prev => [...prev, added]);
+        const response: AxiosResponse<Message> = await withApiLoading(apiService.post('/api/messages', message));
+        setMessages(prev => [...prev, response.data]);
     }, [currentUser]);
 
     const markMessagesAsRead = useCallback(async (conversationId: string) => {
@@ -285,8 +303,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             if (m.conversationId === conversationId && !m.readBy.includes(myId)) {
                 changed = true;
                 const updatedReadBy = [...m.readBy, myId];
-                // Fire-and-forget update to backend
-                apiFetch(`messages/${m.id}`, { method: 'PUT', body: JSON.stringify({ readBy: updatedReadBy }) });
+                withApiLoading(apiService.put(`/api/messages/${m.id}`, { readBy: updatedReadBy }));
                 return { ...m, readBy: updatedReadBy };
             }
             return m;
@@ -294,13 +311,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (changed) setMessages(updatedMessages);
     }, [currentUser, messages]);
 
-    // This is now client-side only for immediate UI feedback. Backend is fire-and-forget.
     const markNotificationsAsRead = useCallback(async (userId: string) => {
         let changed = false;
         const updated = notifications.map(n => {
             if (n.userId === userId && !n.isRead) {
                 changed = true;
-                apiFetch(`notifications/${n.id}`, { method: 'PUT', body: JSON.stringify({ isRead: true }) });
+                withApiLoading(apiService.put(`/api/notifications/${n.id}`, { isRead: true }));
                 return { ...n, isRead: true };
             }
             return n;
@@ -308,20 +324,24 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (changed) setNotifications(updated);
     }, [notifications]);
 
-    // All other functions need to be rewritten to use apiFetch
     const addGoal = useCallback(async (newGoal: Omit<Goal, 'id'>) => {
-        const added = await apiFetch('goals', { method: 'POST', body: JSON.stringify({ ...newGoal, id: uuid() }) });
-        setGoals(prev => [...prev, added]);
+        const response: AxiosResponse<Goal> = await withApiLoading(apiService.post('/api/goals', { ...newGoal, id: uuid() }));
+        setGoals(prev => [...prev, response.data]);
     }, []);
     
     const updateGoal = useCallback(async (updatedGoal: Goal) => {
-        const updated = await apiFetch(`goals/${updatedGoal.id}`, { method: 'PUT', body: JSON.stringify(updatedGoal) });
-        setGoals(prev => prev.map(g => g.id === updated.id ? updated : g));
+        const response: AxiosResponse<Goal> = await withApiLoading(apiService.put(`/api/goals/${updatedGoal.id}`, updatedGoal));
+        setGoals(prev => prev.map(g => g.id === response.data.id ? response.data : g));
     }, []);
 
     const deleteGoal = useCallback(async (goalId: string) => {
-        await apiFetch('goals', { method: 'DELETE', body: JSON.stringify({ ids: [goalId] }) });
+        await withApiLoading(apiService.delete('/api/goals', { data: { ids: [goalId] } }));
         setGoals(prev => prev.filter(g => g.id !== goalId));
+    }, []);
+    
+    const updateMessage = useCallback(async (msg: Message) => {
+        const response: AxiosResponse<Message> = await withApiLoading(apiService.put(`/api/messages/${msg.id}`, msg));
+        setMessages(prev => prev.map(m => m.id === response.data.id ? response.data : m));
     }, []);
 
     const addReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -340,7 +360,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             updatedReactions[emoji].push(myId);
         }
         await updateMessage({ ...message, reactions: updatedReactions });
-    }, [currentUser, messages]);
+    }, [currentUser, messages, updateMessage]);
     
     const voteOnPoll = useCallback(async (messageId: string, optionIndex: number) => {
         if (!currentUser) return;
@@ -352,24 +372,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         updatedOptions[optionIndex].votes.push(myId);
         
         await updateMessage({ ...message, poll: { ...message.poll, options: updatedOptions } });
-    }, [currentUser, messages]);
-
-    // Add generic update/delete functions that call API and update state
-    const updateMessage = useCallback(async (msg: Message) => {
-        const updated = await apiFetch(`messages/${msg.id}`, { method: 'PUT', body: JSON.stringify(msg) });
-        setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-    }, []);
+    }, [currentUser, messages, updateMessage]);
 
     const updateConversation = useCallback(async (conv: Conversation) => {
-        const updated = await apiFetch(`conversations/${conv.id}`, { method: 'PUT', body: JSON.stringify(conv) });
-        setConversations(prev => prev.map(c => c.id === updated.id ? updated : c));
+        const response: AxiosResponse<Conversation> = await withApiLoading(apiService.put(`/api/conversations/${conv.id}`, conv));
+        setConversations(prev => prev.map(c => c.id === response.data.id ? response.data : c));
     }, []);
 
     const startGroupChat = useCallback(async (participantIds: string[], groupName: string): Promise<string | undefined> => {
         if (!currentUser) return;
         const allParticipantIds = Array.from(new Set([...participantIds, currentUser.id]));
         const newConversation: Omit<Conversation, 'id'> = { participantIds: allParticipantIds, isGroup: true, groupName, groupImage: `https://i.pravatar.cc/150?u=${uuid()}`, adminId: currentUser.id };
-        const added = await apiFetch('conversations', { method: 'POST', body: JSON.stringify({ ...newConversation, id: uuid() }) });
+        const response: AxiosResponse<Conversation> = await withApiLoading(apiService.post('/api/conversations', { ...newConversation, id: uuid() }));
+        const added = response.data;
         setConversations(prev => [...prev, added]);
         return added.id;
     }, [currentUser]);
@@ -389,14 +404,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [conversations, updateConversation]);
 
     const endConversation = useCallback(async (conversationId: string) => {
-        await apiFetch('conversations', { method: 'DELETE', body: JSON.stringify({ ids: [conversationId] }) });
+        await withApiLoading(apiService.delete('/api/conversations', { data: { ids: [conversationId] } }));
         setConversations(prev => prev.filter(c => c.id !== conversationId));
-        // Note: server should cascade delete messages, or client needs to filter them out.
         setMessages(prev => prev.filter(m => m.conversationId !== conversationId));
     }, []);
 
     const updateStudentNotes = useCallback(async (studentId: string, notes: string) => {
-        await apiFetch(`users/${studentId}`, { method: 'PUT', body: JSON.stringify({ notes }) });
+        await withApiLoading(apiService.put(`/api/users/${studentId}`, { notes }));
         setUsers(prev => prev.map(u => u.id === studentId ? { ...u, notes } : u));
     }, []);
 
@@ -408,12 +422,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [currentUser, updateUser, addToast]);
 
     const addResource = useCallback(async (newResource: Omit<Resource, 'id'>) => {
-        const added = await apiFetch('resources', { method: 'POST', body: JSON.stringify({ ...newResource, id: uuid() }) });
-        setResources(prev => [...prev, added]);
+        const response: AxiosResponse<Resource> = await withApiLoading(apiService.post('/api/resources', { ...newResource, id: uuid() }));
+        setResources(prev => [...prev, response.data]);
     }, []);
 
     const deleteResource = useCallback(async (resourceId: string) => {
-        await apiFetch('resources', { method: 'DELETE', body: JSON.stringify({ ids: [resourceId] }) });
+        await withApiLoading(apiService.delete('/api/resources', { data: { ids: [resourceId] } }));
         setResources(prev => prev.filter(r => r.id !== resourceId));
     }, []);
 
@@ -421,70 +435,73 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const resource = resources.find(r => r.id === resourceId);
         if (!resource) return;
         const updatedResource = { ...resource, assignedTo: Array.from(new Set([...(resource.assignedTo || []), ...studentIds])) };
-        await apiFetch(`resources/${resourceId}`, { method: 'PUT', body: JSON.stringify(updatedResource) });
-        setResources(prev => prev.map(r => r.id === resourceId ? updatedResource : r));
+        const response: AxiosResponse<Resource> = await withApiLoading(apiService.put(`/api/resources/${resourceId}`, updatedResource));
+        setResources(prev => prev.map(r => r.id === resourceId ? response.data : r));
     }, [resources]);
 
     const addTemplate = useCallback(async (templateData: Omit<AssignmentTemplate, 'id'>) => {
-        const added = await apiFetch('templates', { method: 'POST', body: JSON.stringify({ ...templateData, id: uuid() }) });
-        setTemplates(prev => [...prev, added]);
+        const response: AxiosResponse<AssignmentTemplate> = await withApiLoading(apiService.post('/api/templates', { ...templateData, id: uuid() }));
+        setTemplates(prev => [...prev, response.data]);
     }, []);
     
     const updateTemplate = useCallback(async (template: AssignmentTemplate) => {
-        const updated = await apiFetch(`templates/${template.id}`, { method: 'PUT', body: JSON.stringify(template) });
-        setTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
+        const response: AxiosResponse<AssignmentTemplate> = await withApiLoading(apiService.put(`/api/templates/${template.id}`, template));
+        setTemplates(prev => prev.map(t => t.id === response.data.id ? response.data : t));
     }, []);
     
     const deleteTemplate = useCallback(async (templateId: string) => {
-        await apiFetch('templates', { method: 'DELETE', body: JSON.stringify({ ids: [templateId] }) });
+        await withApiLoading(apiService.delete('/api/templates', { data: { ids: [templateId] } }));
         setTemplates(prev => prev.filter(t => t.id !== templateId));
     }, []);
     
     const addCalendarEvent = useCallback(async (event: Omit<CalendarEvent, 'id'>) => {
-        const added = await apiFetch('calendarEvents', { method: 'POST', body: JSON.stringify({ ...event, id: uuid() }) });
-        setCalendarEvents(prev => [...prev, added]);
+        const response: AxiosResponse<CalendarEvent> = await withApiLoading(apiService.post('/api/calendarEvents', { ...event, id: uuid() }));
+        setCalendarEvents(prev => [...prev, response.data]);
     }, []);
 
     const addMultipleCalendarEvents = useCallback(async (events: Omit<CalendarEvent, 'id' | 'userId'>[]) => {
         if (!currentUser) return;
-        for (const event of events) {
-            const eventWithUser = { ...event, userId: currentUser.id };
-            await addCalendarEvent(eventWithUser);
-        }
-    }, [currentUser, addCalendarEvent]);
+        await withApiLoading((async () => {
+            for (const event of events) {
+                const eventWithUser = { ...event, userId: currentUser.id };
+                const response: AxiosResponse<CalendarEvent> = await apiService.post('/api/calendarEvents', { ...eventWithUser, id: uuid() });
+                setCalendarEvents(prev => [...prev, response.data]);
+            }
+        })());
+    }, [currentUser]);
 
     const deleteCalendarEvent = useCallback(async (eventId: string) => {
-        await apiFetch('calendarEvents', { method: 'DELETE', body: JSON.stringify({ ids: [eventId] }) });
+        await withApiLoading(apiService.delete('/api/calendarEvents', { data: { ids: [eventId] } }));
         setCalendarEvents(prev => prev.filter(e => e.id !== eventId));
     }, []);
     
     const addExam = useCallback(async (exam: Omit<Exam, 'id'>) => {
-        const added = await apiFetch('exams', { method: 'POST', body: JSON.stringify({ ...exam, id: uuid() }) });
-        setExams(prev => [...prev, added]);
+        const response: AxiosResponse<Exam> = await withApiLoading(apiService.post('/api/exams', { ...exam, id: uuid() }));
+        setExams(prev => [...prev, response.data]);
     }, []);
 
     const updateExam = useCallback(async (updatedExam: Exam) => {
-        const updated = await apiFetch(`exams/${updatedExam.id}`, { method: 'PUT', body: JSON.stringify(updatedExam) });
-        setExams(prev => prev.map(e => e.id === updated.id ? updated : e));
+        const response: AxiosResponse<Exam> = await withApiLoading(apiService.put(`/api/exams/${updatedExam.id}`, updatedExam));
+        setExams(prev => prev.map(e => e.id === response.data.id ? response.data : e));
     }, []);
 
     const deleteExam = useCallback(async (examId: string) => {
-        await apiFetch('exams', { method: 'DELETE', body: JSON.stringify({ ids: [examId] }) });
+        await withApiLoading(apiService.delete('/api/exams', { data: { ids: [examId] } }));
         setExams(prev => prev.filter(e => e.id !== examId));
     }, []);
     
     const addQuestion = useCallback(async (questionData: Omit<Question, 'id'>) => {
-        const added = await apiFetch('questions', { method: 'POST', body: JSON.stringify({ ...questionData, id: uuid() }) });
-        setQuestions(prev => [...prev, added]);
+        const response: AxiosResponse<Question> = await withApiLoading(apiService.post('/api/questions', { ...questionData, id: uuid() }));
+        setQuestions(prev => [...prev, response.data]);
     }, []);
 
     const updateQuestion = useCallback(async (question: Question) => {
-        const updated = await apiFetch(`questions/${question.id}`, { method: 'PUT', body: JSON.stringify(question) });
-        setQuestions(prev => prev.map(q => q.id === updated.id ? updated : q));
+        const response: AxiosResponse<Question> = await withApiLoading(apiService.put(`/api/questions/${question.id}`, question));
+        setQuestions(prev => prev.map(q => q.id === response.data.id ? response.data : q));
     }, []);
 
     const deleteQuestion = useCallback(async (questionId: string) => {
-        await apiFetch('questions', { method: 'DELETE', body: JSON.stringify({ ids: [questionId] }) });
+        await withApiLoading(apiService.delete('/api/questions', { data: { ids: [questionId] } }));
         setQuestions(prev => prev.filter(q => q.id !== questionId));
     }, []);
 
@@ -496,11 +513,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }, [conversations, updateConversation]);
 
     const updateBadge = useCallback(async (badge: Badge) => {
-        const updated = await apiFetch(`badges/${badge.id}`, { method: 'PUT', body: JSON.stringify(badge) });
-        setBadges(prev => prev.map(b => b.id === updated.id ? updated : b));
+        const response: AxiosResponse<Badge> = await withApiLoading(apiService.put(`/api/badges/${badge.id}`, badge));
+        setBadges(prev => prev.map(b => b.id === response.data.id ? response.data : b));
     }, []);
     
-    // Memoized derived state for messages
     const { messagesByConversation, unreadCounts, lastMessagesMap } = useMemo(() => {
         const msgByConv = new Map<string, Message[]>();
         messages.forEach(msg => {
@@ -544,7 +560,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const getMessagesForConversation = useCallback((conversationId: string) => messagesByConversation.get(conversationId) || [], [messagesByConversation]);
 
     const contextValue: DataContextType = {
-        currentUser, users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions, isLoading, isDbInitialized,
+        currentUser, users, assignments, messages, conversations, notifications, templates, resources, goals, badges, calendarEvents, exams, questions, isLoading, isDbInitialized, isApiLoading,
         coach, students, login, logout, register, inviteStudent,
         getAssignmentsForStudent, getMessagesForConversation, sendMessage,
         addAssignment, updateAssignment, deleteAssignments,
