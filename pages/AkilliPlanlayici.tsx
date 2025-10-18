@@ -74,7 +74,7 @@ const AkilliPlanlayici = () => {
     const handleSavePlan = async () => {
         if (!plan || !Array.isArray(plan) || !currentUser) return;
         // FIX: The type guard was not sufficient to narrow the type from 'unknown'. Re-adding an explicit cast to `any[]` resolves the compile-time error on `.map`.
-        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map((item: StudyPlanEvent) => ({
+        const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = (plan as any[]).map((item: StudyPlanEvent) => ({
             title: item.title,
             date: item.date,
             type: 'study',
