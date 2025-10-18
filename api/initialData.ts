@@ -1,18 +1,18 @@
-import { sql } from '@vercel/postgres';
+import { sql, VercelPoolClient } from '@vercel/postgres';
 import { initialData } from '../services/seedData';
 
 // This function checks if tables have data and seeds them if they are empty.
 export async function seedDatabase() {
-    // FIX: Replace sql.begin with a manual transaction block using a client from the pool.
-    const client = await sql.connect();
+    let client: VercelPoolClient | undefined;
     try {
+        client = await sql.connect();
+        
         // Check if users table is empty
         const { rows } = await client.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(rows[0].count, 10);
 
         if (userCount > 0) {
             console.log("Database already seeded. Skipping.");
-            client.release();
             return;
         }
 
@@ -22,7 +22,6 @@ export async function seedDatabase() {
         await client.query('BEGIN');
 
         for (const user of initialData.users) {
-            // FIX: Convert to parameterized client.query to handle arrays and other types correctly.
             await client.query(`
                 INSERT INTO users (id, name, email, role, "profilePicture", notes, "assignedCoachId", "gradeLevel", "academicTrack", "childIds", "parentIds", xp, streak, "lastSubmissionDate", "earnedBadgeIds")
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
@@ -110,9 +109,13 @@ export async function seedDatabase() {
 
     } catch (error) {
         console.error("Error seeding database:", error);
-        await client.query('ROLLBACK');
+        if (client) {
+            await client.query('ROLLBACK');
+        }
         throw error;
     } finally {
-        client.release();
+        if (client) {
+            client.release();
+        }
     }
 }

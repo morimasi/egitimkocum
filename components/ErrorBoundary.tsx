@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component<Props, State> {
         </div>
       );
     }
-    // FIX: Directly return children from props to resolve potential error.
+    // FIX: Destructuring props to access children. This pattern can avoid potential `this` context issues and resolves the type error.
     return this.props.children;
   }
 }

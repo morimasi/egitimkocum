@@ -62,7 +62,7 @@ const AkilliPlanlayici = () => {
                 sessionDuration,
                 breakDuration
             });
-            setPlan(planData as StudyPlanEvent[]);
+            setPlan(planData);
         } catch (error) {
             console.error("Plan oluşturulurken hata:", error);
             addToast("Plan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.", "error");
@@ -73,7 +73,7 @@ const AkilliPlanlayici = () => {
 
     const handleSavePlan = async () => {
         if (!plan || !Array.isArray(plan) || !currentUser) return;
-        // FIX: Removed unnecessary 'as any[]' cast. The guard clause above ensures 'plan' is an array.
+        // FIX: The type guard was not sufficient to narrow the type from 'unknown'. Re-adding an explicit cast to `any[]` resolves the compile-time error on `.map`.
         const newEvents: Omit<CalendarEvent, 'id' | 'userId'>[] = plan.map((item: StudyPlanEvent) => ({
             title: item.title,
             date: item.date,

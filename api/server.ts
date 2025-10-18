@@ -1,13 +1,43 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI, Type as GenAIType } from '@google/genai';
-import 'dotenv/config';
 import { createTables } from './index';
 import { seedDatabase } from './initialData';
 import { sql } from '@vercel/postgres';
+import serverless from 'serverless-http';
+
+// --- Environment Variable Validation ---
+// Fail fast if critical environment variables are missing or invalid.
+if (!process.env.POSTGRES_URL || process.env.POSTGRES_URL.trim() === '') {
+    console.error("🔴 FATAL: POSTGRES_URL environment variable is not set or is empty.");
+    console.error("Please ensure it is defined in your .env file and holds a valid Vercel Postgres connection string.");
+    throw new Error("Server startup failed: Missing POSTGRES_URL.");
+}
+
+try {
+    // The @vercel/postgres library will try to construct a URL from this string.
+    // We do it here to catch the error early and provide a more helpful message.
+    new URL(process.env.POSTGRES_URL);
+} catch (error) {
+    console.error("🔴 FATAL: Invalid POSTGRES_URL format.");
+    if (error instanceof TypeError) {
+        console.error("Error details: " + error.message);
+    }
+    console.error(`The provided POSTGRES_URL was: "${process.env.POSTGRES_URL}"`);
+    console.error("Please ensure it is a complete and valid connection string, starting with 'postgres://...'.");
+    throw new Error("Server startup failed: Invalid POSTGRES_URL.");
+}
+
+if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
+    console.error("🔴 FATAL: API_KEY environment variable is not set or is empty.");
+    console.error("It is required for Gemini AI functionality. Please check your .env file.");
+    throw new Error("Server startup failed: Missing API_KEY.");
+}
+// --- End Validation ---
+
 
 const app = express();
-// FIX: Separate cors() and express.json() into their own app.use() calls to resolve middleware type overload issue.
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
@@ -24,9 +54,6 @@ app.post('/api/setup', async (req, res) => {
 });
 
 // --- Gemini AI Setup ---
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set for Gemini.");
-}
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const model = 'gemini-2.5-flash';
 
@@ -299,12 +326,13 @@ app.post('/api/gemini/chat', async (req, res) => {
 
 
 const PORT = process.env.PORT || 3001;
-if (process.env.NODE_ENV !== 'test') { // Prevent server from starting during tests or other script runs
+// Only listen on a port when running directly for local development, not in a serverless environment
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
         console.log('To setup the database for the first time, send a POST request to /api/setup');
     });
 }
 
-// Export for vercel serverless functions
-export default app;
+// Export for serverless functions (Netlify, etc.)
+export const handler = serverless(app);
