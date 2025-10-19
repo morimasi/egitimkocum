@@ -6,6 +6,14 @@ import { createTables } from './index';
 import { seedDatabase } from './initialData';
 import { sql } from '@vercel/postgres';
 import serverless from 'serverless-http';
+import { 
+    generateToken, 
+    hashPassword, 
+    comparePassword, 
+    authMiddleware, 
+    requireRole,
+    AuthRequest 
+} from './auth';
 
 // --- Environment Variable Validation ---
 // Fail fast if critical environment variables are missing or invalid.
@@ -60,16 +68,43 @@ const model = 'gemini-2.5-flash';
 
 // --- Auth Routes ---
 app.post('/api/login', async (req, res) => {
-    const { email } = req.body;
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+    }
+    
     try {
         const { rows } = await sql`SELECT * FROM users WHERE email = ${email};`;
         const user = rows[0];
-        // This is an insecure login for demo purposes only.
-        if (user) {
-            res.json(user);
-        } else {
-            res.status(401).json({ error: 'Invalid credentials' });
+        
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
+
+        // Check password
+        const isPasswordValid = user.password 
+            ? await comparePassword(password, user.password)
+            : password === 'demo'; // Fallback for legacy users without password
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Generate JWT token
+        const token = generateToken({
+            userId: user.id,
+            email: user.email,
+            role: user.role
+        });
+
+        // Return user data without password
+        const { password: _, ...userWithoutPassword } = user;
+        
+        res.json({ 
+            user: userWithoutPassword, 
+            token 
+        });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -77,7 +112,12 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
-    const { id, name, email, role, profilePicture } = req.body;
+    const { id, name, email, password, role, profilePicture } = req.body;
+    
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    
     try {
         // Check if any user exists
         const { rows: countRows } = await sql`SELECT COUNT(*) FROM users;`;
@@ -86,17 +126,55 @@ app.post('/api/register', async (req, res) => {
         // If no users, make this one superadmin, otherwise use provided role.
         const finalRole = userCount === 0 ? 'superadmin' : role;
 
+        // Hash password
+        const hashedPassword = await hashPassword(password);
+
         const { rows } = await sql`
-            INSERT INTO users (id, name, email, role, "profilePicture")
-            VALUES (${id}, ${name}, ${email}, ${finalRole}, ${profilePicture})
+            INSERT INTO users (id, name, email, password, role, "profilePicture")
+            VALUES (${id}, ${name}, ${email}, ${hashedPassword}, ${finalRole}, ${profilePicture})
             RETURNING *;
         `;
-        res.status(201).json(rows[0]);
+        
+        const user = rows[0];
+        
+        // Generate JWT token
+        const token = generateToken({
+            userId: user.id,
+            email: user.email,
+            role: user.role
+        });
+
+        // Return user data without password
+        const { password: _, ...userWithoutPassword } = user;
+        
+        res.status(201).json({ 
+            user: userWithoutPassword, 
+            token 
+        });
     } catch (error: any) {
         if (error.code === '23505') { // Unique constraint violation
             return res.status(400).json({ error: 'Email already exists' });
         }
         console.error('Register error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Verify token endpoint
+app.get('/api/auth/verify', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { rows } = await sql`SELECT * FROM users WHERE id = ${req.user!.userId};`;
+        const user = rows[0];
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Return user data without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+    } catch (error) {
+        console.error('Verify token error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -121,8 +199,8 @@ const entityToTableMap: Record<string, string> = {
 
 Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
 
-    // GET all
-    app.get(`/api/${entity}`, async (req, res) => {
+    // GET all (protected)
+    app.get(`/api/${entity}`, authMiddleware, async (req: AuthRequest, res) => {
         try {
             const { rows } = await sql.query(`SELECT * FROM "${tableName}";`);
             res.json(rows);
@@ -131,8 +209,8 @@ Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
         }
     });
 
-    // GET by ID
-    app.get(`/api/${entity}/:id`, async (req, res) => {
+    // GET by ID (protected)
+    app.get(`/api/${entity}/:id`, authMiddleware, async (req: AuthRequest, res) => {
         try {
             const { rows } = await sql.query(`SELECT * FROM "${tableName}" WHERE id = $1;`, [req.params.id]);
             if (rows.length > 0) res.json(rows[0]);
@@ -142,8 +220,8 @@ Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
         }
     });
 
-    // POST new
-    app.post(`/api/${entity}`, async (req, res) => {
+    // POST new (protected)
+    app.post(`/api/${entity}`, authMiddleware, async (req: AuthRequest, res) => {
         try {
             const newItem = req.body;
             const columns = Object.keys(newItem).map(k => `"${k}"`);
@@ -160,8 +238,8 @@ Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
         }
     });
 
-    // PUT update
-    app.put(`/api/${entity}/:id`, async (req, res) => {
+    // PUT update (protected)
+    app.put(`/api/${entity}/:id`, authMiddleware, async (req: AuthRequest, res) => {
         try {
             const { id } = req.params;
             const updates = req.body;
@@ -192,8 +270,8 @@ Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
         }
     });
 
-    // DELETE multiple
-    app.delete(`/api/${entity}`, async (req, res) => {
+    // DELETE multiple (protected, admin only)
+    app.delete(`/api/${entity}`, authMiddleware, requireRole('superadmin', 'coach'), async (req: AuthRequest, res) => {
         try {
             const { ids } = req.body;
             if (!ids || !Array.isArray(ids)) {
@@ -207,8 +285,8 @@ Object.entries(entityToTableMap).forEach(([entity, tableName]) => {
     });
 });
 
-// Custom conversation route
-app.post('/api/conversations/findOrCreate', async (req, res) => {
+// Custom conversation route (protected)
+app.post('/api/conversations/findOrCreate', authMiddleware, async (req: AuthRequest, res) => {
     const { userId1, userId2 } = req.body;
     try {
         const { rows } = await sql`
@@ -256,7 +334,7 @@ const getJsonSchema = (schemaName: string) => {
     return schemas[schemaName];
 }
 
-app.post('/api/gemini/generateText', async (req, res) => {
+app.post('/api/gemini/generateText', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { prompt, temperature } = req.body;
         const response = await ai.models.generateContent({
@@ -271,7 +349,7 @@ app.post('/api/gemini/generateText', async (req, res) => {
     }
 });
 
-app.post('/api/gemini/generateWithImage', async (req, res) => {
+app.post('/api/gemini/generateWithImage', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { textPart, imagePart } = req.body;
         const response = await ai.models.generateContent({
@@ -285,7 +363,7 @@ app.post('/api/gemini/generateWithImage', async (req, res) => {
     }
 });
 
-app.post('/api/gemini/generateJson', async (req, res) => {
+app.post('/api/gemini/generateJson', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { prompt, schema } = req.body;
         const responseSchema = getJsonSchema(schema);
@@ -307,7 +385,7 @@ app.post('/api/gemini/generateJson', async (req, res) => {
     }
 });
 
-app.post('/api/gemini/chat', async (req, res) => {
+app.post('/api/gemini/chat', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { history, systemInstruction } = req.body;
         const response = await ai.models.generateContent({
