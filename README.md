@@ -44,10 +44,28 @@ Platformumuzun zekası, Google Gemini API'nin gelişmiş yeteneklerinden gelir:
 
 ## 🛠️ Teknoloji Mimarisi
 
--   **Frontend:** React, TypeScript, Vite, Tailwind CSS, Recharts
--   **Backend:** Node.js & Express.js
--   **Veritabanı:** Vercel Postgres
--   **Yapay Zeka:** Google Gemini API (`@google/genai`)
+### **Frontend**
+-   ⚛️ **React 18** + **TypeScript** - Modern UI geliştirme
+-   🎨 **Tailwind CSS** - Utility-first CSS framework
+-   ⚡ **Vite** - Lightning-fast build tool
+-   📊 **Recharts** - Data visualization
+-   🌐 **i18next** - Internationalization (TR/EN)
+-   📱 **PWA** - Progressive Web App support
+-   🔔 **Socket.io Client** - Real-time communication
+
+### **Backend**
+-   🟢 **Node.js** + **Express.js** - RESTful API
+-   🔐 **JWT Authentication** - Secure token-based auth
+-   🔒 **bcryptjs** - Password hashing
+-   🔔 **Socket.io** - WebSocket server
+-   🐘 **Vercel Postgres** - Cloud database
+-   🤖 **Google Gemini API** - AI capabilities
+
+### **DevOps & Tools**
+-   ✅ **Jest** + **React Testing Library** - Unit & integration testing
+-   📈 **Google Analytics 4** - User behavior tracking
+-   ☁️ **Cloudinary** - Cloud file storage
+-   🚀 **Vercel** - Hosting & serverless functions
 
 ## 🚀 Hızlı Başlangıç: Yerelde Çalıştırma
 
@@ -84,6 +102,10 @@ Bu projeyi kendi bilgisayarınızda geliştirmeye başlamak için aşağıdaki a
     ```.env
     API_KEY="YOUR_GEMINI_API_KEY"
     POSTGRES_URL="YOUR_POSTGRES_CONNECTION_STRING"
+    JWT_SECRET="your-secret-key"
+    VITE_GA_MEASUREMENT_ID="G-XXXXXXXXXX" # Optional
+    VITE_CLOUDINARY_CLOUD_NAME="your-cloud-name" # Optional
+    VITE_CLOUDINARY_UPLOAD_PRESET="your-preset" # Optional
     ```
 
 5.  **Uygulamayı Başlatın:**
@@ -98,15 +120,92 @@ Bu projeyi kendi bilgisayarınızda geliştirmeye başlamak için aşağıdaki a
 -   **İlk Kullanıcı Süper Admin'dir:** Platforma ilk kayıt olan kullanıcı, otomatik olarak **Süper Admin** yetkilerine sahip olur. Süper Admin paneli üzerinden yeni koçlar ve öğrenciler ekleyebilirsiniz.
 
 
+## 🆕 Yeni Eklenen Özellikler
+
+### 🔐 JWT Authentication
+- Güvenli token-based kimlik doğrulama
+- Password hashing ile şifre güvenliği
+- Protected API endpoints
+- Token refresh ve expiration yönetimi
+
+### ✅ Testing Infrastructure
+- Jest ile unit testler
+- React Testing Library ile component testleri
+- Test coverage raporları
+- Otomatik test çalıştırma (`npm test`)
+
+### 📱 Progressive Web App (PWA)
+- Offline çalışma desteği
+- App install prompt
+- Service Worker ile cache yönetimi
+- Hızlı yükleme ve performans
+
+### 🌐 Internationalization (i18n)
+- Türkçe ve İngilizce dil desteği
+- Otomatik dil algılama
+- Kolay çeviri yönetimi
+- Runtime'da dil değiştirme
+
+### 📊 Analytics Integration
+- Google Analytics 4 entegrasyonu
+- Kullanıcı davranış takibi
+- Event tracking
+- Custom metrics ve dimensions
+
+### 🔔 Real-time Communication
+- Socket.io ile WebSocket desteği
+- Anlık mesajlaşma
+- Online/offline durum gösterimi
+- Typing indicators
+- Video call signaling
+
+### ☁️ Cloud File Storage
+- Cloudinary entegrasyonu
+- Drag & drop file upload
+- Progress tracking
+- Image optimization
+- Video thumbnail generation
+
 ## 📂 Proje Yapısı
 
 ```
 .
-├── api/          # Express.js backend sunucusu
-├── components/   # Tekrar kullanılabilir React bileşenleri
-├── contexts/     # Global state yönetimi (DataContext, UIContext)
-├── pages/        # Ana sayfa bileşenleri
-├── services/     # Harici servislerle iletişim (Gemini, seedData)
-├── App.tsx       # Ana uygulama bileşeni ve yönlendirme
-└── ...
+├── api/                    # Express.js backend sunucusu
+│   ├── auth.ts            # JWT authentication
+│   ├── socket.ts          # WebSocket server
+│   ├── server.ts          # Main API server
+│   └── index.ts           # Database schema
+├── components/            # React bileşenleri
+│   ├── CloudinaryUpload.tsx
+│   ├── LanguageSwitcher.tsx
+│   ├── PWAInstall.tsx
+│   └── ...
+├── contexts/              # Global state
+├── pages/                 # Sayfa bileşenleri
+├── services/              # API services
+│   ├── authService.ts     # Authentication
+│   ├── socketService.ts   # WebSocket client
+│   ├── analytics.ts       # Analytics tracking
+│   └── cloudinaryService.ts
+├── locales/               # i18n translations
+│   ├── tr/translation.json
+│   └── en/translation.json
+├── __tests__/             # Test dosyaları
+├── i18n.ts                # i18n configuration
+└── App.tsx                # Ana uygulama
+```
+
+## 🧪 Testing
+
+Projeyi test etmek için:
+
+```bash
+# Tüm testleri çalıştır
+npm test
+
+# Watch modunda testler
+npm run test:watch
+
+# Coverage raporu
+npm run test:coverage
 ```

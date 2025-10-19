@@ -8,6 +8,7 @@ export async function createTables() {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
+                password TEXT,
                 role TEXT NOT NULL,
                 "profilePicture" TEXT,
                 notes TEXT,
